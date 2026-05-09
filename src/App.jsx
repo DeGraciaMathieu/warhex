@@ -15,6 +15,7 @@ export default function HexWarhammer() {
     const [armyPhase, setArmyPhase] = useState(true);
     const [showGuide, setShowGuide] = useState(false);
     const [vsAI, setVsAI] = useState(false);
+    const [fairTowns, setFairTowns] = useState(true);
     const [selections, setSelections] = useState({ 1: [], 2: [] });
     const [state, setState] = useState(null);
     const [hoveredHex, setHoveredHex] = useState(null);
@@ -105,7 +106,7 @@ export default function HexWarhammer() {
     }
 
     function endTurn() { setState(computeEndTurn); }
-    function restart() { resetUID(); setSelections({ 1: [], 2: [] }); setArmyPhase(true); setState(null); setVsAI(false); }
+    function restart() { resetUID(); setSelections({ 1: [], 2: [] }); setArmyPhase(true); setState(null); setVsAI(false); setFairTowns(true); }
 
     function addUnit(player, type) {
         setSelections(prev => {
@@ -128,7 +129,7 @@ export default function HexWarhammer() {
 
     function startGame() {
         resetUID();
-        setState(initState(selections));
+        setState(initState(selections, { fairTowns }));
         setArmyPhase(false);
     }
 
@@ -152,6 +153,14 @@ export default function HexWarhammer() {
                     </button>
                     <button className={`btn ${vsAI ? "btn-gold" : "btn-grey"}`} onClick={() => { setVsAI(true); randomArmy(2); }} style={{ width: "auto", padding: "8px 20px" }}>
                         vs IA
+                    </button>
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                    <button className={`btn ${fairTowns ? "btn-gold" : "btn-grey"}`} onClick={() => setFairTowns(true)} style={{ width: "auto", padding: "8px 20px" }}>
+                        Villes équitables
+                    </button>
+                    <button className={`btn ${!fairTowns ? "btn-gold" : "btn-grey"}`} onClick={() => setFairTowns(false)} style={{ width: "auto", padding: "8px 20px" }}>
+                        Villes aléatoires
                     </button>
                 </div>
                 <div style={{ display: "flex", gap: 48 }}>

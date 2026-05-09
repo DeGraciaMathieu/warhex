@@ -171,7 +171,46 @@ const DEFAULT_ARMIES = {
     2: ["warrior", "warrior", "knight", "sniper", "berserker"],
 };
 
-export function initState(armies) {
+function mirrorHex(h) {
+    return { q: -h.q, r: -h.r, s: -h.s };
+}
+
+function fairTownHexes(count, reservedKeys) {
+    const key = h => `${h.q},${h.r},${h.s}`;
+    const half = Math.floor(count / 2);
+    const allHexes = [];
+    for (let q = -5; q <= 5; q++) {
+        for (let r = -5; r <= 5; r++) {
+            const s = -q - r;
+            if (Math.abs(s) <= 5) allHexes.push({ q, r, s });
+        }
+    }
+    const candidates = allHexes.filter(h => {
+        if (h.q > 0) return false;
+        if (h.q === 0 && h.r >= 0) return false;
+        if (reservedKeys.has(key(h))) return false;
+        const m = mirrorHex(h);
+        if (reservedKeys.has(key(m))) return false;
+        return true;
+    });
+    const picked = [];
+    const used = new Set();
+    for (let i = 0; i < half && candidates.length > 0; i++) {
+        const idx = Math.floor(Math.random() * candidates.length);
+        const h = candidates.splice(idx, 1)[0];
+        picked.push(h);
+        used.add(key(h));
+    }
+    const result = [];
+    for (const h of picked) {
+        result.push(h);
+        result.push(mirrorHex(h));
+    }
+    return result;
+}
+
+export function initState(armies, options = {}) {
+    const { fairTowns = true } = options;
     const picks = armies || DEFAULT_ARMIES;
     const units = [
         ...picks[1].map((type, i) => createUnit(type, 1, SPAWN_POSITIONS[1][i])),
@@ -184,7 +223,7 @@ export function initState(armies) {
     const rivers = generateRiver(allReserved);
     const riverKeys = new Set(rivers.map(r => `${r.q},${r.r},${r.s}`));
     const allReserved2 = new Set([...allReserved, ...riverKeys]);
-    const towns = randomAvailableHexes(4, allReserved2);
+    const towns = fairTowns ? fairTownHexes(4, allReserved2) : randomAvailableHexes(4, allReserved2);
     const townKeys = new Set(towns.map(t => `${t.q},${t.r},${t.s}`));
     const allReserved3 = new Set([...allReserved2, ...townKeys]);
     const forests = generateForests(3, allReserved3);
