@@ -159,7 +159,9 @@ export default function HexWarhammer() {
                             </div>
                             {state.pendingAttack.attacker.weapons.map(w => {
                                 const dist = hexDistance(state.pendingAttack.attacker.hex, state.pendingAttack.target.hex);
-                                const ok = dist <= w.range;
+                                const hillKeys = new Set((state.hills || []).map(hexKey));
+                                const rangeBonus = (w.type === "ranged" && hillKeys.has(hexKey(state.pendingAttack.attacker.hex))) ? 1 : 0;
+                                const ok = dist <= w.range + rangeBonus;
                                 const target = state.pendingAttack.target;
                                 const townKeys = new Set((state.towns || []).map(hexKey));
                                 const inTown = townKeys.has(hexKey(target.hex));
@@ -173,11 +175,11 @@ export default function HexWarhammer() {
                                         <div style={{ fontWeight: 600, fontSize: 13 }}>{w.name} {w.type === "ranged" ? "🏹" : "🗡"}</div>
                                         {!ok ? (
                                             <div style={{ fontSize: 11, color: "#b0a090", marginTop: 3 }}>
-                                                {w.type === "ranged" ? `Portée ${w.range}` : "Mêlée (adjacent)"} · Trop loin ({dist} hex)
+                                                {w.type === "ranged" ? `Portée ${w.range + rangeBonus}` : "Mêlée (adjacent)"} · Trop loin ({dist} hex)
                                             </div>
                                         ) : (
                                             <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 5, fontSize: 11, color: "#6a5a40" }}>
-                                                <div>{w.type === "ranged" ? `Portée ${w.range} hex` : "Mêlée (adjacent)"} · Distance : {dist}</div>
+                                                <div>{w.type === "ranged" ? `Portée ${w.range + rangeBonus} hex${rangeBonus ? " ⛰" : ""}` : "Mêlée (adjacent)"} · Distance : {dist}</div>
                                                 <div>Touche sur {skill}+ · {w.attacks} {w.attacks > 1 ? "attaques" : "attaque"}</div>
                                                 <div>{w.damage} {w.damage > 1 ? "dégâts" : "dégât"} par touche · Pénétration {Math.abs(w.ap)}</div>
                                                 <div style={{ color: saveColor, fontWeight: 600, marginTop: 2 }}>
