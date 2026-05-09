@@ -332,11 +332,11 @@ export default function HexWarhammer() {
                         </>
                     ) : (
                         <>
-                            <button className="btn btn-blue" disabled={!sel || sel.hasMoved || state.phase === "attack"} onClick={startMove}>⟶ Déplacer</button>
-                            <button className="btn btn-red" disabled={!sel || sel.hasAttacked} onClick={startAttack}>⚔ Attaquer</button>
+                            <button className="btn btn-blue" disabled={!sel || sel.hasMoved || state.phase === "attack" || (vsAI && state.currentPlayer === 2)} onClick={startMove}>⟶ Déplacer</button>
+                            <button className="btn btn-red" disabled={!sel || sel.hasAttacked || (vsAI && state.currentPlayer === 2)} onClick={startAttack}>⚔ Attaquer</button>
                             {sel && <button className="btn btn-grey" onClick={() => setState(computeDeselect)}>✕ Désélectionner</button>}
                             <div style={{ borderTop: "1px solid #d5cbb8", marginTop: 6, paddingTop: 8 }}>
-                                <button className="btn btn-gold" disabled={!!state.winner} onClick={endTurn}>⏭ Fin de tour</button>
+                                <button className="btn btn-gold" disabled={!!state.winner || (vsAI && state.currentPlayer === 2)} onClick={endTurn}>⏭ Fin de tour</button>
                                 {state.winner && <button className="btn btn-grey" onClick={restart}>↺ Nouvelle partie</button>}
                             </div>
                         </>
