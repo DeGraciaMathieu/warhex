@@ -7,6 +7,8 @@ Jeu tactique tour par tour sur grille hexagonale, inspiré des mécaniques Warha
 - React (JSX, pas de TypeScript)
 - Rendu canvas 2D (pas de librairie graphique)
 - Vite en dev server (`npx vite`)
+- Node.js 22+ requis (`nvm use 22`)
+- Tests : `source ~/.nvm/nvm.sh && nvm use 22 && npx vitest run`
 
 ## Architecture
 
@@ -39,7 +41,7 @@ src/
 
 `select` → `move` → `select` → `attack` → `weapon_select` → `select`
 
-Chaque unité peut se déplacer une fois et attaquer une fois par tour.
+Chaque tour, un joueur agit avec **une seule unité** (déplacement et/ou attaque), puis le tour passe automatiquement à l'adversaire. Une fois qu'une unité a agi, on ne peut pas en sélectionner une autre (`activeUnitId`). Le passage automatique se fait après une attaque (délai 1.2s) ou après un déplacement sans cibles disponibles (délai 0.8s).
 
 ## Règles de combat (Warhammer simplifié)
 
