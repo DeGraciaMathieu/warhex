@@ -14,7 +14,7 @@ Jeu tactique tour par tour sur grille hexagonale, inspiré des mécaniques Warha
 main.jsx              → Point d'entrée, ré-exporte App
 src/
   hex.js              → Maths hexagonales (coordonnées cube, pathfinding, distance, ligne de vue)
-  combat.js           → Résolution de combat (jets de dés, To Hit / Save / multiplicateur Force vs Endurance)
+  combat.js           → Résolution de combat (jets de dés, To Hit / Save / dégâts)
   units.js            → Templates d'unités, factory createUnit(), état initial (unités + obstacles)
   renderer.js         → Rendu canvas (grille, obstacles, unités, barres de vie)
   App.jsx             → Composant React principal (state, handlers, UI panneau droit)
@@ -31,6 +31,8 @@ src/
 - Thème clair (fond beige `#f5f0e8`, texte foncé `#2a2015`)
 - Couleurs joueurs : bleu `#2a6fa8` (J1), rouge `#a03030` (J2)
 - Obstacles stockés dans `state.obstacles`, bloquent le déplacement et la ligne de vue
+- Rivières stockées dans `state.rivers`, entrer stoppe le mouvement, ne bloquent pas la ligne de vue
+- Villes stockées dans `state.towns`, entrer stoppe le mouvement, accordent -1 au seuil de sauvegarde
 - Ligne de vue calculée par `hasLineOfSight()` dans `hex.js` (tracé de ligne hex)
 
 ## Phases de jeu
@@ -42,8 +44,8 @@ Chaque unité peut se déplacer une fois et attaquer une fois par tour.
 ## Règles de combat (Warhammer simplifié)
 
 1. **To Hit** : jet >= compétence (CC ou CT selon type d'arme)
-2. **Sauvegarde** : jet >= (save + |PA|), impossible si > 6
-3. **Dégâts** : touches non sauvées × damage × `damageMultiplier(force, endurance)`
+2. **Sauvegarde** : 3 dés, jet >= (save - coverBonus + |PA|), impossible si > 6
+3. **Dégâts** : touches non sauvées × damage
 
 ## Pour ajouter une feature
 
