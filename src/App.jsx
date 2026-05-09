@@ -3,6 +3,7 @@ import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.j
 import { initState, resetUID, UNIT_TEMPLATES } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY } from "./renderer.js";
 import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn } from "./game.js";
+import Guide from "./Guide.jsx";
 import "./styles.css";
 
 const UNIT_TYPES = Object.keys(UNIT_TEMPLATES);
@@ -11,6 +12,7 @@ const ARMY_SIZE = 5;
 export default function HexWarhammer() {
     const canvasRef = useRef(null);
     const [armyPhase, setArmyPhase] = useState(true);
+    const [showGuide, setShowGuide] = useState(false);
     const [selections, setSelections] = useState({ 1: [], 2: [] });
     const [state, setState] = useState(null);
     const [hoveredHex, setHoveredHex] = useState(null);
@@ -111,6 +113,10 @@ export default function HexWarhammer() {
 
     const P = { 1: "#2a6fa8", 2: "#a03030" };
 
+    if (showGuide) {
+        return <Guide onBack={() => setShowGuide(false)} />;
+    }
+
     if (armyPhase) {
         return (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif", gap: 24 }}>
@@ -155,9 +161,14 @@ export default function HexWarhammer() {
                         </div>
                     ))}
                 </div>
-                <button className="btn btn-gold" disabled={!canStart} onClick={startGame} style={{ fontSize: 16, padding: "10px 32px" }}>
-                    ⚔ Lancer la partie
-                </button>
+                <div style={{ display: "flex", gap: 12 }}>
+                    <button className="btn btn-gold" disabled={!canStart} onClick={startGame} style={{ fontSize: 16, padding: "10px 32px" }}>
+                        ⚔ Lancer la partie
+                    </button>
+                    <button className="btn btn-grey" onClick={() => setShowGuide(true)} style={{ fontSize: 16, padding: "10px 24px" }}>
+                        ? Guide
+                    </button>
+                </div>
             </div>
         );
     }
