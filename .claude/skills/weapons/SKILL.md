@@ -4,7 +4,7 @@ description: Use when modifying weapon mechanics, combat resolution, unit profil
 auto_invoke: true
 ---
 
-# Armes - Hex Warhammer
+# Armes - Warhex
 
 ## Proprietes d'une arme
 

@@ -1,4 +1,4 @@
-# Hex Warhammer
+# Warhex
 
 Turn-based tactical game on a hex grid, inspired by Warhammer tabletop mechanics.
 

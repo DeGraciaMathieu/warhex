@@ -4,7 +4,7 @@ description: Use when modifying terrain mechanics, movement rules, line of sight
 auto_invoke: true
 ---
 
-# Terrains - Hex Warhammer
+# Terrains - Warhex
 
 ## Types de terrain
 

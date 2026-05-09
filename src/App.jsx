@@ -215,7 +215,7 @@ export default function HexWarhammer() {
         <div style={{ display: "flex", height: "100vh", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif", overflow: "hidden" }}>
             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, padding: 20 }}>
                 <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, fontWeight: 700, letterSpacing: ".2em", color: "#8a6a08", textShadow: "0 0 30px rgba(138,106,8,.2)" }}>
-                    ⚔ HEX WARHAMMER ⚔
+                    ⚔ WARHEX ⚔
                 </div>
 
                 <div style={{ position: "relative" }}>

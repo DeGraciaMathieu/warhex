@@ -1,4 +1,4 @@
-# Hex Warhammer
+# Warhex
 
 Jeu tactique tour par tour sur grille hexagonale, inspiré des mécaniques Warhammer 40k.
 

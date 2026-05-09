@@ -4,7 +4,7 @@ description: Implement the following feature: $ARGUMENTS
 user_invocable: true
 ---
 
-# Feature — Hex Warhammer
+# Feature — Warhex
 
 Tu reçois une description de feature en argument. Suis ces étapes dans l'ordre :
 
