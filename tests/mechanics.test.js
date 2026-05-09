@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { hexDistance, hexKey, reachableHexes, isValidHex, hexNeighbors, hasLineOfSight } from "../src/hex.js";
-import { resolveAttack, woundThreshold } from "../src/combat.js";
+import { hexDistance, hexKey, hexToPixel, pixelToHex, reachableHexes, isValidHex, hexNeighbors, hasLineOfSight } from "../src/hex.js";
+import { resolveAttack, damageMultiplier } from "../src/combat.js";
 import { createUnit, initState, resetUID } from "../src/units.js";
 
 beforeEach(() => resetUID());
@@ -75,11 +75,12 @@ describe("combat", () => {
         }
     });
 
-    it("les dégâts ne dépassent jamais attaques × damage de l'arme", () => {
+    it("les dégâts ne dépassent jamais attaques × damage × multiplicateur max", () => {
         const attacker = createUnit("chaosWarrior", 2, { q: 0, r: 0, s: 0 });
         const target = createUnit("orcBoy", 1, { q: 1, r: -1, s: 0 });
         const weapon = attacker.weapons[0]; // Chainsword: 4 attacks, 2 damage
-        const maxDamage = weapon.attacks * weapon.damage;
+        const mult = damageMultiplier(weapon.strength, target.toughness);
+        const maxDamage = Math.round(weapon.attacks * weapon.damage * mult);
 
         for (let i = 0; i < 100; i++) {
             const result = resolveAttack(attacker, weapon, target);
@@ -87,7 +88,7 @@ describe("combat", () => {
         }
     });
 
-    it("le log de combat suit la séquence To Hit → To Wound → Save → Summary", () => {
+    it("le log de combat suit la séquence To Hit → Save → Puissance → Summary", () => {
         const attacker = createUnit("spaceMarine", 1, { q: 0, r: 0, s: 0 });
         const target = createUnit("chaosWarrior", 2, { q: 1, r: -1, s: 0 });
         const weapon = attacker.weapons[1]; // Combat Knife (melee)
@@ -106,37 +107,71 @@ describe("combat", () => {
 
             if (result.log.length === 4) {
                 foundFullSequence = true;
-                expect(labels[1]).toContain("To Wound");
-                expect(labels[2]).toContain("Sauvegarde");
+                expect(labels[1]).toContain("Sauvegarde");
+                expect(labels[2]).toContain("Puissance");
             }
         }
         expect(foundFullSequence).toBe(true);
     });
+
+    it("une arme avec PA rend la sauvegarde plus difficile", () => {
+        const attacker = createUnit("spaceMarine", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("chaosWarrior", 2, { q: 1, r: -1, s: 0 }); // save 4+
+        // On compare la même arme avec et sans PA
+        const withPA = { id: "test", name: "Test", type: "melee", range: 1, attacks: 3, strength: 4, ap: -2, damage: 1 };
+        const noPA = { id: "test", name: "Test", type: "melee", range: 1, attacks: 3, strength: 4, ap: 0, damage: 1 };
+
+        let totalWithPA = 0, totalNoPA = 0;
+        for (let i = 0; i < 1000; i++) {
+            totalWithPA += resolveAttack(attacker, withPA, target).damage;
+            totalNoPA += resolveAttack(attacker, noPA, target).damage;
+        }
+        expect(totalWithPA).toBeGreaterThan(totalNoPA);
+    });
+
+    it("une arme forte contre une cible faible fait plus de dégâts qu'une arme faible contre une cible résistante", () => {
+        // Choppa (str 5) vs Space Marine (toughness 4) → mult 1.5
+        const orc = createUnit("orcBoy", 1, { q: 0, r: 0, s: 0 });
+        const marine = createUnit("spaceMarine", 2, { q: 1, r: -1, s: 0 });
+        const choppa = orc.weapons[0];
+
+        // Slugga (str 4) vs Chaos Warrior (toughness 5) → mult 0.5
+        const orc2 = createUnit("orcBoy", 1, { q: 0, r: 0, s: 0 });
+        const chaos = createUnit("chaosWarrior", 2, { q: 1, r: -1, s: 0 });
+        const slugga = orc2.weapons[1];
+
+        let totalStrong = 0, totalWeak = 0;
+        for (let i = 0; i < 500; i++) {
+            totalStrong += resolveAttack(orc, choppa, marine).damage;
+            totalWeak += resolveAttack(orc2, slugga, chaos).damage;
+        }
+        expect(totalStrong).toBeGreaterThan(totalWeak);
+    });
 });
 
 // ────────────────────────────────────────────────
-// SEUILS DE BLESSURE (table Warhammer)
+// MULTIPLICATEUR DE DÉGÂTS (Force vs Endurance)
 // ────────────────────────────────────────────────
 
-describe("table de blessure", () => {
-    it("force double de l'endurance → seuil 2+", () => {
-        expect(woundThreshold(8, 4)).toBe(2);
+describe("multiplicateur de dégâts", () => {
+    it("force double de l'endurance → ×2", () => {
+        expect(damageMultiplier(8, 4)).toBe(2);
     });
 
-    it("force supérieure à l'endurance → seuil 3+", () => {
-        expect(woundThreshold(5, 4)).toBe(3);
+    it("force supérieure à l'endurance → ×1.5", () => {
+        expect(damageMultiplier(5, 4)).toBe(1.5);
     });
 
-    it("force égale à l'endurance → seuil 4+", () => {
-        expect(woundThreshold(4, 4)).toBe(4);
+    it("force égale à l'endurance → ×1", () => {
+        expect(damageMultiplier(4, 4)).toBe(1);
     });
 
-    it("force inférieure à l'endurance → seuil 5+", () => {
-        expect(woundThreshold(3, 4)).toBe(5);
+    it("force inférieure à l'endurance → ×0.5", () => {
+        expect(damageMultiplier(3, 4)).toBe(0.5);
     });
 
-    it("force moitié de l'endurance → seuil 6+", () => {
-        expect(woundThreshold(2, 4)).toBe(6);
+    it("force moitié de l'endurance → ×0.25", () => {
+        expect(damageMultiplier(2, 4)).toBe(0.25);
     });
 });
 
@@ -279,6 +314,53 @@ describe("état initial du jeu", () => {
         const state = initState();
         for (const obs of state.obstacles) {
             expect(isValidHex(obs)).toBe(true);
+        }
+    });
+
+    it("toutes les armes de mêlée ont une portée de 1", () => {
+        const state = initState();
+        for (const unit of state.units) {
+            for (const w of unit.weapons) {
+                if (w.type === "melee") expect(w.range).toBe(1);
+            }
+        }
+    });
+});
+
+// ────────────────────────────────────────────────
+// CONVERSIONS HEX ↔ PIXEL
+// ────────────────────────────────────────────────
+
+describe("conversions hex ↔ pixel", () => {
+    it("convertir un hex en pixel puis revenir donne le même hex", () => {
+        const hexes = [
+            { q: 3, r: -2, s: -1 },
+            { q: -4, r: 1, s: 3 },
+            { q: 5, r: -5, s: 0 },
+            { q: 2, r: 1, s: -3 },
+        ];
+        for (const h of hexes) {
+            const px = hexToPixel(h.q, h.r);
+            const back = pixelToHex(px.x, px.y);
+            expect(back.q).toBe(h.q);
+            expect(back.r).toBe(h.r);
+            expect(back.s).toBe(h.s);
+        }
+    });
+
+    it("hexKey produit des clés différentes pour des hexes différents", () => {
+        const a = { q: 1, r: -1, s: 0 };
+        const b = { q: 1, r: 0, s: -1 };
+        expect(hexKey(a)).not.toBe(hexKey(b));
+    });
+
+    it("deux hexes adjacents sont toujours en ligne de vue", () => {
+        const a = { q: 0, r: 0, s: 0 };
+        const neighbors = hexNeighbors(a);
+        // Même avec des obstacles ailleurs, les adjacents se voient
+        const obstacleKeys = new Set([hexKey({ q: 3, r: -3, s: 0 })]);
+        for (const n of neighbors) {
+            expect(hasLineOfSight(a, n, obstacleKeys)).toBe(true);
         }
     });
 });
