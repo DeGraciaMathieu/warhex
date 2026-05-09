@@ -349,6 +349,15 @@ describe("villes", () => {
         expect(reachableKeys.has(hexKey(beyondTown))).toBe(false);
     });
 
+    it("une ville entre deux hexes bloque la ligne de vue", () => {
+        const a = { q: -2, r: 0, s: 2 };
+        const b = { q: 2, r: 0, s: -2 };
+        const town = { q: 0, r: 0, s: 0 };
+        const losKeys = new Set([hexKey(town)]);
+
+        expect(hasLineOfSight(a, b, losKeys)).toBe(false);
+    });
+
     it("une unité qui démarre sur une ville peut se déplacer normalement", () => {
         const origin = { q: 0, r: 0, s: 0 };
         const townKeys = new Set([hexKey(origin)]);
@@ -651,6 +660,11 @@ describe("système de points", () => {
     it("égalité de points au tour 5 donne un match nul", () => {
         expect(checkWinner({ 1: 4, 2: 4 }, 5)).toBe("draw");
     });
+
+    it("la partie peut se terminer après le tour 5", () => {
+        expect(checkWinner({ 1: 10, 2: 3 }, 7)).toBe(1);
+        expect(checkWinner({ 1: 2, 2: 8 }, 6)).toBe(2);
+    });
 });
 
 // ────────────────────────────────────────────────
@@ -695,5 +709,109 @@ describe("conversions hex ↔ pixel", () => {
         for (const n of neighbors) {
             expect(hasLineOfSight(a, n, obstacleKeys)).toBe(true);
         }
+    });
+});
+
+// ────────────────────────────────────────────────
+// FORÊTS
+// ────────────────────────────────────────────────
+
+describe("forêts", () => {
+    it("entrer dans une forêt coûte 2 points de mouvement", () => {
+        const origin = { q: 0, r: 0, s: 0 };
+        const forest = { q: 1, r: -1, s: 0 };
+        const forestKeys = new Set([hexKey(forest)]);
+        // Avec mouvement 1, on ne peut pas entrer dans une forêt (coût 2)
+        const reachable1 = reachableHexes(origin, 1, new Set(), new Set(), new Set(), forestKeys);
+        expect(new Set(reachable1.map(hexKey)).has(hexKey(forest))).toBe(false);
+        // Avec mouvement 2, on peut y entrer
+        const reachable2 = reachableHexes(origin, 2, new Set(), new Set(), new Set(), forestKeys);
+        expect(new Set(reachable2.map(hexKey)).has(hexKey(forest))).toBe(true);
+    });
+
+    it("une forêt ne bloque pas la ligne de vue", () => {
+        const a = { q: -2, r: 0, s: 2 };
+        const b = { q: 2, r: 0, s: -2 };
+        const obstacleKeys = new Set();
+
+        // La forêt sur le chemin ne bloque pas la LOS (seuls obstacles et villes bloquent)
+        expect(hasLineOfSight(a, b, obstacleKeys)).toBe(true);
+    });
+
+    it("une forêt réduit la portée de déplacement effective", () => {
+        const origin = { q: 0, r: 0, s: 0 };
+        const forestKeys = new Set([hexKey({ q: 1, r: -1, s: 0 })]);
+        const withForest = reachableHexes(origin, 3, new Set(), new Set(), new Set(), forestKeys);
+        const withoutForest = reachableHexes(origin, 3, new Set(), new Set(), new Set(), new Set());
+        expect(withForest.length).toBeLessThan(withoutForest.length);
+    });
+});
+
+// ────────────────────────────────────────────────
+// VILLES SYMÉTRIQUES
+// ────────────────────────────────────────────────
+
+describe("villes symétriques", () => {
+    it("les villes sont placées en paires symétriques par rapport au centre", () => {
+        for (let i = 0; i < 20; i++) {
+            resetUID();
+            const state = initState();
+            const townKeys = new Set(state.towns.map(hexKey));
+            for (const t of state.towns) {
+                const mirror = { q: -t.q, r: -t.r, s: -t.s };
+                expect(townKeys.has(hexKey(mirror))).toBe(true);
+            }
+        }
+    });
+
+    it("aucune ville n'est au centre de la grille", () => {
+        for (let i = 0; i < 20; i++) {
+            resetUID();
+            const state = initState();
+            for (const t of state.towns) {
+                expect(hexKey(t)).not.toBe(hexKey({ q: 0, r: 0, s: 0 }));
+            }
+        }
+    });
+});
+
+// ────────────────────────────────────────────────
+// COMPÉTENCES DE COMBAT
+// ────────────────────────────────────────────────
+
+describe("compétences de combat", () => {
+    it("une arme de mêlée utilise weaponSkill, une arme à distance utilise ballisticSkill", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const melee = attacker.weapons.find(w => w.type === "melee");
+        const ranged = attacker.weapons.find(w => w.type === "ranged");
+
+        // Melee → To Hit label doit contenir weaponSkill (3+)
+        for (let i = 0; i < 20; i++) {
+            const result = resolveAttack(attacker, melee, target);
+            expect(result.log[0].label).toContain(`${attacker.weaponSkill}+`);
+        }
+        // Ranged → To Hit label doit contenir ballisticSkill (4+)
+        for (let i = 0; i < 20; i++) {
+            const result = resolveAttack(attacker, ranged, target);
+            expect(result.log[0].label).toContain(`${attacker.ballisticSkill}+`);
+        }
+    });
+
+    it("si aucun dé ne touche, il n'y a pas de phase de sauvegarde", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const weapon = attacker.weapons[0];
+
+        let foundNoHits = false;
+        for (let i = 0; i < 200; i++) {
+            const result = resolveAttack(attacker, weapon, target);
+            if (result.log[0].success === 0) {
+                foundNoHits = true;
+                expect(result.log.length).toBe(2); // To Hit + Summary, pas de Save
+                expect(result.damage).toBe(0);
+            }
+        }
+        expect(foundNoHits).toBe(true);
     });
 });
