@@ -235,6 +235,8 @@ export default function HexWarhammer() {
         }
         .roll-hit { background: rgba(76,175,80,.15); border-color: #4caf50; color: #2e7d32; }
         .roll-miss { background: rgba(244,67,54,.1); border-color: #e53935; color: #c62828; }
+        .roll-save { background: rgba(42,111,168,.15); border-color: #2a6fa8; color: #1a5a8a; }
+        .roll-save-fail { background: rgba(138,122,96,.1); border-color: #c8b898; color: #8a7a60; }
         canvas { cursor: crosshair; display: block; }
         .roll-new { animation: diceAppear .45s ease-out; }
         @keyframes diceAppear {
@@ -396,7 +398,7 @@ export default function HexWarhammer() {
                                                         ? parseInt((entry.label.match(/(\d+)\+/) || [0, 7])[1])
                                                         : parseInt((entry.label.match(/(\d+)\+/) || [0, 0])[1]);
                                                     const hit = r >= needed;
-                                                    const cls = (entry.isSave ? hit : hit) ? (entry.isSave ? "roll-miss" : "roll-hit") : (entry.isSave ? "roll-hit" : "roll-miss");
+                                                    const cls = entry.isSave ? (hit ? "roll-save" : "roll-save-fail") : (hit ? "roll-hit" : "roll-miss");
                                                     const isNew = isCurrentPhase && j === src.dice - 1;
                                                     return <span key={j} className={`roll-chip ${cls}${isNew ? " roll-new" : ""}`}>{r}</span>;
                                                 })}
