@@ -1,3 +1,5 @@
+import { hexKey } from "./hex.js";
+
 const UNIT_TEMPLATES = {
     warrior: {
         name: "Warrior", symbol: "⚔",
@@ -67,6 +69,22 @@ function generateRiver(reservedKeys) {
     return river;
 }
 
+export function computeTownControl(units, towns) {
+    const townKeys = new Set(towns.map(hexKey));
+    const alive = units.filter(u => u.currentWounds > 0);
+    return {
+        1: alive.filter(u => u.player === 1 && townKeys.has(hexKey(u.hex))).length,
+        2: alive.filter(u => u.player === 2 && townKeys.has(hexKey(u.hex))).length,
+    };
+}
+
+export function checkWinner(scores, round) {
+    if (round < 5) return null;
+    if (scores[1] > scores[2]) return 1;
+    if (scores[2] > scores[1]) return 2;
+    return "draw";
+}
+
 export function initState() {
     const units = [
         createUnit("warrior", 1, { q: -4, r: 0, s: 4 }),
@@ -99,6 +117,7 @@ export function initState() {
         roundLog: null,
         winner: null,
         round: 1,
+        scores: { 1: 0, 2: 0 },
         activeUnitId: null,
         autoEndTurn: false,
     };

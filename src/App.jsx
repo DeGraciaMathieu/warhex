@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex, reachableHexes, hasLineOfSight } from "./hex.js";
 import { resolveAttack } from "./combat.js";
-import { initState, resetUID } from "./units.js";
+import { initState, resetUID, computeTownControl, checkWinner } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY } from "./renderer.js";
 
 export default function HexWarhammer() {
@@ -29,8 +29,6 @@ export default function HexWarhammer() {
                     if (u.id === target.id) return { ...u, currentWounds: newWounds };
                     return u;
                 });
-                const remainingEnemies = units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
-                const winner = remainingEnemies.length === 0 ? s.currentPlayer : null;
                 const combatLog = [
                     `⚔ ${attacker.name} → ${target.name} [${diceAnim.weaponName}]`,
                     isDead ? `💀 ${target.name} éliminé !` : `❤ ${target.name} : ${newWounds}/${target.wounds} PV`,
@@ -38,7 +36,7 @@ export default function HexWarhammer() {
                 ];
                 return {
                     ...s, units, phase: "select", selectedUnit: null, validMoves: [], validTargets: [],
-                    pendingAttack: null, combatLog, winner, autoEndTurn: !winner,
+                    pendingAttack: null, combatLog, autoEndTurn: true,
                     roundLog: { weapon: diceAnim.weaponName, attacker: attacker.name, target: target.name, log, isDead, damage },
                 };
             });
@@ -179,13 +177,26 @@ export default function HexWarhammer() {
         setState(s => {
             if (s.winner) return s;
             const nextPlayer = s.currentPlayer === 1 ? 2 : 1;
+            const endOfRound = nextPlayer === 1;
+            const scores = { ...s.scores };
+            let combatLog = [`— Tour ${s.round + (endOfRound ? 1 : 0)}, Joueur ${nextPlayer}`, ...s.combatLog.slice(0, 9)];
+            if (endOfRound) {
+                const control = computeTownControl(s.units, s.towns);
+                scores[1] += control[1];
+                scores[2] += control[2];
+                const scoreLog = [];
+                if (control[1] > 0) scoreLog.push(`🏰 J1 +${control[1]} pt${control[1] > 1 ? "s" : ""}`);
+                if (control[2] > 0) scoreLog.push(`🏰 J2 +${control[2]} pt${control[2] > 1 ? "s" : ""}`);
+                if (scoreLog.length > 0) combatLog = [...scoreLog, ...combatLog];
+            }
+            const newRound = endOfRound ? s.round + 1 : s.round;
+            const winner = endOfRound ? checkWinner(scores, s.round) : null;
             return {
-                ...s,
+                ...s, scores,
                 units: s.units.map(u => ({ ...u, hasMoved: false, hasAttacked: false })),
                 currentPlayer: nextPlayer, activeUnitId: null,
                 phase: "select", selectedUnit: null, validMoves: [], validTargets: [], pendingAttack: null,
-                combatLog: [`— Tour ${s.round + (nextPlayer === 1 ? 1 : 0)}, Joueur ${nextPlayer}`, ...s.combatLog.slice(0, 9)],
-                round: nextPlayer === 1 ? s.round + 1 : s.round,
+                combatLog, round: newRound, winner,
                 roundLog: null, autoEndTurn: false,
             };
         });
@@ -269,10 +280,12 @@ export default function HexWarhammer() {
                         padding: "4px 12px", fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: ".1em",
                         color: P[state.currentPlayer], borderRadius: 1,
                     }}>
-                        {state.winner ? `🏆 JOUEUR ${state.winner} VICTORIEUX` : `J${state.currentPlayer} — ${phaseLabel}`}
+                        {state.winner ? (state.winner === "draw" ? "⚖ ÉGALITÉ" : `🏆 JOUEUR ${state.winner} VICTORIEUX`) : `J${state.currentPlayer} — ${phaseLabel}`}
                     </div>
-                    <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(245,240,232,.92)", border: "1px solid #c8b898", padding: "4px 10px", fontFamily: "'Cinzel', serif", fontSize: 10, color: "#8a7a60" }}>
-                        TOUR {state.round}
+                    <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(245,240,232,.92)", border: "1px solid #c8b898", padding: "4px 10px", fontFamily: "'Cinzel', serif", fontSize: 10, color: "#8a7a60", display: "flex", gap: 10, alignItems: "center" }}>
+                        <span style={{ color: "#2a6fa8" }}>{state.scores[1]} pts</span>
+                        <span>TOUR {state.round}/5</span>
+                        <span style={{ color: "#a03030" }}>{state.scores[2]} pts</span>
                     </div>
                     <div style={{ position: "absolute", bottom: 8, left: 8, display: "flex", gap: 12, fontSize: 11, color: "#8a7a60" }}>
                         <span style={{ color: "#2a6fa8" }}>● Joueur 1</span>
@@ -327,16 +340,23 @@ export default function HexWarhammer() {
                                 const effectiveSave = target.save - (inTown ? 1 : 0) + Math.abs(w.ap);
                                 const cantSave = effectiveSave > 6;
                                 const saveColor = cantSave ? "#2e7d32" : effectiveSave >= 6 ? "#558b2f" : effectiveSave >= 4 ? "#8a7a60" : effectiveSave >= 3 ? "#e65100" : "#c62828";
+                                const attacker = state.pendingAttack.attacker;
+                                const skill = w.type === "ranged" ? attacker.ballisticSkill : attacker.weaponSkill;
                                 return (
                                     <button key={w.id} className={`weapon-card${ok ? "" : " disabled"}`} onClick={() => ok && selectWeapon(w)}>
                                         <div style={{ fontWeight: 600, fontSize: 13 }}>{w.name} {w.type === "ranged" ? "🏹" : "🗡"}</div>
-                                        <div style={{ fontSize: 11, color: ok ? "#8a7a60" : "#b0a090", marginTop: 3 }}>
-                                            {w.type === "ranged" ? `Portée ${w.range}` : "Mêlée (adj.)"} · A{w.attacks} PA{w.ap} D{w.damage}
-                                            {!ok && ` · (trop loin: ${dist})`}
-                                        </div>
-                                        {ok && (
-                                            <div style={{ display: "flex", gap: 8, marginTop: 5, fontSize: 10 }}>
-                                                <span style={{ color: saveColor, fontWeight: 600 }}>{cantSave ? "Svg impossible" : `Svg ${effectiveSave}+`}{inTown ? " 🏰" : ""}</span>
+                                        {!ok ? (
+                                            <div style={{ fontSize: 11, color: "#b0a090", marginTop: 3 }}>
+                                                {w.type === "ranged" ? `Portée ${w.range}` : "Mêlée (adjacent)"} · Trop loin ({dist} hex)
+                                            </div>
+                                        ) : (
+                                            <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 5, fontSize: 11, color: "#6a5a40" }}>
+                                                <div>{w.type === "ranged" ? `Portée ${w.range} hex` : "Mêlée (adjacent)"} · Distance : {dist}</div>
+                                                <div>Touche sur {skill}+ · {w.attacks} {w.attacks > 1 ? "attaques" : "attaque"}</div>
+                                                <div>{w.damage} {w.damage > 1 ? "dégâts" : "dégât"} par touche · Pénétration {Math.abs(w.ap)}</div>
+                                                <div style={{ color: saveColor, fontWeight: 600, marginTop: 2 }}>
+                                                    {cantSave ? "Sauvegarde impossible" : `Sauvegarde ennemie sur ${effectiveSave}+`}{inTown ? " 🏰 (couvert)" : ""}
+                                                </div>
                                             </div>
                                         )}
                                     </button>
