@@ -64,9 +64,9 @@ describe("déplacement", () => {
 
 describe("combat", () => {
     it("une attaque produit toujours un résultat avec des dégâts >= 0", () => {
-        const attacker = createUnit("spaceMarine", 1, { q: 0, r: 0, s: 0 });
-        const target = createUnit("orcBoy", 2, { q: 1, r: -1, s: 0 });
-        const weapon = attacker.weapons[0]; // Bolter
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const weapon = attacker.weapons[0]; // Rifle
 
         for (let i = 0; i < 50; i++) {
             const result = resolveAttack(attacker, weapon, target);
@@ -76,9 +76,9 @@ describe("combat", () => {
     });
 
     it("les dégâts ne dépassent jamais attaques × damage", () => {
-        const attacker = createUnit("chaosWarrior", 2, { q: 0, r: 0, s: 0 });
-        const target = createUnit("orcBoy", 1, { q: 1, r: -1, s: 0 });
-        const weapon = attacker.weapons[0]; // Chainsword: 4 attacks, 2 damage
+        const attacker = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 1, { q: 1, r: -1, s: 0 });
+        const weapon = attacker.weapons[0]; // Rifle: 2 attacks, 1 damage
         const maxDamage = weapon.attacks * weapon.damage;
 
         for (let i = 0; i < 100; i++) {
@@ -88,9 +88,9 @@ describe("combat", () => {
     });
 
     it("le log de combat suit la séquence To Hit → Save → Summary", () => {
-        const attacker = createUnit("spaceMarine", 1, { q: 0, r: 0, s: 0 });
-        const target = createUnit("chaosWarrior", 2, { q: 1, r: -1, s: 0 });
-        const weapon = attacker.weapons[1]; // Combat Knife (melee)
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const weapon = attacker.weapons[1]; // Sword (melee)
 
         // On lance assez de fois pour avoir au moins un combat complet
         let foundFullSequence = false;
@@ -113,8 +113,8 @@ describe("combat", () => {
     });
 
     it("une arme avec PA rend la sauvegarde plus difficile", () => {
-        const attacker = createUnit("spaceMarine", 1, { q: 0, r: 0, s: 0 });
-        const target = createUnit("chaosWarrior", 2, { q: 1, r: -1, s: 0 }); // save 4+
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 }); // save 4+
         // On compare la même arme avec et sans PA
         const withPA = { id: "test", name: "Test", type: "melee", range: 1, attacks: 3, strength: 4, ap: -2, damage: 1 };
         const noPA = { id: "test", name: "Test", type: "melee", range: 1, attacks: 3, strength: 4, ap: 0, damage: 1 };
@@ -127,9 +127,33 @@ describe("combat", () => {
         expect(totalWithPA).toBeGreaterThan(totalNoPA);
     });
 
+    it("un PA assez fort rend la sauvegarde impossible", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 }); // save 4+
+        const bigAP = { id: "test", name: "Test", type: "melee", range: 1, attacks: 4, strength: 4, ap: -3, damage: 1 };
+        // save 4 + 3 = 7+ → impossible
+
+        let found = false;
+        for (let i = 0; i < 100; i++) {
+            const result = resolveAttack(attacker, bigAP, target);
+            const saveEntry = result.log.find(e => e.isSave);
+            if (saveEntry) {
+                found = true;
+                expect(saveEntry.label).toContain("impossible");
+                expect(saveEntry.success).toBe(0);
+            }
+        }
+        expect(found).toBe(true);
+    });
+
+    it("un hex a exactement 6 voisins", () => {
+        const hex = { q: 0, r: 0, s: 0 };
+        expect(hexNeighbors(hex)).toHaveLength(6);
+    });
+
     it("une arme avec plus d'attaques fait plus de dégâts en moyenne", () => {
-        const attacker = createUnit("spaceMarine", 1, { q: 0, r: 0, s: 0 });
-        const target = createUnit("orcBoy", 2, { q: 1, r: -1, s: 0 });
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
         const manyAttacks = { id: "test", name: "Test", type: "melee", range: 1, attacks: 4, strength: 4, ap: 0, damage: 1 };
         const fewAttacks = { id: "test2", name: "Test2", type: "melee", range: 1, attacks: 1, strength: 4, ap: 0, damage: 1 };
 
@@ -139,6 +163,33 @@ describe("combat", () => {
             totalFew += resolveAttack(attacker, fewAttacks, target).damage;
         }
         expect(totalMany).toBeGreaterThan(totalFew);
+    });
+
+    it("le couvert de ville réduit les dégâts subis", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const weapon = { id: "test", name: "Test", type: "melee", range: 1, attacks: 4, strength: 4, ap: -1, damage: 1 };
+
+        let totalNoCover = 0, totalCover = 0;
+        for (let i = 0; i < 1000; i++) {
+            totalNoCover += resolveAttack(attacker, weapon, target).damage;
+            totalCover += resolveAttack(attacker, weapon, target, { coverBonus: 1 }).damage;
+        }
+        expect(totalNoCover).toBeGreaterThan(totalCover);
+    });
+
+    it("le défenseur lance toujours 3 dés de sauvegarde", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const weapon = attacker.weapons[1];
+
+        for (let i = 0; i < 100; i++) {
+            const result = resolveAttack(attacker, weapon, target);
+            const saveEntry = result.log.find(e => e.isSave);
+            if (saveEntry) {
+                expect(saveEntry.rolls).toHaveLength(3);
+            }
+        }
     });
 });
 
@@ -273,6 +324,32 @@ describe("rivières", () => {
 });
 
 // ────────────────────────────────────────────────
+// VILLES
+// ────────────────────────────────────────────────
+
+describe("villes", () => {
+    it("entrer dans une ville stoppe le déplacement", () => {
+        const origin = { q: -1, r: 0, s: 1 };
+        const town = { q: 0, r: 0, s: 0 };
+        const beyondTown = { q: 1, r: 0, s: -1 };
+        const townKeys = new Set([hexKey(town)]);
+        const reachable = reachableHexes(origin, 2, new Set(), new Set(), townKeys);
+        const reachableKeys = new Set(reachable.map(hexKey));
+
+        expect(reachableKeys.has(hexKey(town))).toBe(true);
+        expect(reachableKeys.has(hexKey(beyondTown))).toBe(false);
+    });
+
+    it("une unité qui démarre sur une ville peut se déplacer normalement", () => {
+        const origin = { q: 0, r: 0, s: 0 };
+        const townKeys = new Set([hexKey(origin)]);
+        const reachable = reachableHexes(origin, 3, new Set(), new Set(), townKeys);
+
+        expect(reachable.length).toBeGreaterThan(6);
+    });
+});
+
+// ────────────────────────────────────────────────
 // ÉTAT INITIAL
 // ────────────────────────────────────────────────
 
@@ -307,10 +384,13 @@ describe("état initial du jeu", () => {
         expect(state.winner).toBeNull();
     });
 
-    it("chaque unité a au moins une arme", () => {
+    it("chaque unité a une arme à distance et une arme de mêlée", () => {
         const state = initState();
         for (const unit of state.units) {
-            expect(unit.weapons.length).toBeGreaterThanOrEqual(1);
+            const ranged = unit.weapons.filter(w => w.type === "ranged");
+            const melee = unit.weapons.filter(w => w.type === "melee");
+            expect(ranged).toHaveLength(1);
+            expect(melee).toHaveLength(1);
         }
     });
 
@@ -333,6 +413,35 @@ describe("état initial du jeu", () => {
         const state = initState();
         for (const obs of state.obstacles) {
             expect(isValidHex(obs)).toBe(true);
+        }
+    });
+
+    it("les rivières ne chevauchent ni unités ni obstacles", () => {
+        const state = initState();
+        const unitKeys = new Set(state.units.map(u => hexKey(u.hex)));
+        const obsKeys = new Set(state.obstacles.map(o => hexKey(o)));
+        for (const r of state.rivers) {
+            expect(unitKeys.has(hexKey(r))).toBe(false);
+            expect(obsKeys.has(hexKey(r))).toBe(false);
+        }
+    });
+
+    it("les villes ne chevauchent ni unités, ni obstacles, ni rivières", () => {
+        const state = initState();
+        const unitKeys = new Set(state.units.map(u => hexKey(u.hex)));
+        const obsKeys = new Set(state.obstacles.map(o => hexKey(o)));
+        const riverKeys = new Set(state.rivers.map(r => hexKey(r)));
+        for (const t of state.towns) {
+            expect(unitKeys.has(hexKey(t))).toBe(false);
+            expect(obsKeys.has(hexKey(t))).toBe(false);
+            expect(riverKeys.has(hexKey(t))).toBe(false);
+        }
+    });
+
+    it("les villes sont sur des hexes valides", () => {
+        const state = initState();
+        for (const t of state.towns) {
+            expect(isValidHex(t)).toBe(true);
         }
     });
 
