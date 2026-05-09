@@ -254,6 +254,58 @@ describe("obstacles", () => {
 });
 
 // ────────────────────────────────────────────────
+// RIVIÈRES
+// ────────────────────────────────────────────────
+
+describe("rivières", () => {
+    it("entrer dans une rivière stoppe le déplacement", () => {
+        const origin = { q: -1, r: 0, s: 1 };
+        const river = { q: 0, r: 0, s: 0 };
+        const beyondRiver = { q: 1, r: 0, s: -1 };
+        const riverKeys = new Set([hexKey(river)]);
+        const reachable = reachableHexes(origin, 2, new Set(), new Set(), riverKeys);
+        const reachableKeys = new Set(reachable.map(hexKey));
+
+        // La case rivière est accessible
+        expect(reachableKeys.has(hexKey(river))).toBe(true);
+        // La case juste après la rivière n'est pas accessible (mouvement stoppé, pas assez pour contourner)
+        expect(reachableKeys.has(hexKey(beyondRiver))).toBe(false);
+    });
+
+    it("une unité qui démarre sur une rivière peut se déplacer normalement", () => {
+        const origin = { q: 0, r: 0, s: 0 };
+        const riverKeys = new Set([hexKey(origin)]);
+        const reachable = reachableHexes(origin, 3, new Set(), new Set(), riverKeys);
+
+        // L'unité peut se déplacer au-delà de la case adjacente
+        expect(reachable.length).toBeGreaterThan(6);
+    });
+
+    it("une rivière ne bloque pas la ligne de vue", () => {
+        const a = { q: -2, r: 0, s: 2 };
+        const b = { q: 2, r: 0, s: -2 };
+        const river = { q: 0, r: 0, s: 0 };
+        const obstacleKeys = new Set();
+        const riverKeys = new Set([hexKey(river)]);
+
+        // La rivière n'est pas un obstacle pour la LdV
+        expect(hasLineOfSight(a, b, obstacleKeys)).toBe(true);
+    });
+
+    it("on peut contourner une rivière si le mouvement le permet", () => {
+        const origin = { q: -1, r: 0, s: 1 };
+        const river = { q: 0, r: 0, s: 0 };
+        const target = { q: 1, r: 0, s: -1 };
+        const riverKeys = new Set([hexKey(river)]);
+        const reachable = reachableHexes(origin, 5, new Set(), new Set(), riverKeys);
+        const reachableKeys = new Set(reachable.map(hexKey));
+
+        // Le hex derrière la rivière est accessible par un contournement
+        expect(reachableKeys.has(hexKey(target))).toBe(true);
+    });
+});
+
+// ────────────────────────────────────────────────
 // ÉTAT INITIAL
 // ────────────────────────────────────────────────
 

@@ -49,8 +49,8 @@ export function hexCorners(cx, cy, size) {
 }
 
 export function reachableHexes(start, movement, occupiedKeys, obstacleKeys = new Set(), riverKeys = new Set()) {
-    const visited = new Map([[hexKey(start), 0]]);
-    const stopped = new Set();
+    const startKey = hexKey(start);
+    const visited = new Map([[startKey, 0]]);
     const queue = [start];
     const result = [];
     while (queue.length) {
@@ -58,15 +58,13 @@ export function reachableHexes(start, movement, occupiedKeys, obstacleKeys = new
         const curKey = hexKey(cur);
         const dist = visited.get(curKey);
         if (dist > 0) result.push(cur);
-        if (dist < movement && !stopped.has(curKey)) {
+        const isRiverStop = curKey !== startKey && riverKeys.has(curKey);
+        if (dist < movement && !isRiverStop) {
             for (const n of hexNeighbors(cur)) {
                 const k = hexKey(n);
                 if (!visited.has(k) && !occupiedKeys.has(k) && !obstacleKeys.has(k) && isValidHex(n)) {
                     visited.set(k, dist + 1);
                     queue.push(n);
-                    if (riverKeys.has(curKey) && !riverKeys.has(k)) {
-                        stopped.add(k);
-                    }
                 }
             }
         }
