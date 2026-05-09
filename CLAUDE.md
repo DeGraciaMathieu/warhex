@@ -32,11 +32,7 @@ src/
 - Les fonctions pures (hex, combat) n'importent jamais React
 - Thème clair (fond beige `#f5f0e8`, texte foncé `#2a2015`)
 - Couleurs joueurs : bleu `#2a6fa8` (J1), rouge `#a03030` (J2)
-- Obstacles stockés dans `state.obstacles`, bloquent le déplacement et la ligne de vue
-- Rivières stockées dans `state.rivers`, entrer stoppe le mouvement, ne bloquent pas la ligne de vue
-- Villes stockées dans `state.towns`, entrer stoppe le mouvement, accordent -1 au seuil de sauvegarde
-- Forêts stockées dans `state.forests`, coûtent 2 points de mouvement au lieu de 1, générées en 3 zones contiguës de 2-5 hexes
-- Ligne de vue calculée par `hasLineOfSight()` dans `hex.js` (tracé de ligne hex)
+- Terrains (obstacles, rivières, villes, forêts) et armes : voir skills `terrains` et `weapons`
 
 ## Phases de jeu
 
