@@ -10,6 +10,14 @@ const UNIT_TEMPLATES = {
             { id: "sword", name: "Sword", type: "melee", range: 1, attacks: 3, strength: 4, ap: 0, damage: 1 },
         ],
     },
+    knight: {
+        name: "Knight", symbol: "🐴",
+        movement: 5, weaponSkill: 3, ballisticSkill: 4,
+        toughness: 4, wounds: 2, save: 4,
+        weapons: [
+            { id: "lance", name: "Lance", type: "melee", range: 1, attacks: 2, strength: 4, ap: -1, damage: 1 },
+        ],
+    },
 };
 
 let UID = 0;
@@ -126,10 +134,10 @@ export function initState() {
     const units = [
         createUnit("warrior", 1, { q: -4, r: 0, s: 4 }),
         createUnit("warrior", 1, { q: -3, r: 3, s: 0 }),
-        createUnit("warrior", 1, { q: -4, r: 2, s: 2 }),
+        createUnit("knight", 1, { q: -4, r: 2, s: 2 }),
         createUnit("warrior", 2, { q: 4, r: 0, s: -4 }),
         createUnit("warrior", 2, { q: 3, r: -3, s: 0 }),
-        createUnit("warrior", 2, { q: 4, r: -2, s: -2 }),
+        createUnit("knight", 2, { q: 4, r: -2, s: -2 }),
     ];
     const reservedKeys = new Set(units.map(u => `${u.hex.q},${u.hex.r},${u.hex.s}`));
     const obstacles = randomAvailableHexes(9, reservedKeys);

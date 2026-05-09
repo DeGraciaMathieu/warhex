@@ -403,13 +403,10 @@ describe("état initial du jeu", () => {
         expect(state.winner).toBeNull();
     });
 
-    it("chaque unité a une arme à distance et une arme de mêlée", () => {
+    it("chaque unité a au moins une arme", () => {
         const state = initState();
         for (const unit of state.units) {
-            const ranged = unit.weapons.filter(w => w.type === "ranged");
-            const melee = unit.weapons.filter(w => w.type === "melee");
-            expect(ranged).toHaveLength(1);
-            expect(melee).toHaveLength(1);
+            expect(unit.weapons.length).toBeGreaterThanOrEqual(1);
         }
     });
 
@@ -473,9 +470,10 @@ describe("état initial du jeu", () => {
         }
     });
 
-    it("le fusil a une portée de 2 cases", () => {
+    it("les warriors ont un fusil de portée 2", () => {
         const state = initState();
-        for (const unit of state.units) {
+        const warriors = state.units.filter(u => u.name === "Warrior");
+        for (const unit of warriors) {
             const rifle = unit.weapons.find(w => w.id === "rifle");
             expect(rifle.range).toBe(2);
         }
@@ -592,6 +590,32 @@ describe("création d'unités", () => {
         expect(unit.currentWounds).toBe(2);
         expect(unit.save).toBe(4);
         expect(unit.weapons).toHaveLength(2);
+    });
+    it("le knight a les stats attendues", () => {
+        const unit = createUnit("knight", 1, { q: 0, r: 0, s: 0 });
+        expect(unit.movement).toBe(5);
+        expect(unit.wounds).toBe(2);
+        expect(unit.save).toBe(4);
+        expect(unit.weapons).toHaveLength(1);
+        expect(unit.weapons[0].type).toBe("melee");
+        expect(unit.weapons[0].id).toBe("lance");
+    });
+
+    it("le knight n'a pas d'arme à distance", () => {
+        const unit = createUnit("knight", 1, { q: 0, r: 0, s: 0 });
+        const ranged = unit.weapons.filter(w => w.type === "ranged");
+        expect(ranged).toHaveLength(0);
+    });
+
+    it("la partie a 2 warriors et 1 knight par joueur", () => {
+        const state = initState();
+        for (const player of [1, 2]) {
+            const units = state.units.filter(u => u.player === player);
+            const warriors = units.filter(u => u.name === "Warrior");
+            const knights = units.filter(u => u.name === "Knight");
+            expect(warriors).toHaveLength(2);
+            expect(knights).toHaveLength(1);
+        }
     });
 });
 
