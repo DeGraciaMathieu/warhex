@@ -49,6 +49,19 @@ Chaque tour, un joueur agit avec **une seule unité** (déplacement et/ou attaqu
 2. **Sauvegarde** : 3 dés, jet >= (save - coverBonus + |PA|), impossible si > 6
 3. **Dégâts** : touches non sauvées × damage
 
+## Conventions de code
+
+- Toute logique métier (scoring, victoire, terrain) doit être dans des fonctions pures exportées (`hex.js`, `combat.js`, `units.js`), jamais directement dans `App.jsx`
+- `App.jsx` ne fait qu'orchestrer l'état React et le rendu — il appelle les fonctions pures
+- Tout nouveau champ d'état doit être initialisé dans `initState()` de `units.js`
+
+## Tests
+
+- Fichier : `tests/mechanics.test.js`
+- Commande : `source ~/.nvm/nvm.sh && nvm use 22 && npx vitest run`
+- Tests macro uniquement : on teste le comportement fonctionnel, pas les détails d'implémentation
+- Utiliser les fonctions exportées comme un utilisateur du module le ferait
+
 ## Pour ajouter une feature
 
 - **Nouveau type d'unité** → ajouter le template dans `src/units.js`
