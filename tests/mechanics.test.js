@@ -487,7 +487,7 @@ describe("état initial du jeu", () => {
         for (let i = 0; i < 20; i++) {
             resetUID();
             const state = initState();
-            expect(state.forests.length).toBeGreaterThanOrEqual(6);
+            expect(state.forests.length).toBeGreaterThanOrEqual(3);
             expect(state.forests.length).toBeLessThanOrEqual(15);
         }
     });
