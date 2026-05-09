@@ -141,15 +141,15 @@ export default function HexWarhammer() {
 
     if (armyPhase) {
         return (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif", gap: 24 }}>
-                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 24, fontWeight: 700, letterSpacing: ".2em", color: "#8a6a08" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif", gap: 32 }}>
+                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 28, fontWeight: 700, letterSpacing: ".2em", color: "#8a6a08" }}>
                     ⚔ SÉLECTION D'ARMÉE ⚔
                 </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                    <button className={`btn ${!vsAI ? "btn-gold" : "btn-grey"}`} onClick={() => { setVsAI(false); setSelections(prev => ({ ...prev, 2: [] })); }} style={{ width: "auto", padding: "6px 16px", fontSize: 12 }}>
+                <div style={{ display: "flex", gap: 10 }}>
+                    <button className={`btn ${!vsAI ? "btn-gold" : "btn-grey"}`} onClick={() => { setVsAI(false); setSelections(prev => ({ ...prev, 2: [] })); }} style={{ width: "auto", padding: "8px 20px" }}>
                         2 Joueurs
                     </button>
-                    <button className={`btn ${vsAI ? "btn-gold" : "btn-grey"}`} onClick={() => { setVsAI(true); randomArmy(2); }} style={{ width: "auto", padding: "6px 16px", fontSize: 12 }}>
+                    <button className={`btn ${vsAI ? "btn-gold" : "btn-grey"}`} onClick={() => { setVsAI(true); randomArmy(2); }} style={{ width: "auto", padding: "8px 20px" }}>
                         vs IA
                     </button>
                 </div>
@@ -157,11 +157,11 @@ export default function HexWarhammer() {
                     {[1, 2].map(player => {
                         const isAIPlayer = vsAI && player === 2;
                         return (
-                        <div key={player} style={{ width: 280, border: `2px solid ${P[player]}`, borderRadius: 4, padding: 16, background: "#ece5d8", opacity: isAIPlayer ? 0.5 : 1, pointerEvents: isAIPlayer ? "none" : "auto" }}>
-                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 14, fontWeight: 700, color: P[player], marginBottom: 12, textAlign: "center" }}>
+                        <div key={player} style={{ width: 320, border: `2px solid ${P[player]}`, borderRadius: 6, padding: 20, background: "#ece5d8", opacity: isAIPlayer ? 0.5 : 1, pointerEvents: isAIPlayer ? "none" : "auto" }}>
+                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 16, fontWeight: 700, color: P[player], marginBottom: 14, textAlign: "center" }}>
                                 {isAIPlayer ? "IA" : `JOUEUR ${player}`} ({selections[player].length}/{ARMY_SIZE})
                             </div>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
                                 {UNIT_TYPES.map(type => {
                                     const t = UNIT_TEMPLATES[type];
                                     const full = selections[player].length >= ARMY_SIZE;
@@ -171,20 +171,20 @@ export default function HexWarhammer() {
                                         </button>
                                     );
                                 })}
-                                <button className="btn btn-gold" onClick={() => randomArmy(player)} style={{ marginTop: 4, width: "100%" }}>
+                                <button className="btn btn-gold" onClick={() => randomArmy(player)} style={{ marginTop: 6, width: "100%" }}>
                                     🎲 Aléatoire
                                 </button>
                             </div>
-                            <div style={{ borderTop: "1px solid #d5cbb8", paddingTop: 8 }}>
+                            <div style={{ borderTop: "1px solid #d5cbb8", paddingTop: 10 }}>
                                 {selections[player].length === 0 ? (
-                                    <div style={{ color: "#a09080", fontSize: 12, fontStyle: "italic" }}>Aucune unité sélectionnée</div>
+                                    <div style={{ color: "#a09080", fontSize: 13, fontStyle: "italic" }}>Aucune unité sélectionnée</div>
                                 ) : (
                                     selections[player].map((type, i) => {
                                         const t = UNIT_TEMPLATES[type];
                                         return (
-                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, padding: "2px 0" }}>
+                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 14, padding: "3px 0" }}>
                                                 <span>{t.symbol} {t.name}</span>
-                                                <button onClick={() => removeUnit(player, i)} style={{ background: "none", border: "none", color: "#a03030", cursor: "pointer", fontSize: 14 }}>✕</button>
+                                                <button onClick={() => removeUnit(player, i)} style={{ background: "none", border: "none", color: "#a03030", cursor: "pointer", fontSize: 16 }}>✕</button>
                                             </div>
                                         );
                                     })
@@ -195,10 +195,10 @@ export default function HexWarhammer() {
                     })}
                 </div>
                 <div style={{ display: "flex", gap: 12 }}>
-                    <button className="btn btn-gold" disabled={!canStart} onClick={startGame} style={{ fontSize: 16, padding: "10px 32px" }}>
+                    <button className="btn btn-gold" disabled={!canStart} onClick={startGame} style={{ fontSize: 17, padding: "12px 36px" }}>
                         ⚔ Lancer la partie
                     </button>
-                    <button className="btn btn-grey" onClick={() => setShowGuide(true)} style={{ fontSize: 16, padding: "10px 24px" }}>
+                    <button className="btn btn-grey" onClick={() => setShowGuide(true)} style={{ fontSize: 17, padding: "12px 28px" }}>
                         ? Guide
                     </button>
                 </div>
@@ -213,8 +213,8 @@ export default function HexWarhammer() {
 
     return (
         <div style={{ display: "flex", height: "100vh", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif", overflow: "hidden" }}>
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, padding: 20 }}>
-                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 20, fontWeight: 700, letterSpacing: ".2em", color: "#8a6a08", textShadow: "0 0 30px rgba(138,106,8,.2)" }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: 20 }}>
+                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 24, fontWeight: 700, letterSpacing: ".2em", color: "#8a6a08", textShadow: "0 0 30px rgba(138,106,8,.2)" }}>
                     ⚔ WARHEX ⚔
                 </div>
 
@@ -229,19 +229,19 @@ export default function HexWarhammer() {
                         onMouseLeave={() => setHoveredHex(null)}
                     />
                     <div style={{
-                        position: "absolute", top: 8, left: 8,
+                        position: "absolute", top: 10, left: 10,
                         background: "rgba(245,240,232,.92)", border: `1px solid ${P[state.currentPlayer]}`,
-                        padding: "4px 12px", fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: ".1em",
-                        color: P[state.currentPlayer], borderRadius: 1,
+                        padding: "6px 14px", fontFamily: "'Cinzel', serif", fontSize: 13, letterSpacing: ".1em",
+                        color: P[state.currentPlayer], borderRadius: 3,
                     }}>
                         {state.winner ? (state.winner === "draw" ? "⚖ ÉGALITÉ" : `🏆 JOUEUR ${state.winner} VICTORIEUX`) : `J${state.currentPlayer} — ${phaseLabel}`}
                     </div>
-                    <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(245,240,232,.92)", border: "1px solid #c8b898", padding: "4px 10px", fontFamily: "'Cinzel', serif", fontSize: 10, color: "#8a7a60", display: "flex", gap: 10, alignItems: "center" }}>
+                    <div style={{ position: "absolute", top: 10, right: 10, background: "rgba(245,240,232,.92)", border: "1px solid #c8b898", padding: "6px 12px", fontFamily: "'Cinzel', serif", fontSize: 12, color: "#8a7a60", display: "flex", gap: 12, alignItems: "center", borderRadius: 3 }}>
                         <span style={{ color: "#2a6fa8" }}>{state.scores[1]} pts</span>
                         <span>TOUR {state.round}/5</span>
                         <span style={{ color: "#a03030" }}>{state.scores[2]} pts</span>
                     </div>
-                    <div style={{ position: "absolute", bottom: 8, left: 8, display: "flex", gap: 12, fontSize: 11, color: "#8a7a60" }}>
+                    <div style={{ position: "absolute", bottom: 10, left: 10, display: "flex", gap: 14, fontSize: 12, color: "#8a7a60" }}>
                         <span style={{ color: "#2a6fa8" }}>● Joueur 1</span>
                         <span style={{ color: "#a03030" }}>● Joueur 2</span>
                         <span>■ Déplacement possible</span>
@@ -251,14 +251,14 @@ export default function HexWarhammer() {
                 </div>
             </div>
 
-            <div style={{ width: 290, borderLeft: "1px solid #d5cbb8", background: "#ece5d8", display: "flex", flexDirection: "column", flexShrink: 0 }}>
-                <div style={{ padding: "14px 16px", borderBottom: "1px solid #d5cbb8", minHeight: 195 }}>
-                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 10 }}>UNITÉ SÉLECTIONNÉE</div>
+            <div style={{ width: 320, borderLeft: "1px solid #d5cbb8", background: "#ece5d8", display: "flex", flexDirection: "column", flexShrink: 0 }}>
+                <div style={{ padding: "16px 20px", borderBottom: "1px solid #d5cbb8", minHeight: 210 }}>
+                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 12, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 12 }}>UNITÉ SÉLECTIONNÉE</div>
                     {sel ? (
                         <>
-                            <div style={{ fontSize: 15, fontWeight: 600, color: P[sel.player], marginBottom: 1 }}>{sel.symbol} {sel.name}</div>
-                            <div style={{ fontSize: 11, color: "#8a7a60", marginBottom: 8 }}>Joueur {sel.player}</div>
-                            <div style={{ borderTop: "1px solid #d5cbb8", paddingTop: 8, display: "flex", flexDirection: "column", gap: 1 }}>
+                            <div style={{ fontSize: 17, fontWeight: 600, color: P[sel.player], marginBottom: 2 }}>{sel.symbol} {sel.name}</div>
+                            <div style={{ fontSize: 13, color: "#8a7a60", marginBottom: 10 }}>Joueur {sel.player}</div>
+                            <div style={{ borderTop: "1px solid #d5cbb8", paddingTop: 10, display: "flex", flexDirection: "column", gap: 2 }}>
                                 {[
                                     ["PV", `${sel.currentWounds}/${sel.wounds}`, sel.currentWounds > sel.wounds / 2 ? "#4caf50" : "#e53935"],
                                     ["Mouvement", sel.movement], ["CC", `${sel.weaponSkill}+`], ["CT", `${sel.ballisticSkill}+`],
@@ -273,16 +273,16 @@ export default function HexWarhammer() {
                             </div>
                         </>
                     ) : (
-                        <div style={{ color: "#a09080", fontSize: 13, fontStyle: "italic" }}>Cliquez sur une de vos unités pour la sélectionner.</div>
+                        <div style={{ color: "#a09080", fontSize: 14, fontStyle: "italic" }}>Cliquez sur une de vos unités pour la sélectionner.</div>
                     )}
                 </div>
 
-                <div style={{ padding: "12px 16px", borderBottom: "1px solid #d5cbb8" }}>
-                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 10 }}>ACTIONS</div>
+                <div style={{ padding: "16px 20px", borderBottom: "1px solid #d5cbb8" }}>
+                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 12, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 12 }}>ACTIONS</div>
 
                     {state.phase === "weapon_select" && state.pendingAttack ? (
                         <>
-                            <div style={{ fontSize: 12, color: "#8a6a08", marginBottom: 8 }}>
+                            <div style={{ fontSize: 14, color: "#8a6a08", marginBottom: 10 }}>
                                 Attaquer <strong>{state.pendingAttack.target.name}</strong> avec :
                             </div>
                             {state.pendingAttack.attacker.weapons.map(w => {
@@ -300,13 +300,13 @@ export default function HexWarhammer() {
                                 const skill = w.type === "ranged" ? attacker.ballisticSkill : attacker.weaponSkill;
                                 return (
                                     <button key={w.id} className={`weapon-card${ok ? "" : " disabled"}`} onClick={() => ok && selectWeapon(w)}>
-                                        <div style={{ fontWeight: 600, fontSize: 13 }}>{w.name} {w.type === "ranged" ? "🏹" : "🗡"}</div>
+                                        <div style={{ fontWeight: 600, fontSize: 14 }}>{w.name} {w.type === "ranged" ? "🏹" : "🗡"}</div>
                                         {!ok ? (
-                                            <div style={{ fontSize: 11, color: "#b0a090", marginTop: 3 }}>
+                                            <div style={{ fontSize: 12, color: "#b0a090", marginTop: 4 }}>
                                                 {w.type === "ranged" ? `Portée ${w.range + rangeBonus}` : "Mêlée (adjacent)"} · Trop loin ({dist} hex)
                                             </div>
                                         ) : (
-                                            <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 5, fontSize: 11, color: "#6a5a40" }}>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 6, fontSize: 12, color: "#6a5a40" }}>
                                                 <div>{w.type === "ranged" ? `Portée ${w.range + rangeBonus} hex${rangeBonus ? " ⛰" : ""}` : "Mêlée (adjacent)"} · Distance : {dist}</div>
                                                 <div>Touche sur {skill}+ · {w.attacks} {w.attacks > 1 ? "attaques" : "attaque"}</div>
                                                 <div>{w.damage} {w.damage > 1 ? "dégâts" : "dégât"} par touche · Pénétration {Math.abs(w.ap)}</div>
@@ -344,17 +344,17 @@ export default function HexWarhammer() {
                     const tgtName = animating ? src.target.name : src.target;
                     const wpnName = animating ? src.weaponName : src.weapon;
                     return (
-                        <div style={{ padding: "10px 16px", borderBottom: "1px solid #d5cbb8", background: "#e5ddd0" }}>
-                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 8 }}>RÉSOLUTION DE COMBAT</div>
-                            <div style={{ fontSize: 12, color: "#8a6a08", marginBottom: 6 }}>
+                        <div style={{ padding: "16px 20px", borderBottom: "1px solid #d5cbb8", background: "#e5ddd0" }}>
+                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 12, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 10 }}>RÉSOLUTION DE COMBAT</div>
+                            <div style={{ fontSize: 14, color: "#8a6a08", marginBottom: 8 }}>
                                 {atkName} → {tgtName} [{wpnName}]
                             </div>
                             {visibleLog.map((entry, i) => {
                                 const isCurrentPhase = animating && i === src.phase;
                                 const visibleDice = isCurrentPhase ? (entry.rolls || []).slice(0, src.dice) : (entry.rolls || []);
                                 return (
-                                    <div key={i} style={{ marginBottom: entry.isSummary ? 0 : 5 }}>
-                                        <div style={{ fontSize: 11, color: "#6a5a40", marginBottom: visibleDice.length ? 2 : 0 }}>{entry.label}</div>
+                                    <div key={i} style={{ marginBottom: entry.isSummary ? 0 : 6 }}>
+                                        <div style={{ fontSize: 13, color: "#6a5a40", marginBottom: visibleDice.length ? 3 : 0 }}>{entry.label}</div>
                                         {visibleDice.length > 0 && (
                                             <div style={{ display: "flex", flexWrap: "wrap", gap: 0 }}>
                                                 {visibleDice.map((r, j) => {
@@ -369,7 +369,7 @@ export default function HexWarhammer() {
                                             </div>
                                         )}
                                         {entry.isSummary && !animating && (
-                                            <div style={{ fontSize: 13, fontWeight: 600, color: src.damage > 0 ? "#e53935" : "#4caf50", marginTop: 4 }}>
+                                            <div style={{ fontSize: 14, fontWeight: 600, color: src.damage > 0 ? "#e53935" : "#4caf50", marginTop: 6 }}>
                                                 {src.isDead ? `💀 ${tgtName} éliminé !` : `${src.damage} dégât(s) infligé(s)`}
                                             </div>
                                         )}
@@ -377,7 +377,7 @@ export default function HexWarhammer() {
                                 );
                             })}
                             {animating && (
-                                <div style={{ fontSize: 11, color: "#8a7a60", marginTop: 6, fontStyle: "italic", animation: "pulse 1s infinite" }}>
+                                <div style={{ fontSize: 13, color: "#8a7a60", marginTop: 8, fontStyle: "italic", animation: "pulse 1s infinite" }}>
                                     Lancement des dés...
                                 </div>
                             )}
