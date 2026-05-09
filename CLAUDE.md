@@ -22,7 +22,8 @@ src/
   renderer.js         → Rendu canvas (grille, obstacles, unités, barres de vie)
   styles.css          → Styles CSS (boutons, dés, animations)
   App.jsx             → Composant React (state, effets, rendu UI)
-  ai.js               → (à créer) IA basique pour le joueur 2
+  ai.js               → IA basique pour le joueur 2 (computeAIAction)
+  Guide.jsx            → Page guide (unités, terrains, règles, schémas hex)
 ```
 
 ## Conventions
@@ -66,6 +67,7 @@ Chaque tour, un joueur agit avec **une seule unité** (déplacement et/ou attaqu
   - `tests/units.test.js` → création d'unités, état initial, génération de la carte
   - `tests/scoring.test.js` → contrôle de villes, victoire, système de points
   - `tests/game.test.js` → logique de jeu (sélection, déplacement, attaque, fin de tour, collines, marais)
+  - `tests/ai.test.js` → IA (sélection d'unité, déplacement, attaque, choix d'arme)
 
 ## Pour ajouter une feature
 
@@ -73,6 +75,7 @@ Chaque tour, un joueur agit avec **une seule unité** (déplacement et/ou attaqu
 - **Nouvelle mécanique de combat** → modifier `src/combat.js`
 - **Nouvel obstacle** → ajouter les coordonnées dans `initState()` de `src/units.js`
 - **Nouveau type de terrain** → modifier `src/hex.js` (validation) + `src/renderer.js` (affichage)
-- **IA** → créer `src/ai.js`, importer les fonctions de `hex.js` et `combat.js`
+- **IA** → modifier `src/ai.js`, importer les fonctions de `hex.js` et `combat.js`
 - **Animations** → modifier `src/renderer.js`
 - **Nouveau panneau UI** → modifier `src/App.jsx`
+- **Nouveau terrain, unité ou règle de combat** → mettre à jour `src/Guide.jsx` pour que le guide reste synchronisé

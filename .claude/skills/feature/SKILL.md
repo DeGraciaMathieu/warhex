@@ -41,6 +41,7 @@ Tu reçois une description de feature en argument. Suis ces étapes dans l'ordre
 
 - Mets à jour le **CLAUDE.md** si la feature change l'architecture, les conventions ou les phases de jeu.
 - Mets à jour les **skills** (`terrains`, `weapons`) si la feature impacte leur périmètre.
+- Mets à jour **`src/Guide.jsx`** si la feature ajoute/modifie un terrain, une unité ou une règle de combat (le guide doit rester synchronisé).
 - Crée un nouveau skill si la feature introduit un domaine entièrement nouveau.
 
 ## 5. Résumé
