@@ -32,7 +32,6 @@ export default function HexWarhammer() {
                 const combatLog = [
                     `⚔ ${attacker.name} → ${target.name} [${diceAnim.weaponName}]`,
                     isDead ? `💀 ${target.name} éliminé !` : `❤ ${target.name} : ${newWounds}/${target.wounds} PV`,
-                    ...s.combatLog.slice(0, 8),
                 ];
                 return {
                     ...s, units, phase: "select", selectedUnit: null, validMoves: [], validTargets: [],
@@ -91,7 +90,7 @@ export default function HexWarhammer() {
 
         if ((s.phase === "select" || s.phase === "attack") && targetKeys.has(k)) {
             const target = s.validTargets.find(u => hexKey(u.hex) === k);
-            return { ...s, phase: "weapon_select", pendingAttack: { attacker: s.selectedUnit, target }, roundLog: null };
+            return { ...s, phase: "weapon_select", pendingAttack: { attacker: s.selectedUnit, target } };
         }
 
         if ((s.phase === "select" || s.phase === "move") && moveKeys.has(k)) {
@@ -102,7 +101,7 @@ export default function HexWarhammer() {
             const maxRange = Math.max(...movedUnit.weapons.map(w => w.range));
             const validTargets = movedUnit.hasAttacked ? [] : enemies.filter(e => hexDistance(movedUnit.hex, e.hex) <= maxRange && hasLineOfSight(movedUnit.hex, e.hex, obsKeys));
             const autoEnd = validTargets.length === 0;
-            return { ...s, units, selectedUnit: movedUnit, activeUnitId: movedUnit.id, phase: "select", validMoves: [], validTargets, roundLog: null, autoEndTurn: autoEnd };
+            return { ...s, units, selectedUnit: movedUnit, activeUnitId: movedUnit.id, phase: "select", validMoves: [], validTargets, autoEndTurn: autoEnd };
         }
 
         if (unitOnHex && unitOnHex.player === s.currentPlayer) {
@@ -116,7 +115,7 @@ export default function HexWarhammer() {
             const enemies = s.units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
             const maxRange = Math.max(...cur.weapons.map(w => w.range));
             const validTargets = cur.hasAttacked ? [] : enemies.filter(e => hexDistance(cur.hex, e.hex) <= maxRange && hasLineOfSight(cur.hex, e.hex, obsKeys));
-            return { ...s, selectedUnit: cur, phase: "select", validMoves, validTargets, roundLog: null };
+            return { ...s, selectedUnit: cur, phase: "select", validMoves, validTargets };
         }
 
         return s;
@@ -152,7 +151,7 @@ export default function HexWarhammer() {
             const { attacker, target } = s.pendingAttack;
             const dist = hexDistance(attacker.hex, target.hex);
             if (dist > weapon.range) {
-                return { ...s, combatLog: [`❌ ${weapon.name} hors portée`, ...s.combatLog.slice(0, 10)], phase: "select", pendingAttack: null, validTargets: [], validMoves: [] };
+                return { ...s, combatLog: [`❌ ${weapon.name} hors portée`], phase: "select", pendingAttack: null, validTargets: [], validMoves: [] };
             }
 
             const townKeys = new Set((s.towns || []).map(hexKey));
@@ -172,15 +171,13 @@ export default function HexWarhammer() {
             const nextPlayer = s.currentPlayer === 1 ? 2 : 1;
             const endOfRound = nextPlayer === 1;
             const scores = { ...s.scores };
-            let combatLog = [`— Tour ${s.round + (endOfRound ? 1 : 0)}, Joueur ${nextPlayer}`, ...s.combatLog.slice(0, 9)];
+            let combatLog = [...s.combatLog];
             if (endOfRound) {
                 const control = computeTownControl(s.units, s.towns);
                 scores[1] += control[1];
                 scores[2] += control[2];
-                const scoreLog = [];
-                if (control[1] > 0) scoreLog.push(`🏰 J1 +${control[1]} pt${control[1] > 1 ? "s" : ""}`);
-                if (control[2] > 0) scoreLog.push(`🏰 J2 +${control[2]} pt${control[2] > 1 ? "s" : ""}`);
-                if (scoreLog.length > 0) combatLog = [...scoreLog, ...combatLog];
+                if (control[1] > 0) combatLog.push(`🏰 J1 +${control[1]} pt${control[1] > 1 ? "s" : ""}`);
+                if (control[2] > 0) combatLog.push(`🏰 J2 +${control[2]} pt${control[2] > 1 ? "s" : ""}`);
             }
             const winner = endOfRound ? checkWinner(scores, s.round) : null;
             const newRound = endOfRound && !winner ? s.round + 1 : s.round;
@@ -190,7 +187,7 @@ export default function HexWarhammer() {
                 currentPlayer: nextPlayer, activeUnitId: null,
                 phase: "select", selectedUnit: null, validMoves: [], validTargets: [], pendingAttack: null,
                 combatLog, round: newRound, winner,
-                roundLog: null, autoEndTurn: false,
+                autoEndTurn: false,
             };
         });
     }
