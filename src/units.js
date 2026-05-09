@@ -46,8 +46,20 @@ export function initState() {
         createUnit("orcBoy", 2, { q: 3, r: -3, s: 0 }),
         createUnit("chaosWarrior", 2, { q: 4, r: -2, s: -2 }),
     ];
+    const obstacles = [
+        { q: 0, r: 0, s: 0 },
+        { q: 0, r: -1, s: 1 },
+        { q: 0, r: 1, s: -1 },
+        { q: -2, r: -1, s: 3 },
+        { q: -2, r: -2, s: 4 },
+        { q: 2, r: 1, s: -3 },
+        { q: 2, r: 2, s: -4 },
+        { q: -1, r: 3, s: -2 },
+        { q: 1, r: -3, s: 2 },
+    ];
     return {
         units,
+        obstacles,
         currentPlayer: 1,
         phase: "select",
         selectedUnit: null,

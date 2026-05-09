@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex, reachableHexes } from "./hex.js";
+import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex, reachableHexes, hasLineOfSight } from "./hex.js";
 import { resolveAttack } from "./combat.js";
 import { initState, resetUID } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY } from "./renderer.js";
@@ -98,10 +98,11 @@ export default function HexWarhammer() {
         if (unitOnHex && unitOnHex.player === s.currentPlayer) {
             const cur = s.units.find(u => u.id === unitOnHex.id);
             const occupied = new Set(s.units.filter(u => u.currentWounds > 0 && u.id !== cur.id).map(u => hexKey(u.hex)));
-            const validMoves = cur.hasMoved ? [] : reachableHexes(cur.hex, cur.movement, occupied);
+            const obsKeys = new Set(s.obstacles.map(hexKey));
+            const validMoves = cur.hasMoved ? [] : reachableHexes(cur.hex, cur.movement, occupied, obsKeys);
             const enemies = s.units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
             const maxRange = Math.max(...cur.weapons.map(w => w.range));
-            const validTargets = cur.hasAttacked ? [] : enemies.filter(e => hexDistance(cur.hex, e.hex) <= maxRange);
+            const validTargets = cur.hasAttacked ? [] : enemies.filter(e => hexDistance(cur.hex, e.hex) <= maxRange && hasLineOfSight(cur.hex, e.hex, obsKeys));
             return { ...s, selectedUnit: cur, phase: "select", validMoves, validTargets, roundLog: null };
         }
 
@@ -113,7 +114,8 @@ export default function HexWarhammer() {
             const cur = s.units.find(u => u.id === s.selectedUnit?.id);
             if (!cur || cur.hasMoved) return s;
             const occupied = new Set(s.units.filter(u => u.currentWounds > 0 && u.id !== cur.id).map(u => hexKey(u.hex)));
-            return { ...s, phase: "move", validMoves: reachableHexes(cur.hex, cur.movement, occupied), validTargets: [] };
+            const obsKeys = new Set(s.obstacles.map(hexKey));
+            return { ...s, phase: "move", validMoves: reachableHexes(cur.hex, cur.movement, occupied, obsKeys), validTargets: [] };
         });
     }
 
@@ -123,7 +125,8 @@ export default function HexWarhammer() {
             if (!cur || cur.hasAttacked) return s;
             const enemies = s.units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
             const maxRange = Math.max(...cur.weapons.map(w => w.range));
-            const validTargets = enemies.filter(e => hexDistance(cur.hex, e.hex) <= maxRange);
+            const obsKeys = new Set(s.obstacles.map(hexKey));
+            const validTargets = enemies.filter(e => hexDistance(cur.hex, e.hex) <= maxRange && hasLineOfSight(cur.hex, e.hex, obsKeys));
             return { ...s, phase: "attack", validTargets, validMoves: [], selectedUnit: cur };
         });
     }
@@ -250,6 +253,7 @@ export default function HexWarhammer() {
                         <span style={{ color: "#a03030" }}>● Joueur 2</span>
                         <span>■ Déplacement possible</span>
                         <span style={{ color: "#b03030" }}>■ Cible</span>
+                        <span style={{ color: "#8a7a60" }}>▲ Obstacle</span>
                     </div>
                 </div>
             </div>

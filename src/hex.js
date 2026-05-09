@@ -48,7 +48,7 @@ export function hexCorners(cx, cy, size) {
     });
 }
 
-export function reachableHexes(start, movement, occupiedKeys) {
+export function reachableHexes(start, movement, occupiedKeys, obstacleKeys = new Set()) {
     const visited = new Map([[hexKey(start), 0]]);
     const queue = [start];
     const result = [];
@@ -59,7 +59,7 @@ export function reachableHexes(start, movement, occupiedKeys) {
         if (dist < movement) {
             for (const n of hexNeighbors(cur)) {
                 const k = hexKey(n);
-                if (!visited.has(k) && !occupiedKeys.has(k) && isValidHex(n)) {
+                if (!visited.has(k) && !occupiedKeys.has(k) && !obstacleKeys.has(k) && isValidHex(n)) {
                     visited.set(k, dist + 1);
                     queue.push(n);
                 }
@@ -67,4 +67,26 @@ export function reachableHexes(start, movement, occupiedKeys) {
         }
     }
     return result;
+}
+
+function cubeLineDraw(a, b) {
+    const n = hexDistance(a, b);
+    if (n === 0) return [a];
+    const results = [];
+    for (let i = 0; i <= n; i++) {
+        const t = i / n;
+        const q = a.q + (b.q - a.q) * t;
+        const r = a.r + (b.r - a.r) * t;
+        const s = a.s + (b.s - a.s) * t;
+        results.push(cubeRound(q, r, s));
+    }
+    return results;
+}
+
+export function hasLineOfSight(a, b, obstacleKeys) {
+    const line = cubeLineDraw(a, b);
+    for (let i = 1; i < line.length - 1; i++) {
+        if (obstacleKeys.has(hexKey(line[i]))) return false;
+    }
+    return true;
 }
