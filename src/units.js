@@ -99,5 +99,7 @@ export function initState() {
         roundLog: null,
         winner: null,
         round: 1,
+        activeUnitId: null,
+        autoEndTurn: false,
     };
 }

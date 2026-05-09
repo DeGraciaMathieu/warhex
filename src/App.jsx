@@ -38,7 +38,7 @@ export default function HexWarhammer() {
                 ];
                 return {
                     ...s, units, phase: "select", selectedUnit: null, validMoves: [], validTargets: [],
-                    pendingAttack: null, combatLog, winner,
+                    pendingAttack: null, combatLog, winner, autoEndTurn: !winner,
                     roundLog: { weapon: diceAnim.weaponName, attacker: attacker.name, target: target.name, log, isDead, damage },
                 };
             });
@@ -55,6 +55,23 @@ export default function HexWarhammer() {
         const timer = setTimeout(() => setDiceAnim(a => ({ ...a, dice: a.dice + 1 })), 350);
         return () => clearTimeout(timer);
     }, [diceAnim]);
+
+    useEffect(() => {
+        if (state.autoEndTurn) {
+            const timer = setTimeout(() => endTurn(), 1200);
+            return () => clearTimeout(timer);
+        }
+    }, [state.autoEndTurn]);
+
+    useEffect(() => {
+        if (state.activeUnitId && state.phase === "select" && state.selectedUnit) {
+            const sel = state.units.find(u => u.id === state.selectedUnit.id);
+            if (sel && sel.hasMoved && !sel.hasAttacked && (state.validTargets || []).length === 0) {
+                const timer = setTimeout(() => endTurn(), 800);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [state.activeUnitId, state.phase, state.selectedUnit, state.validTargets]);
 
     function onCanvasClick(e) {
         if (diceAnim && !diceAnim.done) return;
@@ -92,10 +109,15 @@ export default function HexWarhammer() {
         if ((s.phase === "select" || s.phase === "move") && moveKeys.has(k)) {
             const movedUnit = { ...s.selectedUnit, hex, hasMoved: true };
             const units = s.units.map(u => u.id === movedUnit.id ? movedUnit : u);
-            return { ...s, units, selectedUnit: movedUnit, phase: "select", validMoves: [], validTargets: [], roundLog: null };
+            const obsKeys = new Set(s.obstacles.map(hexKey));
+            const enemies = units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
+            const maxRange = Math.max(...movedUnit.weapons.map(w => w.range));
+            const validTargets = movedUnit.hasAttacked ? [] : enemies.filter(e => hexDistance(movedUnit.hex, e.hex) <= maxRange && hasLineOfSight(movedUnit.hex, e.hex, obsKeys));
+            return { ...s, units, selectedUnit: movedUnit, activeUnitId: movedUnit.id, phase: "select", validMoves: [], validTargets, roundLog: null };
         }
 
         if (unitOnHex && unitOnHex.player === s.currentPlayer) {
+            if (s.activeUnitId && unitOnHex.id !== s.activeUnitId) return s;
             const cur = s.units.find(u => u.id === unitOnHex.id);
             const occupied = new Set(s.units.filter(u => u.currentWounds > 0 && u.id !== cur.id).map(u => hexKey(u.hex)));
             const obsKeys = new Set(s.obstacles.map(hexKey));
@@ -149,7 +171,7 @@ export default function HexWarhammer() {
 
             setDiceAnim({ log, phase: 0, dice: 0, done: false, attacker, target, weaponName: weapon.name, damage, isDead });
 
-            return { ...s, phase: "resolving", roundLog: null };
+            return { ...s, phase: "resolving", activeUnitId: attacker.id, roundLog: null };
         });
     }
 
@@ -160,11 +182,11 @@ export default function HexWarhammer() {
             return {
                 ...s,
                 units: s.units.map(u => ({ ...u, hasMoved: false, hasAttacked: false })),
-                currentPlayer: nextPlayer,
+                currentPlayer: nextPlayer, activeUnitId: null,
                 phase: "select", selectedUnit: null, validMoves: [], validTargets: [], pendingAttack: null,
                 combatLog: [`— Tour ${s.round + (nextPlayer === 1 ? 1 : 0)}, Joueur ${nextPlayer}`, ...s.combatLog.slice(0, 9)],
                 round: nextPlayer === 1 ? s.round + 1 : s.round,
-                roundLog: null,
+                roundLog: null, autoEndTurn: false,
             };
         });
     }
