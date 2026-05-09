@@ -96,6 +96,11 @@ export default function HexWarhammer() {
         }));
     }
 
+    function randomArmy(player) {
+        const army = Array.from({ length: ARMY_SIZE }, () => UNIT_TYPES[Math.floor(Math.random() * UNIT_TYPES.length)]);
+        setSelections(prev => ({ ...prev, [player]: army }));
+    }
+
     function startGame() {
         resetUID();
         setState(initState(selections));
@@ -128,6 +133,9 @@ export default function HexWarhammer() {
                                         </button>
                                     );
                                 })}
+                                <button className="btn btn-gold" onClick={() => randomArmy(player)} style={{ marginTop: 4, width: "100%" }}>
+                                    🎲 Aléatoire
+                                </button>
                             </div>
                             <div style={{ borderTop: "1px solid #d5cbb8", paddingTop: 8 }}>
                                 {selections[player].length === 0 ? (
