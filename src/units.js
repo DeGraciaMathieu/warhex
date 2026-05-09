@@ -1,5 +1,7 @@
 import { hexKey } from "./hex.js";
 
+export const ACTIVATIONS_PER_TURN = 2;
+
 export const UNIT_TEMPLATES = {
     warrior: {
         name: "Warrior", symbol: "⚔",
@@ -211,6 +213,8 @@ export function initState(armies) {
         round: 1,
         scores: { 1: 0, 2: 0 },
         activeUnitId: null,
+        activationsUsed: 0,
+        activatedUnitIds: [],
         autoEndTurn: false,
     };
 }

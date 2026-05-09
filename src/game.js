@@ -1,6 +1,6 @@
 import { hexDistance, hexKey, reachableHexes, hasLineOfSight } from "./hex.js";
 import { resolveAttack } from "./combat.js";
-import { computeTownControl, checkWinner } from "./units.js";
+import { computeTownControl, checkWinner, ACTIVATIONS_PER_TURN } from "./units.js";
 
 function buildLosKeys(state) {
     return new Set([...state.obstacles, ...(state.towns || []), ...(state.forests || [])].map(hexKey));
@@ -16,6 +16,34 @@ function buildTerrainKeys(state) {
 function findValidTargets(unit, enemies, losKeys, rangeBonus = 0) {
     const maxRange = Math.max(...unit.weapons.map(w => w.range + (w.type === "ranged" ? rangeBonus : 0)));
     return enemies.filter(e => hexDistance(unit.hex, e.hex) <= maxRange && hasLineOfSight(unit.hex, e.hex, losKeys));
+}
+
+function finishActivation(s, unitId, units) {
+    const used = s.activationsUsed + 1;
+    const activated = [...s.activatedUnitIds, unitId];
+    const remaining = units.filter(u =>
+        u.player === s.currentPlayer && u.currentWounds > 0 && !activated.includes(u.id)
+    );
+    return {
+        activationsUsed: used,
+        activatedUnitIds: activated,
+        activeUnitId: null,
+        selectedUnit: null,
+        phase: "select",
+        validMoves: [],
+        validTargets: [],
+        pendingAttack: null,
+        autoEndTurn: used >= ACTIVATIONS_PER_TURN || remaining.length === 0,
+    };
+}
+
+export function computeDeselect(s) {
+    const sel = s.units.find(u => u.id === s.selectedUnit?.id);
+    const hasActed = sel && (sel.hasMoved || sel.hasAttacked);
+    if (hasActed) {
+        return { ...s, ...finishActivation(s, sel.id, s.units) };
+    }
+    return { ...s, selectedUnit: null, activeUnitId: null, phase: "select", validMoves: [], validTargets: [] };
 }
 
 export function handleClick(s, hex) {
@@ -39,18 +67,21 @@ export function handleClick(s, hex) {
             : movedUnit;
         const units = s.units.map(u => u.id === poisoned.id ? poisoned : u);
         if (poisoned.currentWounds <= 0) {
-            return { ...s, units, selectedUnit: null, activeUnitId: null, phase: "select", validMoves: [], validTargets: [], autoEndTurn: true };
+            return { ...s, units, ...finishActivation(s, poisoned.id, units) };
         }
         const losKeys = buildLosKeys(s);
         const enemies = units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
         const rangeBonus = hillKeys.has(hexKey(poisoned.hex)) ? 1 : 0;
         const validTargets = poisoned.hasAttacked ? [] : findValidTargets(poisoned, enemies, losKeys, rangeBonus);
-        const autoEnd = validTargets.length === 0;
-        return { ...s, units, selectedUnit: poisoned, activeUnitId: poisoned.id, phase: "select", validMoves: [], validTargets, autoEndTurn: autoEnd };
+        if (validTargets.length === 0) {
+            return { ...s, units, ...finishActivation(s, poisoned.id, units) };
+        }
+        return { ...s, units, selectedUnit: poisoned, activeUnitId: poisoned.id, phase: "select", validMoves: [], validTargets, autoEndTurn: false };
     }
 
     if (unitOnHex && unitOnHex.player === s.currentPlayer) {
         if (s.activeUnitId && unitOnHex.id !== s.activeUnitId) return s;
+        if (s.activatedUnitIds.includes(unitOnHex.id)) return s;
         const cur = s.units.find(u => u.id === unitOnHex.id);
         const occupied = new Set(s.units.filter(u => u.currentWounds > 0 && u.id !== cur.id).map(u => hexKey(u.hex)));
         const { obsKeys, stopKeys, forestKeys } = buildTerrainKeys(s);
@@ -115,8 +146,7 @@ export function applyDamage(s, anim) {
         return u;
     });
     return {
-        ...s, units, phase: "select", selectedUnit: null, validMoves: [], validTargets: [],
-        pendingAttack: null, autoEndTurn: true,
+        ...s, units, ...finishActivation(s, attacker.id, units),
         roundLog: { weapon: anim.weaponName, attacker: attacker.name, target: target.name, log: anim.log, isDead: anim.isDead, damage },
     };
 }
@@ -136,7 +166,7 @@ export function computeEndTurn(s) {
     return {
         ...s, scores,
         units: s.units.map(u => ({ ...u, hasMoved: false, hasAttacked: false })),
-        currentPlayer: nextPlayer, activeUnitId: null,
+        currentPlayer: nextPlayer, activeUnitId: null, activationsUsed: 0, activatedUnitIds: [],
         phase: "select", selectedUnit: null, validMoves: [], validTargets: [], pendingAttack: null,
         round: newRound, winner,
         autoEndTurn: false,

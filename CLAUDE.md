@@ -41,7 +41,7 @@ src/
 
 `select` → `move` → `select` → `attack` → `weapon_select` → `select`
 
-Chaque tour, un joueur agit avec **une seule unité** (déplacement et/ou attaque), puis le tour passe automatiquement à l'adversaire. Une fois qu'une unité a agi, on ne peut pas en sélectionner une autre (`activeUnitId`). Le passage automatique se fait après une attaque (délai 1.2s) ou après un déplacement sans cibles disponibles (délai 0.8s).
+Chaque tour, un joueur active **deux unités** (`ACTIVATIONS_PER_TURN = 2`), une à la fois (déplacement et/ou attaque chacune). Après chaque activation, le joueur peut sélectionner une autre unité non encore activée (`activatedUnitIds`). Le tour passe à l'adversaire après la 2e activation ou si aucune unité n'est disponible. Le passage automatique se fait après une attaque (délai 1.2s) ou après un déplacement sans cibles disponibles.
 
 ## Règles de combat (Warhammer simplifié)
 

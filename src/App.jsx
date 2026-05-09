@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.js";
-import { initState, resetUID, UNIT_TEMPLATES } from "./units.js";
+import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY } from "./renderer.js";
-import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn } from "./game.js";
+import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect } from "./game.js";
 import { computeAIAction } from "./ai.js";
 import Guide from "./Guide.jsx";
 import "./styles.css";
@@ -56,7 +56,8 @@ export default function HexWarhammer() {
         if (diceAnim && !diceAnim.done) return;
         const action = computeAIAction(state);
         if (!action) return;
-        const delay = action.type === "weapon" ? 600 : 500;
+        const isNewActivation = !state.selectedUnit;
+        const delay = isNewActivation ? 1000 : action.type === "weapon" ? 800 : 700;
         const timer = setTimeout(() => {
             if (action.type === "click") {
                 setState(prev => handleClick(prev, action.hex));
@@ -234,7 +235,7 @@ export default function HexWarhammer() {
                         padding: "6px 14px", fontFamily: "'Cinzel', serif", fontSize: 13, letterSpacing: ".1em",
                         color: P[state.currentPlayer], borderRadius: 3,
                     }}>
-                        {state.winner ? (state.winner === "draw" ? "⚖ ÉGALITÉ" : `🏆 JOUEUR ${state.winner} VICTORIEUX`) : `J${state.currentPlayer} — ${phaseLabel}`}
+                        {state.winner ? (state.winner === "draw" ? "⚖ ÉGALITÉ" : `🏆 JOUEUR ${state.winner} VICTORIEUX`) : `J${state.currentPlayer} — ${phaseLabel} · ⚡${ACTIVATIONS_PER_TURN - state.activationsUsed}`}
                     </div>
                     <div style={{ position: "absolute", top: 10, right: 10, background: "rgba(245,240,232,.92)", border: "1px solid #c8b898", padding: "6px 12px", fontFamily: "'Cinzel', serif", fontSize: 12, color: "#8a7a60", display: "flex", gap: 12, alignItems: "center", borderRadius: 3 }}>
                         <span style={{ color: "#2a6fa8" }}>{state.scores[1]} pts</span>
@@ -324,7 +325,7 @@ export default function HexWarhammer() {
                         <>
                             <button className="btn btn-blue" disabled={!sel || sel.hasMoved || state.phase === "attack"} onClick={startMove}>⟶ Déplacer</button>
                             <button className="btn btn-red" disabled={!sel || sel.hasAttacked} onClick={startAttack}>⚔ Attaquer</button>
-                            {sel && <button className="btn btn-grey" onClick={() => setState(s => ({ ...s, selectedUnit: null, phase: "select", validMoves: [], validTargets: [] }))}>✕ Désélectionner</button>}
+                            {sel && <button className="btn btn-grey" onClick={() => setState(computeDeselect)}>✕ Désélectionner</button>}
                             <div style={{ borderTop: "1px solid #d5cbb8", marginTop: 6, paddingTop: 8 }}>
                                 <button className="btn btn-gold" disabled={!!state.winner} onClick={endTurn}>⏭ Fin de tour</button>
                                 {state.winner && <button className="btn btn-grey" onClick={restart}>↺ Nouvelle partie</button>}

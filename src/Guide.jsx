@@ -305,7 +305,7 @@ export default function Guide({ onBack }) {
                     <div style={TITLE_STYLE}>OBJECTIF</div>
                     <div style={TEXT_STYLE}>
                         <p style={{ margin: "0 0 8px" }}>Warhex est un jeu tactique au tour par tour sur grille hexagonale. Deux joueurs s'affrontent pendant <strong>5 tours</strong>.</p>
-                        <p style={{ margin: "0 0 8px" }}>Chaque tour, vous activez <strong>une seule unité</strong> : déplacement et/ou attaque, puis le tour passe automatiquement à l'adversaire.</p>
+                        <p style={{ margin: "0 0 8px" }}>Chaque tour, vous activez <strong>deux unités</strong> (une à la fois) : déplacement et/ou attaque pour chacune, puis le tour passe automatiquement à l'adversaire.</p>
                         <p style={{ margin: "0 0 8px" }}>Les <strong>villes</strong> (🏰) rapportent des points : chaque unité sur une ville en fin de tour rapporte <strong>1 point</strong> à son joueur. Après 5 tours, le joueur avec le plus de points gagne.</p>
                     </div>
                     <SceneTownControl />
