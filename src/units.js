@@ -18,6 +18,23 @@ const UNIT_TEMPLATES = {
             { id: "lance", name: "Lance", type: "melee", range: 1, attacks: 2, strength: 4, ap: -1, damage: 1 },
         ],
     },
+    sniper: {
+        name: "Sniper", symbol: "🎯",
+        movement: 2, weaponSkill: 5, ballisticSkill: 2,
+        toughness: 3, wounds: 1, save: 5,
+        weapons: [
+            { id: "sniper_rifle", name: "Sniper Rifle", type: "ranged", range: 4, attacks: 1, strength: 5, ap: -2, damage: 2 },
+            { id: "pistol", name: "Pistol", type: "ranged", range: 1, attacks: 1, strength: 3, ap: 0, damage: 1 },
+        ],
+    },
+    berserker: {
+        name: "Berserker", symbol: "🪓",
+        movement: 4, weaponSkill: 2, ballisticSkill: 6,
+        toughness: 4, wounds: 2, save: 6,
+        weapons: [
+            { id: "chain_axe", name: "Chain Axe", type: "melee", range: 1, attacks: 4, strength: 5, ap: -1, damage: 1 },
+        ],
+    },
 };
 
 let UID = 0;
@@ -135,9 +152,13 @@ export function initState() {
         createUnit("warrior", 1, { q: -4, r: 0, s: 4 }),
         createUnit("warrior", 1, { q: -3, r: 3, s: 0 }),
         createUnit("knight", 1, { q: -4, r: 2, s: 2 }),
+        createUnit("sniper", 1, { q: -3, r: -1, s: 4 }),
+        createUnit("berserker", 1, { q: -2, r: 3, s: -1 }),
         createUnit("warrior", 2, { q: 4, r: 0, s: -4 }),
         createUnit("warrior", 2, { q: 3, r: -3, s: 0 }),
         createUnit("knight", 2, { q: 4, r: -2, s: -2 }),
+        createUnit("sniper", 2, { q: 3, r: 1, s: -4 }),
+        createUnit("berserker", 2, { q: 2, r: -3, s: 1 }),
     ];
     const reservedKeys = new Set(units.map(u => `${u.hex.q},${u.hex.r},${u.hex.s}`));
     const obstacles = randomAvailableHexes(9, reservedKeys);

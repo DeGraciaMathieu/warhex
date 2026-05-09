@@ -373,12 +373,12 @@ describe("villes", () => {
 // ────────────────────────────────────────────────
 
 describe("état initial du jeu", () => {
-    it("la partie commence avec 3 unités par joueur", () => {
+    it("la partie commence avec 5 unités par joueur", () => {
         const state = initState();
         const p1 = state.units.filter(u => u.player === 1);
         const p2 = state.units.filter(u => u.player === 2);
-        expect(p1).toHaveLength(3);
-        expect(p2).toHaveLength(3);
+        expect(p1).toHaveLength(5);
+        expect(p2).toHaveLength(5);
     });
 
     it("toutes les unités commencent avec leurs PV max", () => {
@@ -607,14 +607,45 @@ describe("création d'unités", () => {
         expect(ranged).toHaveLength(0);
     });
 
-    it("la partie a 2 warriors et 1 knight par joueur", () => {
+    it("le sniper a les stats attendues", () => {
+        const unit = createUnit("sniper", 1, { q: 0, r: 0, s: 0 });
+        expect(unit.movement).toBe(2);
+        expect(unit.ballisticSkill).toBe(2);
+        expect(unit.weaponSkill).toBe(5);
+        expect(unit.wounds).toBe(1);
+        expect(unit.save).toBe(5);
+        expect(unit.weapons).toHaveLength(2);
+        const sniper = unit.weapons.find(w => w.id === "sniper_rifle");
+        expect(sniper.range).toBe(4);
+        expect(sniper.damage).toBe(2);
+        expect(sniper.ap).toBe(-2);
+    });
+
+    it("le berserker a les stats attendues", () => {
+        const unit = createUnit("berserker", 1, { q: 0, r: 0, s: 0 });
+        expect(unit.movement).toBe(4);
+        expect(unit.weaponSkill).toBe(2);
+        expect(unit.wounds).toBe(2);
+        expect(unit.save).toBe(6);
+        expect(unit.weapons).toHaveLength(1);
+        expect(unit.weapons[0].id).toBe("chain_axe");
+        expect(unit.weapons[0].attacks).toBe(4);
+    });
+
+    it("le berserker n'a pas d'arme à distance", () => {
+        const unit = createUnit("berserker", 1, { q: 0, r: 0, s: 0 });
+        const ranged = unit.weapons.filter(w => w.type === "ranged");
+        expect(ranged).toHaveLength(0);
+    });
+
+    it("la partie a 2 warriors, 1 knight, 1 sniper et 1 berserker par joueur", () => {
         const state = initState();
         for (const player of [1, 2]) {
             const units = state.units.filter(u => u.player === player);
-            const warriors = units.filter(u => u.name === "Warrior");
-            const knights = units.filter(u => u.name === "Knight");
-            expect(warriors).toHaveLength(2);
-            expect(knights).toHaveLength(1);
+            expect(units.filter(u => u.name === "Warrior")).toHaveLength(2);
+            expect(units.filter(u => u.name === "Knight")).toHaveLength(1);
+            expect(units.filter(u => u.name === "Sniper")).toHaveLength(1);
+            expect(units.filter(u => u.name === "Berserker")).toHaveLength(1);
         }
     });
 });
