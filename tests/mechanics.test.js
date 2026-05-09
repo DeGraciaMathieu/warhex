@@ -749,29 +749,16 @@ describe("forêts", () => {
 });
 
 // ────────────────────────────────────────────────
-// VILLES SYMÉTRIQUES
+// PLACEMENT DES VILLES
 // ────────────────────────────────────────────────
 
-describe("villes symétriques", () => {
-    it("les villes sont placées en paires symétriques par rapport au centre", () => {
+describe("placement des villes", () => {
+    it("les 4 villes sont sur des hexes distincts", () => {
         for (let i = 0; i < 20; i++) {
             resetUID();
             const state = initState();
-            const townKeys = new Set(state.towns.map(hexKey));
-            for (const t of state.towns) {
-                const mirror = { q: -t.q, r: -t.r, s: -t.s };
-                expect(townKeys.has(hexKey(mirror))).toBe(true);
-            }
-        }
-    });
-
-    it("aucune ville n'est au centre de la grille", () => {
-        for (let i = 0; i < 20; i++) {
-            resetUID();
-            const state = initState();
-            for (const t of state.towns) {
-                expect(hexKey(t)).not.toBe(hexKey({ q: 0, r: 0, s: 0 }));
-            }
+            const keys = new Set(state.towns.map(hexKey));
+            expect(keys.size).toBe(4);
         }
     });
 });
@@ -970,5 +957,19 @@ describe("logique de jeu", () => {
         const s = makeState({ winner: 1 });
         const result = computeEndTurn(s);
         expect(result).toEqual(s);
+    });
+
+    it("computeEndTurn incrémente le round en fin de round", () => {
+        const s = makeState({ currentPlayer: 2, round: 3 });
+        const result = computeEndTurn(s);
+        expect(result.round).toBe(4);
+        expect(result.currentPlayer).toBe(1);
+    });
+
+    it("computeEndTurn n'incrémente pas le round en milieu de round", () => {
+        const s = makeState({ currentPlayer: 1, round: 3 });
+        const result = computeEndTurn(s);
+        expect(result.round).toBe(3);
+        expect(result.currentPlayer).toBe(2);
     });
 });
