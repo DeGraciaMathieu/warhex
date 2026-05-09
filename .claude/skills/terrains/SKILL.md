@@ -28,7 +28,7 @@ auto_invoke: true
 
 Trace une ligne hex entre source et cible. Bloquee par les hexes intermediaires presents dans le set de blocage.
 
-En `App.jsx`, le set de blocage LOS est construit ainsi :
+En `game.js`, le set de blocage LOS est construit via `buildLosKeys()` :
 ```js
 const losKeys = new Set([...s.obstacles, ...(s.towns || [])].map(hexKey));
 ```
@@ -51,6 +51,6 @@ Chaque terrain a son propre style de rendu dans `drawScene()`.
 1. Ajouter la generation dans `initState()` de `units.js`
 2. Ajouter le champ dans l'objet state retourne par `initState()`
 3. Gerer l'effet mouvement dans `reachableHexes()` de `hex.js` (obstacle, stop, ou cout)
-4. Si bloque la LOS : ajouter au set `losKeys` dans les 3 endroits de `App.jsx`
+4. Si bloque la LOS : ajouter au set dans `buildLosKeys()` de `game.js`
 5. Ajouter le rendu dans `renderer.js`
 6. Si effet combat : modifier `resolveAttack()` dans `combat.js`

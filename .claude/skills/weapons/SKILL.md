@@ -32,6 +32,17 @@ auto_invoke: true
 |------|------|--------|----------|----|--------|
 | Lance | melee | 1 | 2 | -1 | 1 |
 
+### Sniper
+| Arme | Type | Portee | Attaques | AP | Degats |
+|------|------|--------|----------|----|--------|
+| Sniper Rifle | ranged | 4 | 1 | -2 | 2 |
+| Pistol | ranged | 1 | 1 | 0 | 1 |
+
+### Berserker
+| Arme | Type | Portee | Attaques | AP | Degats |
+|------|------|--------|----------|----|--------|
+| Chain Axe | melee | 1 | 4 | -1 | 1 |
+
 ## Resolution de combat (`combat.js` - `resolveAttack()`)
 
 1. **To Hit** — lance `attacks` D6, reussite sur `ballisticSkill+` (ranged) ou `weaponSkill+` (melee)
