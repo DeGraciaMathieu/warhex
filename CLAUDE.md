@@ -14,7 +14,7 @@ Jeu tactique tour par tour sur grille hexagonale, inspiré des mécaniques Warha
 main.jsx              → Point d'entrée, ré-exporte App
 src/
   hex.js              → Maths hexagonales (coordonnées cube, pathfinding, distance, ligne de vue)
-  combat.js           → Résolution de combat (jets de dés, To Hit / To Wound / Save)
+  combat.js           → Résolution de combat (jets de dés, To Hit / Save / multiplicateur Force vs Endurance)
   units.js            → Templates d'unités, factory createUnit(), état initial (unités + obstacles)
   renderer.js         → Rendu canvas (grille, obstacles, unités, barres de vie)
   App.jsx             → Composant React principal (state, handlers, UI panneau droit)
@@ -42,9 +42,8 @@ Chaque unité peut se déplacer une fois et attaquer une fois par tour.
 ## Règles de combat (Warhammer simplifié)
 
 1. **To Hit** : jet >= compétence (CC ou CT selon type d'arme)
-2. **To Wound** : seuil calculé par `woundThreshold(force, endurance)`
-3. **Sauvegarde** : jet >= (save + |PA|), impossible si > 6
-4. **Dégâts** : blessures non sauvées × damage de l'arme
+2. **Sauvegarde** : jet >= (save + |PA|), impossible si > 6
+3. **Dégâts** : touches non sauvées × damage × `damageMultiplier(force, endurance)`
 
 ## Pour ajouter une feature
 
