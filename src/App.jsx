@@ -191,8 +191,8 @@ export default function HexWarhammer() {
                 if (control[2] > 0) scoreLog.push(`🏰 J2 +${control[2]} pt${control[2] > 1 ? "s" : ""}`);
                 if (scoreLog.length > 0) combatLog = [...scoreLog, ...combatLog];
             }
-            const newRound = endOfRound ? s.round + 1 : s.round;
             const winner = endOfRound ? checkWinner(scores, s.round) : null;
+            const newRound = endOfRound && !winner ? s.round + 1 : s.round;
             return {
                 ...s, scores,
                 units: s.units.map(u => ({ ...u, hasMoved: false, hasAttacked: false })),
