@@ -120,7 +120,8 @@ export default function HexWarhammer() {
             const occupied = new Set(s.units.filter(u => u.currentWounds > 0 && u.id !== cur.id).map(u => hexKey(u.hex)));
             const obsKeys = new Set(s.obstacles.map(hexKey));
             const stopKeys = new Set([...(s.rivers || []), ...(s.towns || [])].map(hexKey));
-            const validMoves = cur.hasMoved ? [] : reachableHexes(cur.hex, cur.movement, occupied, obsKeys, stopKeys);
+            const forestKeys = new Set((s.forests || []).map(hexKey));
+            const validMoves = cur.hasMoved ? [] : reachableHexes(cur.hex, cur.movement, occupied, obsKeys, stopKeys, forestKeys);
             const enemies = s.units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
             const maxRange = Math.max(...cur.weapons.map(w => w.range));
             const validTargets = cur.hasAttacked ? [] : enemies.filter(e => hexDistance(cur.hex, e.hex) <= maxRange && hasLineOfSight(cur.hex, e.hex, obsKeys));
@@ -137,7 +138,8 @@ export default function HexWarhammer() {
             const occupied = new Set(s.units.filter(u => u.currentWounds > 0 && u.id !== cur.id).map(u => hexKey(u.hex)));
             const obsKeys = new Set(s.obstacles.map(hexKey));
             const stopKeys = new Set([...(s.rivers || []), ...(s.towns || [])].map(hexKey));
-            return { ...s, phase: "move", validMoves: reachableHexes(cur.hex, cur.movement, occupied, obsKeys, stopKeys), validTargets: [] };
+            const forestKeys = new Set((s.forests || []).map(hexKey));
+            return { ...s, phase: "move", validMoves: reachableHexes(cur.hex, cur.movement, occupied, obsKeys, stopKeys, forestKeys), validTargets: [] };
         });
     }
 

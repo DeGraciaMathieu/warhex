@@ -69,6 +69,42 @@ function generateRiver(reservedKeys) {
     return river;
 }
 
+function generateForests(count, reservedKeys) {
+    const key = h => `${h.q},${h.r},${h.s}`;
+    const isValid = h => Math.abs(h.q) <= 5 && Math.abs(h.r) <= 5 && Math.abs(h.s) <= 5;
+    const allReserved = new Set(reservedKeys);
+    const forests = [];
+    for (let i = 0; i < count; i++) {
+        const size = 2 + Math.floor(Math.random() * 4);
+        const start = randomAvailableHexes(1, allReserved);
+        if (start.length === 0) break;
+        const cluster = [start[0]];
+        allReserved.add(key(start[0]));
+        while (cluster.length < size) {
+            const candidates = [];
+            for (const h of cluster) {
+                for (const d of DIRECTIONS) {
+                    const n = { q: h.q + d.q, r: h.r + d.r, s: h.s + d.s };
+                    if (isValid(n) && !allReserved.has(key(n))) candidates.push(n);
+                }
+            }
+            if (candidates.length === 0) break;
+            const picked = candidates[Math.floor(Math.random() * candidates.length)];
+            cluster.push(picked);
+            allReserved.add(key(picked));
+        }
+        // Reserve neighbors as buffer to prevent clusters from merging
+        for (const h of cluster) {
+            for (const d of DIRECTIONS) {
+                const n = { q: h.q + d.q, r: h.r + d.r, s: h.s + d.s };
+                allReserved.add(key(n));
+            }
+        }
+        forests.push(...cluster);
+    }
+    return forests;
+}
+
 export function computeTownControl(units, towns) {
     const townKeys = new Set(towns.map(hexKey));
     const alive = units.filter(u => u.currentWounds > 0);
@@ -102,11 +138,15 @@ export function initState() {
     const riverKeys = new Set(rivers.map(r => `${r.q},${r.r},${r.s}`));
     const allReserved2 = new Set([...allReserved, ...riverKeys]);
     const towns = randomAvailableHexes(4, allReserved2);
+    const townKeys = new Set(towns.map(t => `${t.q},${t.r},${t.s}`));
+    const allReserved3 = new Set([...allReserved2, ...townKeys]);
+    const forests = generateForests(3, allReserved3);
     return {
         units,
         obstacles,
         rivers,
         towns,
+        forests,
         currentPlayer: 1,
         phase: "select",
         selectedUnit: null,

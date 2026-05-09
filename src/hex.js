@@ -48,7 +48,7 @@ export function hexCorners(cx, cy, size) {
     });
 }
 
-export function reachableHexes(start, movement, occupiedKeys, obstacleKeys = new Set(), stopKeys = new Set()) {
+export function reachableHexes(start, movement, occupiedKeys, obstacleKeys = new Set(), stopKeys = new Set(), costKeys = new Set()) {
     const startKey = hexKey(start);
     const visited = new Map([[startKey, 0]]);
     const queue = [start];
@@ -63,8 +63,12 @@ export function reachableHexes(start, movement, occupiedKeys, obstacleKeys = new
             for (const n of hexNeighbors(cur)) {
                 const k = hexKey(n);
                 if (!visited.has(k) && !occupiedKeys.has(k) && !obstacleKeys.has(k) && isValidHex(n)) {
-                    visited.set(k, dist + 1);
-                    queue.push(n);
+                    const cost = costKeys.has(k) ? 2 : 1;
+                    const newDist = dist + cost;
+                    if (newDist <= movement) {
+                        visited.set(k, newDist);
+                        queue.push(n);
+                    }
                 }
             }
         }
