@@ -94,10 +94,14 @@ export function initState() {
     const obstacleKeys = new Set(obstacles.map(o => `${o.q},${o.r},${o.s}`));
     const allReserved = new Set([...reservedKeys, ...obstacleKeys]);
     const rivers = generateRiver(allReserved);
+    const riverKeys = new Set(rivers.map(r => `${r.q},${r.r},${r.s}`));
+    const allReserved2 = new Set([...allReserved, ...riverKeys]);
+    const towns = randomAvailableHexes(4, allReserved2);
     return {
         units,
         obstacles,
         rivers,
+        towns,
         currentPlayer: 1,
         phase: "select",
         selectedUnit: null,

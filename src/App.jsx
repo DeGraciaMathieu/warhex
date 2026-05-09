@@ -99,8 +99,8 @@ export default function HexWarhammer() {
             const cur = s.units.find(u => u.id === unitOnHex.id);
             const occupied = new Set(s.units.filter(u => u.currentWounds > 0 && u.id !== cur.id).map(u => hexKey(u.hex)));
             const obsKeys = new Set(s.obstacles.map(hexKey));
-            const riverKeys = new Set((s.rivers || []).map(hexKey));
-            const validMoves = cur.hasMoved ? [] : reachableHexes(cur.hex, cur.movement, occupied, obsKeys, riverKeys);
+            const stopKeys = new Set([...(s.rivers || []), ...(s.towns || [])].map(hexKey));
+            const validMoves = cur.hasMoved ? [] : reachableHexes(cur.hex, cur.movement, occupied, obsKeys, stopKeys);
             const enemies = s.units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
             const maxRange = Math.max(...cur.weapons.map(w => w.range));
             const validTargets = cur.hasAttacked ? [] : enemies.filter(e => hexDistance(cur.hex, e.hex) <= maxRange && hasLineOfSight(cur.hex, e.hex, obsKeys));
@@ -116,8 +116,8 @@ export default function HexWarhammer() {
             if (!cur || cur.hasMoved) return s;
             const occupied = new Set(s.units.filter(u => u.currentWounds > 0 && u.id !== cur.id).map(u => hexKey(u.hex)));
             const obsKeys = new Set(s.obstacles.map(hexKey));
-            const riverKeys = new Set((s.rivers || []).map(hexKey));
-            return { ...s, phase: "move", validMoves: reachableHexes(cur.hex, cur.movement, occupied, obsKeys, riverKeys), validTargets: [] };
+            const stopKeys = new Set([...(s.rivers || []), ...(s.towns || [])].map(hexKey));
+            return { ...s, phase: "move", validMoves: reachableHexes(cur.hex, cur.movement, occupied, obsKeys, stopKeys), validTargets: [] };
         });
     }
 
@@ -142,7 +142,9 @@ export default function HexWarhammer() {
                 return { ...s, combatLog: [`❌ ${weapon.name} hors portée`, ...s.combatLog.slice(0, 10)], phase: "select", pendingAttack: null, validTargets: [], validMoves: [] };
             }
 
-            const { damage, log } = resolveAttack(attacker, weapon, target);
+            const townKeys = new Set((s.towns || []).map(hexKey));
+            const coverBonus = townKeys.has(hexKey(target.hex)) ? 1 : 0;
+            const { damage, log } = resolveAttack(attacker, weapon, target, { coverBonus });
             const isDead = Math.max(0, target.currentWounds - damage) <= 0;
 
             setDiceAnim({ log, phase: 0, dice: 0, done: false, attacker, target, weaponName: weapon.name, damage, isDead });
@@ -298,8 +300,10 @@ export default function HexWarhammer() {
                                 const dist = hexDistance(state.pendingAttack.attacker.hex, state.pendingAttack.target.hex);
                                 const ok = dist <= w.range;
                                 const target = state.pendingAttack.target;
+                                const townKeys = new Set((state.towns || []).map(hexKey));
+                                const inTown = townKeys.has(hexKey(target.hex));
                                 const mult = damageMultiplier(w.strength, target.toughness);
-                                const effectiveSave = target.save + Math.abs(w.ap);
+                                const effectiveSave = target.save - (inTown ? 1 : 0) + Math.abs(w.ap);
                                 const cantSave = effectiveSave > 6;
                                 const multColor = mult >= 2 ? "#2e7d32" : mult >= 1.5 ? "#558b2f" : mult === 1 ? "#8a7a60" : mult <= 0.25 ? "#c62828" : "#e65100";
                                 const saveColor = cantSave ? "#2e7d32" : effectiveSave >= 6 ? "#558b2f" : effectiveSave >= 4 ? "#8a7a60" : effectiveSave >= 3 ? "#e65100" : "#c62828";
@@ -313,7 +317,7 @@ export default function HexWarhammer() {
                                         {ok && (
                                             <div style={{ display: "flex", gap: 8, marginTop: 5, fontSize: 10 }}>
                                                 <span style={{ color: multColor, fontWeight: 600 }}>Force ×{mult}</span>
-                                                <span style={{ color: saveColor, fontWeight: 600 }}>{cantSave ? "Svg impossible" : `Svg ${effectiveSave}+`}</span>
+                                                <span style={{ color: saveColor, fontWeight: 600 }}>{cantSave ? "Svg impossible" : `Svg ${effectiveSave}+`}{inTown ? " 🏰" : ""}</span>
                                             </div>
                                         )}
                                     </button>

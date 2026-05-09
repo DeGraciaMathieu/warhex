@@ -9,7 +9,7 @@ export function damageMultiplier(str, tough) {
     return 0.5;
 }
 
-export function resolveAttack(attacker, weapon, target) {
+export function resolveAttack(attacker, weapon, target, { coverBonus = 0 } = {}) {
     const log = [];
     const skillStat = weapon.type === "ranged" ? attacker.ballisticSkill : attacker.weaponSkill;
 
@@ -21,7 +21,7 @@ export function resolveAttack(attacker, weapon, target) {
     // — Save
     let totalDamage = 0;
     if (hits > 0) {
-        const effectiveSave = target.save + Math.abs(weapon.ap);
+        const effectiveSave = target.save - coverBonus + Math.abs(weapon.ap);
         const saveRolls = rollDice(3);
         const cantSave = effectiveSave > 6;
         const saved = cantSave ? 0 : saveRolls.filter(r => r >= effectiveSave).length;
