@@ -463,6 +463,82 @@ describe("état initial du jeu", () => {
         }
     });
 
+    it("le fusil a une portée de 2 cases", () => {
+        const state = initState();
+        for (const unit of state.units) {
+            const rifle = unit.weapons.find(w => w.id === "rifle");
+            expect(rifle.range).toBe(2);
+        }
+    });
+
+    it("la carte contient exactement 9 obstacles", () => {
+        const state = initState();
+        expect(state.obstacles).toHaveLength(9);
+    });
+
+    it("les rivières sont sur des hexes valides", () => {
+        const state = initState();
+        for (const r of state.rivers) {
+            expect(isValidHex(r)).toBe(true);
+        }
+    });
+
+    it("la carte contient entre 6 et 15 cases de forêt réparties en zones", () => {
+        for (let i = 0; i < 20; i++) {
+            resetUID();
+            const state = initState();
+            expect(state.forests.length).toBeGreaterThanOrEqual(6);
+            expect(state.forests.length).toBeLessThanOrEqual(15);
+        }
+    });
+
+    it("les forêts sont sur des hexes valides", () => {
+        const state = initState();
+        for (const f of state.forests) {
+            expect(isValidHex(f)).toBe(true);
+        }
+    });
+
+    it("les forêts ne chevauchent aucun autre terrain", () => {
+        const state = initState();
+        const unitKeys = new Set(state.units.map(u => hexKey(u.hex)));
+        const obsKeys = new Set(state.obstacles.map(o => hexKey(o)));
+        const riverKeys = new Set(state.rivers.map(r => hexKey(r)));
+        const townKeys = new Set(state.towns.map(t => hexKey(t)));
+        for (const f of state.forests) {
+            const k = hexKey(f);
+            expect(unitKeys.has(k)).toBe(false);
+            expect(obsKeys.has(k)).toBe(false);
+            expect(riverKeys.has(k)).toBe(false);
+            expect(townKeys.has(k)).toBe(false);
+        }
+    });
+
+    it("les forêts forment des zones contiguës", () => {
+        const state = initState();
+        const forestKeys = new Set(state.forests.map(hexKey));
+        const visited = new Set();
+        let zones = 0;
+        for (const f of state.forests) {
+            const k = hexKey(f);
+            if (visited.has(k)) continue;
+            zones++;
+            const queue = [f];
+            visited.add(k);
+            while (queue.length > 0) {
+                const cur = queue.shift();
+                for (const n of hexNeighbors(cur)) {
+                    const nk = hexKey(n);
+                    if (forestKeys.has(nk) && !visited.has(nk)) {
+                        visited.add(nk);
+                        queue.push(n);
+                    }
+                }
+            }
+        }
+        expect(zones).toBe(3);
+    });
+
     it("les scores commencent à 0 pour chaque joueur", () => {
         const state = initState();
         expect(state.scores).toEqual({ 1: 0, 2: 0 });
@@ -602,6 +678,13 @@ describe("conversions hex ↔ pixel", () => {
         const a = { q: 1, r: -1, s: 0 };
         const b = { q: 1, r: 0, s: -1 };
         expect(hexKey(a)).not.toBe(hexKey(b));
+    });
+
+    it("un hex au bord de la grille est valide, un hex hors grille ne l'est pas", () => {
+        expect(isValidHex({ q: 5, r: -5, s: 0 })).toBe(true);
+        expect(isValidHex({ q: -5, r: 5, s: 0 })).toBe(true);
+        expect(isValidHex({ q: 6, r: -6, s: 0 })).toBe(false);
+        expect(isValidHex({ q: 0, r: -6, s: 6 })).toBe(false);
     });
 
     it("deux hexes adjacents sont toujours en ligne de vue", () => {
