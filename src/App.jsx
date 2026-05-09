@@ -8,12 +8,57 @@ export default function HexWarhammer() {
     const canvasRef = useRef(null);
     const [state, setState] = useState(initState);
     const [hoveredHex, setHoveredHex] = useState(null);
+    const [diceAnim, setDiceAnim] = useState(null);
 
     useEffect(() => {
         drawScene(canvasRef.current, state, hoveredHex);
     }, [state, hoveredHex]);
 
+    useEffect(() => {
+        if (!diceAnim || diceAnim.done) return;
+        const { log, phase, dice } = diceAnim;
+        const entry = log[phase];
+        if (!entry) {
+            // All phases revealed — apply damage
+            setDiceAnim(a => ({ ...a, done: true }));
+            setState(s => {
+                const { attacker, target, damage, isDead } = diceAnim;
+                const newWounds = Math.max(0, target.currentWounds - damage);
+                const units = s.units.map(u => {
+                    if (u.id === attacker.id) return { ...u, hasAttacked: true };
+                    if (u.id === target.id) return { ...u, currentWounds: newWounds };
+                    return u;
+                });
+                const remainingEnemies = units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
+                const winner = remainingEnemies.length === 0 ? s.currentPlayer : null;
+                const combatLog = [
+                    `⚔ ${attacker.name} → ${target.name} [${diceAnim.weaponName}]`,
+                    isDead ? `💀 ${target.name} éliminé !` : `❤ ${target.name} : ${newWounds}/${target.wounds} PV`,
+                    ...s.combatLog.slice(0, 8),
+                ];
+                return {
+                    ...s, units, phase: "select", selectedUnit: null, validMoves: [], validTargets: [],
+                    pendingAttack: null, combatLog, winner,
+                    roundLog: { weapon: diceAnim.weaponName, attacker: attacker.name, target: target.name, log, isDead, damage },
+                };
+            });
+            return;
+        }
+        const rolls = entry.rolls || [];
+        if (rolls.length === 0 || dice >= rolls.length) {
+            // Phase fully revealed, move to next
+            const delay = entry.isSummary ? 800 : 600;
+            const timer = setTimeout(() => setDiceAnim(a => ({ ...a, phase: a.phase + 1, dice: 0 })), delay);
+            return () => clearTimeout(timer);
+        }
+        // Reveal next die
+        const timer = setTimeout(() => setDiceAnim(a => ({ ...a, dice: a.dice + 1 })), 350);
+        return () => clearTimeout(timer);
+    }, [diceAnim]);
+
     function onCanvasClick(e) {
+        if (diceAnim && !diceAnim.done) return;
+        if (diceAnim?.done) setDiceAnim(null);
         const rect = canvasRef.current.getBoundingClientRect();
         const sx = CANVAS_W / rect.width, sy = CANVAS_H / rect.height;
         const x = (e.clientX - rect.left) * sx - OX;
@@ -33,7 +78,7 @@ export default function HexWarhammer() {
     }
 
     function handleClick(s, hex) {
-        if (s.winner || s.phase === "weapon_select") return s;
+        if (s.winner || s.phase === "weapon_select" || s.phase === "resolving") return s;
         const k = hexKey(hex);
         const unitOnHex = s.units.find(u => u.currentWounds > 0 && hexKey(u.hex) === k);
         const moveKeys = new Set(s.validMoves.map(hexKey));
@@ -93,29 +138,11 @@ export default function HexWarhammer() {
             }
 
             const { damage, log } = resolveAttack(attacker, weapon, target);
-            const newWounds = Math.max(0, target.currentWounds - damage);
-            const isDead = newWounds <= 0;
+            const isDead = Math.max(0, target.currentWounds - damage) <= 0;
 
-            const units = s.units.map(u => {
-                if (u.id === attacker.id) return { ...u, hasAttacked: true };
-                if (u.id === target.id) return { ...u, currentWounds: newWounds };
-                return u;
-            });
+            setDiceAnim({ log, phase: 0, dice: 0, done: false, attacker, target, weaponName: weapon.name, damage, isDead });
 
-            const remainingEnemies = units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
-            const winner = remainingEnemies.length === 0 ? s.currentPlayer : null;
-
-            const combatLog = [
-                `⚔ ${attacker.name} → ${target.name} [${weapon.name}]`,
-                isDead ? `💀 ${target.name} éliminé !` : `❤ ${target.name} : ${newWounds}/${target.wounds} PV`,
-                ...s.combatLog.slice(0, 8),
-            ];
-
-            return {
-                ...s, units, phase: "select", selectedUnit: null, validMoves: [], validTargets: [],
-                pendingAttack: null, combatLog, winner,
-                roundLog: { weapon: weapon.name, attacker: attacker.name, target: target.name, log, isDead, damage },
-            };
+            return { ...s, phase: "resolving", roundLog: null };
         });
     }
 
@@ -140,7 +167,7 @@ export default function HexWarhammer() {
     const sel = state.selectedUnit ? state.units.find(u => u.id === state.selectedUnit.id) : null;
     const P = { 1: "#2a6fa8", 2: "#a03030" };
     const phaseLabel = {
-        select: "SÉLECTION", move: "MOUVEMENT", attack: "ATTAQUE", weapon_select: "CHOIX D'ARME",
+        select: "SÉLECTION", move: "MOUVEMENT", attack: "ATTAQUE", weapon_select: "CHOIX D'ARME", resolving: "RÉSOLUTION",
     }[state.phase] || "";
 
     return (
@@ -179,6 +206,17 @@ export default function HexWarhammer() {
         .roll-hit { background: rgba(76,175,80,.15); border-color: #4caf50; color: #2e7d32; }
         .roll-miss { background: rgba(244,67,54,.1); border-color: #e53935; color: #c62828; }
         canvas { cursor: crosshair; display: block; }
+        .roll-new { animation: diceAppear .45s ease-out; }
+        @keyframes diceAppear {
+          0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+          50% { transform: scale(1.4) rotate(15deg); opacity: 1; }
+          75% { transform: scale(0.9) rotate(-5deg); opacity: 1; }
+          100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: .4; }
+          50% { opacity: 1; }
+        }
       `}</style>
 
             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, padding: 20 }}>
@@ -278,36 +316,57 @@ export default function HexWarhammer() {
                     )}
                 </div>
 
-                {state.roundLog && (
-                    <div style={{ padding: "10px 16px", borderBottom: "1px solid #d5cbb8", background: "#e5ddd0" }}>
-                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 8 }}>RÉSOLUTION DE COMBAT</div>
-                        <div style={{ fontSize: 12, color: "#8a6a08", marginBottom: 6 }}>
-                            {state.roundLog.attacker} → {state.roundLog.target} [{state.roundLog.weapon}]
-                        </div>
-                        {state.roundLog.log.map((entry, i) => (
-                            <div key={i} style={{ marginBottom: entry.isSummary ? 0 : 5 }}>
-                                <div style={{ fontSize: 11, color: "#6a5a40", marginBottom: entry.rolls?.length ? 2 : 0 }}>{entry.label}</div>
-                                {entry.rolls?.length > 0 && (
-                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 0 }}>
-                                        {entry.rolls.map((r, j) => {
-                                            const needed = entry.isSave
-                                                ? parseInt(entry.label.match(/(\d+)\+/) || [0, 7])[1]
-                                                : parseInt(entry.label.match(/(\d+)\+/) || [0, 0])[1];
-                                            const hit = entry.isSave ? r >= needed : r >= needed;
-                                            const cls = (entry.isSave ? hit : hit) ? (entry.isSave ? "roll-miss" : "roll-hit") : (entry.isSave ? "roll-hit" : "roll-miss");
-                                            return <span key={j} className={`roll-chip ${cls}`}>{r}</span>;
-                                        })}
-                                    </div>
-                                )}
-                                {entry.isSummary && (
-                                    <div style={{ fontSize: 13, fontWeight: 600, color: state.roundLog.damage > 0 ? "#e53935" : "#4caf50", marginTop: 4 }}>
-                                        {state.roundLog.isDead ? `💀 ${state.roundLog.target} éliminé !` : `${state.roundLog.damage} dégât(s) infligé(s)`}
-                                    </div>
-                                )}
+                {(diceAnim || state.roundLog) && (() => {
+                    const src = diceAnim && !diceAnim.done ? diceAnim : state.roundLog;
+                    if (!src) return null;
+                    const animating = diceAnim && !diceAnim.done;
+                    const visibleLog = animating
+                        ? src.log.slice(0, src.phase + 1)
+                        : src.log;
+                    const atkName = animating ? src.attacker.name : src.attacker;
+                    const tgtName = animating ? src.target.name : src.target;
+                    const wpnName = animating ? src.weaponName : src.weapon;
+                    return (
+                        <div style={{ padding: "10px 16px", borderBottom: "1px solid #d5cbb8", background: "#e5ddd0" }}>
+                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 8 }}>RÉSOLUTION DE COMBAT</div>
+                            <div style={{ fontSize: 12, color: "#8a6a08", marginBottom: 6 }}>
+                                {atkName} → {tgtName} [{wpnName}]
                             </div>
-                        ))}
-                    </div>
-                )}
+                            {visibleLog.map((entry, i) => {
+                                const isCurrentPhase = animating && i === src.phase;
+                                const visibleDice = isCurrentPhase ? (entry.rolls || []).slice(0, src.dice) : (entry.rolls || []);
+                                return (
+                                    <div key={i} style={{ marginBottom: entry.isSummary ? 0 : 5 }}>
+                                        <div style={{ fontSize: 11, color: "#6a5a40", marginBottom: visibleDice.length ? 2 : 0 }}>{entry.label}</div>
+                                        {visibleDice.length > 0 && (
+                                            <div style={{ display: "flex", flexWrap: "wrap", gap: 0 }}>
+                                                {visibleDice.map((r, j) => {
+                                                    const needed = entry.isSave
+                                                        ? parseInt((entry.label.match(/(\d+)\+/) || [0, 7])[1])
+                                                        : parseInt((entry.label.match(/(\d+)\+/) || [0, 0])[1]);
+                                                    const hit = r >= needed;
+                                                    const cls = (entry.isSave ? hit : hit) ? (entry.isSave ? "roll-miss" : "roll-hit") : (entry.isSave ? "roll-hit" : "roll-miss");
+                                                    const isNew = isCurrentPhase && j === src.dice - 1;
+                                                    return <span key={j} className={`roll-chip ${cls}${isNew ? " roll-new" : ""}`}>{r}</span>;
+                                                })}
+                                            </div>
+                                        )}
+                                        {entry.isSummary && !animating && (
+                                            <div style={{ fontSize: 13, fontWeight: 600, color: src.damage > 0 ? "#e53935" : "#4caf50", marginTop: 4 }}>
+                                                {src.isDead ? `💀 ${tgtName} éliminé !` : `${src.damage} dégât(s) infligé(s)`}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                            {animating && (
+                                <div style={{ fontSize: 11, color: "#8a7a60", marginTop: 6, fontStyle: "italic", animation: "pulse 1s infinite" }}>
+                                    Lancement des dés...
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()}
 
                 <div style={{ flex: 1, padding: "10px 16px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
                     <div style={{ fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 8 }}>JOURNAL</div>
