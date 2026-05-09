@@ -13,23 +13,25 @@ Jeu tactique tour par tour sur grille hexagonale, inspiré des mécaniques Warha
 ```
 main.jsx              → Point d'entrée, ré-exporte App
 src/
-  hex.js              → Maths hexagonales (coordonnées cube, pathfinding, distance)
+  hex.js              → Maths hexagonales (coordonnées cube, pathfinding, distance, ligne de vue)
   combat.js           → Résolution de combat (jets de dés, To Hit / To Wound / Save)
-  units.js            → Templates d'unités, factory createUnit(), état initial
-  renderer.js         → Rendu canvas (grille, unités, barres de vie)
+  units.js            → Templates d'unités, factory createUnit(), état initial (unités + obstacles)
+  renderer.js         → Rendu canvas (grille, obstacles, unités, barres de vie)
   App.jsx             → Composant React principal (state, handlers, UI panneau droit)
   ai.js               → (à créer) IA basique pour le joueur 2
 ```
 
 ## Conventions
 
-- Pas de TypeScript, pas de tests pour l'instant
+- Pas de TypeScript
 - Coordonnées hex en système cube (q + r + s = 0), toujours utiliser `hexKey()` pour les clés
 - L'état du jeu est un objet immutable passé via `setState`
 - Le rendu du plateau se fait dans `renderer.js` via `drawScene(canvas, state, hoveredHex)`
 - Les fonctions pures (hex, combat) n'importent jamais React
 - Thème clair (fond beige `#f5f0e8`, texte foncé `#2a2015`)
 - Couleurs joueurs : bleu `#2a6fa8` (J1), rouge `#a03030` (J2)
+- Obstacles stockés dans `state.obstacles`, bloquent le déplacement et la ligne de vue
+- Ligne de vue calculée par `hasLineOfSight()` dans `hex.js` (tracé de ligne hex)
 
 ## Phases de jeu
 
@@ -48,7 +50,8 @@ Chaque unité peut se déplacer une fois et attaquer une fois par tour.
 
 - **Nouveau type d'unité** → ajouter le template dans `src/units.js`
 - **Nouvelle mécanique de combat** → modifier `src/combat.js`
-- **Obstacles / terrain** → modifier `src/hex.js` (validation) + `src/renderer.js` (affichage)
+- **Nouvel obstacle** → ajouter les coordonnées dans `initState()` de `src/units.js`
+- **Nouveau type de terrain** → modifier `src/hex.js` (validation) + `src/renderer.js` (affichage)
 - **IA** → créer `src/ai.js`, importer les fonctions de `hex.js` et `combat.js`
 - **Animations** → modifier `src/renderer.js`
 - **Nouveau panneau UI** → modifier `src/App.jsx`

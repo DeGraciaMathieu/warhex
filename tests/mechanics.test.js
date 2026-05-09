@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { hexDistance, hexKey, reachableHexes, isValidHex, hexNeighbors } from "../src/hex.js";
+import { hexDistance, hexKey, reachableHexes, isValidHex, hexNeighbors, hasLineOfSight } from "../src/hex.js";
 import { resolveAttack, woundThreshold } from "../src/combat.js";
 import { createUnit, initState, resetUID } from "../src/units.js";
 
@@ -166,6 +166,59 @@ describe("distance hexagonale", () => {
 });
 
 // ────────────────────────────────────────────────
+// OBSTACLES
+// ────────────────────────────────────────────────
+
+describe("obstacles", () => {
+    it("une unité ne peut pas traverser un obstacle", () => {
+        const origin = { q: -1, r: 0, s: 1 };
+        const obstacle = { q: 0, r: 0, s: 0 };
+        const obstacleKeys = new Set([hexKey(obstacle)]);
+        const reachable = reachableHexes(origin, 3, new Set(), obstacleKeys);
+        const reachableKeys = new Set(reachable.map(hexKey));
+
+        expect(reachableKeys.has(hexKey(obstacle))).toBe(false);
+    });
+
+    it("un obstacle entre deux hexes bloque la ligne de vue", () => {
+        const a = { q: -2, r: 0, s: 2 };
+        const b = { q: 2, r: 0, s: -2 };
+        const obstacle = { q: 0, r: 0, s: 0 };
+        const obstacleKeys = new Set([hexKey(obstacle)]);
+
+        expect(hasLineOfSight(a, b, obstacleKeys)).toBe(false);
+    });
+
+    it("la ligne de vue est dégagée sans obstacle intermédiaire", () => {
+        const a = { q: -2, r: 0, s: 2 };
+        const b = { q: 2, r: 0, s: -2 };
+        const obstacleKeys = new Set();
+
+        expect(hasLineOfSight(a, b, obstacleKeys)).toBe(true);
+    });
+
+    it("un obstacle sur la case de départ ou d'arrivée ne bloque pas la ligne de vue", () => {
+        const a = { q: 0, r: 0, s: 0 };
+        const b = { q: 2, r: 0, s: -2 };
+        const obstacleKeys = new Set([hexKey(a), hexKey(b)]);
+
+        expect(hasLineOfSight(a, b, obstacleKeys)).toBe(true);
+    });
+
+    it("les obstacles réduisent le nombre de destinations accessibles", () => {
+        const origin = { q: 0, r: 0, s: 0 };
+        const withoutObstacles = reachableHexes(origin, 3, new Set(), new Set());
+
+        const neighbors = hexNeighbors(origin);
+        const obstacleKeys = new Set(neighbors.map(hexKey));
+        const withObstacles = reachableHexes(origin, 3, new Set(), obstacleKeys);
+
+        expect(withObstacles.length).toBe(0);
+        expect(withoutObstacles.length).toBeGreaterThan(0);
+    });
+});
+
+// ────────────────────────────────────────────────
 // ÉTAT INITIAL
 // ────────────────────────────────────────────────
 
@@ -212,5 +265,20 @@ describe("état initial du jeu", () => {
         const keys = state.units.map(u => hexKey(u.hex));
         const unique = new Set(keys);
         expect(unique.size).toBe(keys.length);
+    });
+
+    it("les obstacles ne chevauchent aucune unité", () => {
+        const state = initState();
+        const unitKeys = new Set(state.units.map(u => hexKey(u.hex)));
+        for (const obs of state.obstacles) {
+            expect(unitKeys.has(hexKey(obs))).toBe(false);
+        }
+    });
+
+    it("les obstacles sont sur des hexes valides", () => {
+        const state = initState();
+        for (const obs of state.obstacles) {
+            expect(isValidHex(obs)).toBe(true);
+        }
     });
 });
