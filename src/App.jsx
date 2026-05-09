@@ -29,13 +29,9 @@ export default function HexWarhammer() {
                     if (u.id === target.id) return { ...u, currentWounds: newWounds };
                     return u;
                 });
-                const combatLog = [
-                    `⚔ ${attacker.name} → ${target.name} [${diceAnim.weaponName}]`,
-                    isDead ? `💀 ${target.name} éliminé !` : `❤ ${target.name} : ${newWounds}/${target.wounds} PV`,
-                ];
                 return {
                     ...s, units, phase: "select", selectedUnit: null, validMoves: [], validTargets: [],
-                    pendingAttack: null, combatLog, autoEndTurn: true,
+                    pendingAttack: null, autoEndTurn: true,
                     roundLog: { weapon: diceAnim.weaponName, attacker: attacker.name, target: target.name, log, isDead, damage },
                 };
             });
@@ -151,7 +147,7 @@ export default function HexWarhammer() {
             const { attacker, target } = s.pendingAttack;
             const dist = hexDistance(attacker.hex, target.hex);
             if (dist > weapon.range) {
-                return { ...s, combatLog: [`❌ ${weapon.name} hors portée`], phase: "select", pendingAttack: null, validTargets: [], validMoves: [] };
+                return { ...s, phase: "select", pendingAttack: null, validTargets: [], validMoves: [] };
             }
 
             const townKeys = new Set((s.towns || []).map(hexKey));
@@ -171,13 +167,10 @@ export default function HexWarhammer() {
             const nextPlayer = s.currentPlayer === 1 ? 2 : 1;
             const endOfRound = nextPlayer === 1;
             const scores = { ...s.scores };
-            let combatLog = [...s.combatLog];
             if (endOfRound) {
                 const control = computeTownControl(s.units, s.towns);
                 scores[1] += control[1];
                 scores[2] += control[2];
-                if (control[1] > 0) combatLog.push(`🏰 J1 +${control[1]} pt${control[1] > 1 ? "s" : ""}`);
-                if (control[2] > 0) combatLog.push(`🏰 J2 +${control[2]} pt${control[2] > 1 ? "s" : ""}`);
             }
             const winner = endOfRound ? checkWinner(scores, s.round) : null;
             const newRound = endOfRound && !winner ? s.round + 1 : s.round;
@@ -186,7 +179,7 @@ export default function HexWarhammer() {
                 units: s.units.map(u => ({ ...u, hasMoved: false, hasAttacked: false })),
                 currentPlayer: nextPlayer, activeUnitId: null,
                 phase: "select", selectedUnit: null, validMoves: [], validTargets: [], pendingAttack: null,
-                combatLog, round: newRound, winner,
+                round: newRound, winner,
                 autoEndTurn: false,
             };
         });
@@ -421,16 +414,6 @@ export default function HexWarhammer() {
                     );
                 })()}
 
-                <div style={{ flex: 1, padding: "10px 16px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 8 }}>JOURNAL</div>
-                    <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 3 }}>
-                        {state.combatLog.map((entry, i) => (
-                            <div key={i} style={{ fontSize: 11, color: `rgba(42,32,21,${Math.max(0.25, 0.9 - i * 0.1)})`, lineHeight: 1.5, borderLeft: `2px solid ${i === 0 ? "#8a6a08" : "transparent"}`, paddingLeft: 6 }}>
-                                {entry}
-                            </div>
-                        ))}
-                    </div>
-                </div>
             </div>
         </div>
     );

@@ -153,7 +153,6 @@ export function initState() {
         validMoves: [],
         validTargets: [],
         pendingAttack: null,
-        combatLog: [],
         roundLog: null,
         winner: null,
         round: 1,
