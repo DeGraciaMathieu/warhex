@@ -37,7 +37,7 @@ const losKeys = new Set([...s.obstacles, ...(s.towns || [])].map(hexKey));
 
 - Obstacles : 9 hexes aleatoires
 - Riviere : chemin continu nord→sud via `generateRiver()`
-- Villes : 2 paires symetriques via `generateSymmetricTowns()`
+- Villes : 4 hexes aleatoires via `randomAvailableHexes()`
 - Forets : 3 zones contigues via `generateForests()`
 
 Les terrains sont generes sequentiellement, chaque type reserve ses hexes pour eviter les chevauchements.

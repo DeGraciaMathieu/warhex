@@ -19,12 +19,18 @@ auto_invoke: true
 | `ap` | Penetration d'armure (negatif, reduit la sauvegarde adverse) |
 | `damage` | Degats par touche non sauvee |
 
-## Armes existantes (Warrior)
+## Armes existantes
 
+### Warrior
 | Arme | Type | Portee | Attaques | AP | Degats |
 |------|------|--------|----------|----|--------|
 | Rifle | ranged | 2 | 2 | -1 | 1 |
 | Sword | melee | 1 | 3 | 0 | 1 |
+
+### Knight
+| Arme | Type | Portee | Attaques | AP | Degats |
+|------|------|--------|----------|----|--------|
+| Lance | melee | 1 | 2 | -1 | 1 |
 
 ## Resolution de combat (`combat.js` - `resolveAttack()`)
 
