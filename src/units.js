@@ -1,6 +1,6 @@
 import { hexKey } from "./hex.js";
 
-const UNIT_TEMPLATES = {
+export const UNIT_TEMPLATES = {
     warrior: {
         name: "Warrior", symbol: "⚔",
         movement: 3, weaponSkill: 3, ballisticSkill: 4,
@@ -147,18 +147,33 @@ export function checkWinner(scores, round) {
 }
 
 
-export function initState() {
+export const SPAWN_POSITIONS = {
+    1: [
+        { q: -4, r: 0, s: 4 },
+        { q: -3, r: 3, s: 0 },
+        { q: -4, r: 2, s: 2 },
+        { q: -3, r: -1, s: 4 },
+        { q: -2, r: 3, s: -1 },
+    ],
+    2: [
+        { q: 4, r: 0, s: -4 },
+        { q: 3, r: -3, s: 0 },
+        { q: 4, r: -2, s: -2 },
+        { q: 3, r: 1, s: -4 },
+        { q: 2, r: -3, s: 1 },
+    ],
+};
+
+const DEFAULT_ARMIES = {
+    1: ["warrior", "warrior", "knight", "sniper", "berserker"],
+    2: ["warrior", "warrior", "knight", "sniper", "berserker"],
+};
+
+export function initState(armies) {
+    const picks = armies || DEFAULT_ARMIES;
     const units = [
-        createUnit("warrior", 1, { q: -4, r: 0, s: 4 }),
-        createUnit("warrior", 1, { q: -3, r: 3, s: 0 }),
-        createUnit("knight", 1, { q: -4, r: 2, s: 2 }),
-        createUnit("sniper", 1, { q: -3, r: -1, s: 4 }),
-        createUnit("berserker", 1, { q: -2, r: 3, s: -1 }),
-        createUnit("warrior", 2, { q: 4, r: 0, s: -4 }),
-        createUnit("warrior", 2, { q: 3, r: -3, s: 0 }),
-        createUnit("knight", 2, { q: 4, r: -2, s: -2 }),
-        createUnit("sniper", 2, { q: 3, r: 1, s: -4 }),
-        createUnit("berserker", 2, { q: 2, r: -3, s: 1 }),
+        ...picks[1].map((type, i) => createUnit(type, 1, SPAWN_POSITIONS[1][i])),
+        ...picks[2].map((type, i) => createUnit(type, 2, SPAWN_POSITIONS[2][i])),
     ];
     const reservedKeys = new Set(units.map(u => `${u.hex.q},${u.hex.r},${u.hex.s}`));
     const obstacles = randomAvailableHexes(9, reservedKeys);

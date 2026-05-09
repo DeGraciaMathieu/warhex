@@ -1,19 +1,24 @@
 import { useState, useEffect, useRef } from "react";
 import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.js";
-import { initState, resetUID } from "./units.js";
+import { initState, resetUID, UNIT_TEMPLATES } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY } from "./renderer.js";
 import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn } from "./game.js";
 import "./styles.css";
 
+const UNIT_TYPES = Object.keys(UNIT_TEMPLATES);
+const ARMY_SIZE = 5;
+
 export default function HexWarhammer() {
     const canvasRef = useRef(null);
-    const [state, setState] = useState(initState);
+    const [armyPhase, setArmyPhase] = useState(true);
+    const [selections, setSelections] = useState({ 1: [], 2: [] });
+    const [state, setState] = useState(null);
     const [hoveredHex, setHoveredHex] = useState(null);
     const [diceAnim, setDiceAnim] = useState(null);
 
     useEffect(() => {
-        drawScene(canvasRef.current, state, hoveredHex);
-    }, [state, hoveredHex]);
+        if (!armyPhase && state) drawScene(canvasRef.current, state, hoveredHex);
+    }, [state, hoveredHex, armyPhase]);
 
     useEffect(() => {
         if (!diceAnim || diceAnim.done) return;
@@ -35,11 +40,11 @@ export default function HexWarhammer() {
     }, [diceAnim]);
 
     useEffect(() => {
-        if (state.autoEndTurn) {
+        if (state && state.autoEndTurn) {
             const timer = setTimeout(() => endTurn(), 1200);
             return () => clearTimeout(timer);
         }
-    }, [state.autoEndTurn]);
+    }, [state?.autoEndTurn]);
 
     function onCanvasClick(e) {
         if (diceAnim && !diceAnim.done) return;
@@ -75,10 +80,81 @@ export default function HexWarhammer() {
     }
 
     function endTurn() { setState(computeEndTurn); }
-    function restart() { resetUID(); setState(initState()); }
+    function restart() { resetUID(); setSelections({ 1: [], 2: [] }); setArmyPhase(true); setState(null); }
+
+    function addUnit(player, type) {
+        setSelections(prev => {
+            if (prev[player].length >= ARMY_SIZE) return prev;
+            return { ...prev, [player]: [...prev[player], type] };
+        });
+    }
+
+    function removeUnit(player, index) {
+        setSelections(prev => ({
+            ...prev,
+            [player]: prev[player].filter((_, i) => i !== index),
+        }));
+    }
+
+    function startGame() {
+        resetUID();
+        setState(initState(selections));
+        setArmyPhase(false);
+    }
+
+    const canStart = selections[1].length === ARMY_SIZE && selections[2].length === ARMY_SIZE;
+
+    const P = { 1: "#2a6fa8", 2: "#a03030" };
+
+    if (armyPhase) {
+        return (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif", gap: 24 }}>
+                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 24, fontWeight: 700, letterSpacing: ".2em", color: "#8a6a08" }}>
+                    ⚔ SÉLECTION D'ARMÉE ⚔
+                </div>
+                <div style={{ display: "flex", gap: 48 }}>
+                    {[1, 2].map(player => (
+                        <div key={player} style={{ width: 280, border: `2px solid ${P[player]}`, borderRadius: 4, padding: 16, background: "#ece5d8" }}>
+                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 14, fontWeight: 700, color: P[player], marginBottom: 12, textAlign: "center" }}>
+                                JOUEUR {player} ({selections[player].length}/{ARMY_SIZE})
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+                                {UNIT_TYPES.map(type => {
+                                    const t = UNIT_TEMPLATES[type];
+                                    const full = selections[player].length >= ARMY_SIZE;
+                                    return (
+                                        <button key={type} className={`btn ${full ? "btn-grey" : "btn-blue"}`} disabled={full} onClick={() => addUnit(player, type)} style={{ textAlign: "left" }}>
+                                            {t.symbol} {t.name}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <div style={{ borderTop: "1px solid #d5cbb8", paddingTop: 8 }}>
+                                {selections[player].length === 0 ? (
+                                    <div style={{ color: "#a09080", fontSize: 12, fontStyle: "italic" }}>Aucune unité sélectionnée</div>
+                                ) : (
+                                    selections[player].map((type, i) => {
+                                        const t = UNIT_TEMPLATES[type];
+                                        return (
+                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, padding: "2px 0" }}>
+                                                <span>{t.symbol} {t.name}</span>
+                                                <button onClick={() => removeUnit(player, i)} style={{ background: "none", border: "none", color: "#a03030", cursor: "pointer", fontSize: 14 }}>✕</button>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <button className="btn btn-gold" disabled={!canStart} onClick={startGame} style={{ fontSize: 16, padding: "10px 32px" }}>
+                    ⚔ Lancer la partie
+                </button>
+            </div>
+        );
+    }
 
     const sel = state.selectedUnit ? state.units.find(u => u.id === state.selectedUnit.id) : null;
-    const P = { 1: "#2a6fa8", 2: "#a03030" };
     const phaseLabel = {
         select: "SÉLECTION", move: "MOUVEMENT", attack: "ATTAQUE", weapon_select: "CHOIX D'ARME", resolving: "RÉSOLUTION",
     }[state.phase] || "";

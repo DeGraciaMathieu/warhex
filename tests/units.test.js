@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { hexKey, isValidHex, hexNeighbors } from "../src/hex.js";
-import { createUnit, initState, resetUID } from "../src/units.js";
+import { createUnit, initState, resetUID, UNIT_TEMPLATES, SPAWN_POSITIONS } from "../src/units.js";
 
 beforeEach(() => resetUID());
 
@@ -75,7 +75,7 @@ describe("création d'unités", () => {
         expect(ranged).toHaveLength(0);
     });
 
-    it("la partie a 2 warriors, 1 knight, 1 sniper et 1 berserker par joueur", () => {
+    it("la partie a 2 warriors, 1 knight, 1 sniper et 1 berserker par joueur par défaut", () => {
         const state = initState();
         for (const player of [1, 2]) {
             const units = state.units.filter(u => u.player === player);
@@ -307,5 +307,63 @@ describe("génération de la carte", () => {
             expect(forestKeys.has(k)).toBe(false);
             expect(hillKeys.has(k)).toBe(false);
         }
+    });
+});
+
+describe("sélection d'armée", () => {
+    it("UNIT_TEMPLATES expose les 4 types d'unités", () => {
+        expect(Object.keys(UNIT_TEMPLATES)).toEqual(expect.arrayContaining(["warrior", "knight", "sniper", "berserker"]));
+        expect(Object.keys(UNIT_TEMPLATES)).toHaveLength(4);
+    });
+
+    it("SPAWN_POSITIONS contient 5 positions par joueur", () => {
+        expect(SPAWN_POSITIONS[1]).toHaveLength(5);
+        expect(SPAWN_POSITIONS[2]).toHaveLength(5);
+    });
+
+    it("initState avec des armées custom crée les bonnes unités", () => {
+        const armies = {
+            1: ["knight", "knight", "knight", "sniper", "sniper"],
+            2: ["berserker", "berserker", "berserker", "berserker", "warrior"],
+        };
+        const state = initState(armies);
+        const p1 = state.units.filter(u => u.player === 1);
+        const p2 = state.units.filter(u => u.player === 2);
+        expect(p1).toHaveLength(5);
+        expect(p2).toHaveLength(5);
+        expect(p1.filter(u => u.name === "Knight")).toHaveLength(3);
+        expect(p1.filter(u => u.name === "Sniper")).toHaveLength(2);
+        expect(p2.filter(u => u.name === "Berserker")).toHaveLength(4);
+        expect(p2.filter(u => u.name === "Warrior")).toHaveLength(1);
+    });
+
+    it("initState avec des armées custom place les unités sur les positions de spawn", () => {
+        const armies = {
+            1: ["warrior", "warrior", "warrior", "warrior", "warrior"],
+            2: ["knight", "knight", "knight", "knight", "knight"],
+        };
+        const state = initState(armies);
+        const p1 = state.units.filter(u => u.player === 1);
+        const p2 = state.units.filter(u => u.player === 2);
+        for (let i = 0; i < 5; i++) {
+            expect(p1[i].hex).toEqual(SPAWN_POSITIONS[1][i]);
+            expect(p2[i].hex).toEqual(SPAWN_POSITIONS[2][i]);
+        }
+    });
+
+    it("initState sans argument utilise l'armée par défaut", () => {
+        const state = initState();
+        expect(state.units).toHaveLength(10);
+        const p1 = state.units.filter(u => u.player === 1);
+        expect(p1.filter(u => u.name === "Warrior")).toHaveLength(2);
+    });
+
+    it("initState avec armées custom initialise autoEndTurn à false", () => {
+        const armies = {
+            1: ["warrior", "warrior", "warrior", "warrior", "warrior"],
+            2: ["warrior", "warrior", "warrior", "warrior", "warrior"],
+        };
+        const state = initState(armies);
+        expect(state.autoEndTurn).toBe(false);
     });
 });
