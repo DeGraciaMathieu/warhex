@@ -22,7 +22,7 @@ export function resolveAttack(attacker, weapon, target) {
     let totalDamage = 0;
     if (hits > 0) {
         const effectiveSave = target.save + Math.abs(weapon.ap);
-        const saveRolls = rollDice(hits);
+        const saveRolls = rollDice(3);
         const cantSave = effectiveSave > 6;
         const saved = cantSave ? 0 : saveRolls.filter(r => r >= effectiveSave).length;
         const unsaved = hits - saved;
