@@ -70,30 +70,36 @@ const DIRECTIONS = [
     { q: -1, r: 1, s: 0 }, { q: -1, r: 0, s: 1 }, { q: 0, r: -1, s: 1 },
 ];
 
-function generateRiver(reservedKeys) {
+function generateWaterBodies(reservedKeys) {
     const key = h => `${h.q},${h.r},${h.s}`;
     const isValid = h => Math.abs(h.q) <= 5 && Math.abs(h.r) <= 5 && Math.abs(h.s) <= 5;
-    const edgeHexes = [];
-    for (let q = -5; q <= 5; q++) {
-        const s = -q + 5;
-        const h = { q, r: -5, s };
-        if (isValid(h) && !reservedKeys.has(key(h))) edgeHexes.push(h);
+    const allReserved = new Set(reservedKeys);
+    const water = [];
+    const bodyCount = 3 + Math.floor(Math.random() * 3); // 3-5 plans d'eau
+
+    for (let i = 0; i < bodyCount; i++) {
+        const start = randomAvailableHexes(1, allReserved);
+        if (start.length === 0) break;
+        const size = 2 + Math.floor(Math.random() * 3); // 2-4 hexes
+        const body = [start[0]];
+        allReserved.add(key(start[0]));
+
+        while (body.length < size) {
+            const candidates = [];
+            for (const h of body) {
+                for (const d of DIRECTIONS) {
+                    const n = { q: h.q + d.q, r: h.r + d.r, s: h.s + d.s };
+                    if (isValid(n) && !allReserved.has(key(n))) candidates.push(n);
+                }
+            }
+            if (candidates.length === 0) break;
+            const picked = candidates[Math.floor(Math.random() * candidates.length)];
+            body.push(picked);
+            allReserved.add(key(picked));
+        }
+        water.push(...body);
     }
-    if (edgeHexes.length === 0) return [];
-    let current = edgeHexes[Math.floor(Math.random() * edgeHexes.length)];
-    const river = [current];
-    const visited = new Set([key(current)]);
-    while (current.r < 5) {
-        const forward = DIRECTIONS.filter(d => d.r >= 0);
-        const candidates = forward
-            .map(d => ({ q: current.q + d.q, r: current.r + d.r, s: current.s + d.s }))
-            .filter(h => isValid(h) && !visited.has(key(h)) && !reservedKeys.has(key(h)));
-        if (candidates.length === 0) break;
-        current = candidates[Math.floor(Math.random() * candidates.length)];
-        river.push(current);
-        visited.add(key(current));
-    }
-    return river;
+    return water;
 }
 
 function generateForests(count, reservedKeys) {
@@ -220,7 +226,7 @@ export function initState(armies, options = {}) {
     const obstacles = randomAvailableHexes(9, reservedKeys);
     const obstacleKeys = new Set(obstacles.map(o => `${o.q},${o.r},${o.s}`));
     const allReserved = new Set([...reservedKeys, ...obstacleKeys]);
-    const rivers = generateRiver(allReserved);
+    const rivers = generateWaterBodies(allReserved);
     const riverKeys = new Set(rivers.map(r => `${r.q},${r.r},${r.s}`));
     const allReserved2 = new Set([...allReserved, ...riverKeys]);
     const towns = fairTowns ? fairTownHexes(4, allReserved2) : randomAvailableHexes(4, allReserved2);
