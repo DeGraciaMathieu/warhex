@@ -1,0 +1,288 @@
+import { describe, it, expect, beforeEach } from "vitest";
+import { hexKey, reachableHexes, isValidHex } from "../src/hex.js";
+import { createUnit, resetUID } from "../src/units.js";
+import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn } from "../src/game.js";
+
+beforeEach(() => resetUID());
+
+function makeState(overrides = {}) {
+    const u1 = createUnit("warrior", 1, { q: -1, r: 0, s: 1 });
+    const u2 = createUnit("warrior", 2, { q: 1, r: 0, s: -1 });
+    return {
+        units: [u1, u2],
+        obstacles: [],
+        rivers: [],
+        towns: [],
+        forests: [],
+        hills: [],
+        swamps: [],
+        currentPlayer: 1,
+        phase: "select",
+        selectedUnit: null,
+        validMoves: [],
+        validTargets: [],
+        pendingAttack: null,
+        roundLog: null,
+        winner: null,
+        round: 1,
+        scores: { 1: 0, 2: 0 },
+        activeUnitId: null,
+        autoEndTurn: false,
+        ...overrides,
+    };
+}
+
+describe("sélection et déplacement", () => {
+    it("cliquer sur une unité alliée la sélectionne", () => {
+        const s = makeState();
+        const result = handleClick(s, { q: -1, r: 0, s: 1 });
+        expect(result.selectedUnit).not.toBeNull();
+        expect(result.selectedUnit.id).toBe(s.units[0].id);
+        expect(result.validMoves.length).toBeGreaterThan(0);
+    });
+
+    it("on ne peut pas sélectionner une unité ennemie", () => {
+        const s = makeState();
+        const result = handleClick(s, { q: 1, r: 0, s: -1 });
+        expect(result.selectedUnit).toBeNull();
+    });
+
+    it("on ne peut pas sélectionner une autre unité quand activeUnitId est défini", () => {
+        createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const u1 = createUnit("warrior", 1, { q: -1, r: 0, s: 1 });
+        const u2 = createUnit("warrior", 1, { q: -2, r: 1, s: 1 });
+        const enemy = createUnit("warrior", 2, { q: 2, r: -1, s: -1 });
+        const s = makeState({ units: [u1, u2, enemy], activeUnitId: u1.id, selectedUnit: u1 });
+        const result = handleClick(s, u2.hex);
+        expect(result.selectedUnit.id).toBe(u1.id);
+    });
+
+    it("cliquer sur un hex de déplacement valide déplace l'unité", () => {
+        const s = makeState();
+        const selected = handleClick(s, { q: -1, r: 0, s: 1 });
+        const moveTarget = selected.validMoves[0];
+        const moved = handleClick(selected, moveTarget);
+        expect(moved.selectedUnit.hex).toEqual(moveTarget);
+        expect(moved.selectedUnit.hasMoved).toBe(true);
+    });
+
+    it("handleClick ne fait rien si la partie est gagnée", () => {
+        const s = makeState({ winner: 1 });
+        const result = handleClick(s, { q: -1, r: 0, s: 1 });
+        expect(result).toEqual(s);
+    });
+
+    it("computeMove ne donne pas de mouvements si l'unité a déjà bougé", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        u1.hasMoved = true;
+        const s = makeState({ units: [u1], selectedUnit: u1 });
+        const result = computeMove(s);
+        expect(result.validMoves).toHaveLength(0);
+    });
+});
+
+describe("attaque et armes", () => {
+    it("computeAttack ne donne pas de cibles si l'unité a déjà attaqué", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        u1.hasAttacked = true;
+        const enemy = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [u1, enemy], selectedUnit: u1 });
+        const result = computeAttack(s);
+        expect(result).toEqual(s);
+    });
+
+    it("computeWeaponSelect annule si la cible est hors de portée", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 4, r: -4, s: 0 });
+        const weapon = attacker.weapons.find(w => w.id === "rifle");
+        const s = makeState({ units: [attacker, target], pendingAttack: { attacker, target } });
+        const result = computeWeaponSelect(s, weapon);
+        expect(result.anim).toBeNull();
+        expect(result.state.phase).toBe("select");
+    });
+
+    it("computeWeaponSelect résout l'attaque si la cible est à portée", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const weapon = attacker.weapons.find(w => w.id === "sword");
+        const s = makeState({ units: [attacker, target], pendingAttack: { attacker, target } });
+        const result = computeWeaponSelect(s, weapon);
+        expect(result.anim).not.toBeNull();
+        expect(result.state.phase).toBe("resolving");
+        expect(result.anim.damage).toBeGreaterThanOrEqual(0);
+    });
+
+    it("applyDamage réduit les PV de la cible et marque l'attaquant comme ayant attaqué", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [attacker, target] });
+        const anim = { attacker, target, damage: 1, weaponName: "Sword", log: [], isDead: false };
+        const result = applyDamage(s, anim);
+        const tgt = result.units.find(u => u.id === target.id);
+        const atk = result.units.find(u => u.id === attacker.id);
+        expect(tgt.currentWounds).toBe(target.currentWounds - 1);
+        expect(atk.hasAttacked).toBe(true);
+    });
+
+    it("applyDamage ne descend pas les PV sous 0", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [attacker, target] });
+        const anim = { attacker, target, damage: 99, weaponName: "Sword", log: [], isDead: true };
+        const result = applyDamage(s, anim);
+        const tgt = result.units.find(u => u.id === target.id);
+        expect(tgt.currentWounds).toBe(0);
+    });
+});
+
+describe("fin de tour", () => {
+    it("computeEndTurn passe au joueur suivant et réinitialise les flags", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        u1.hasMoved = true;
+        u1.hasAttacked = true;
+        const s = makeState({ units: [u1], currentPlayer: 1 });
+        const result = computeEndTurn(s);
+        expect(result.currentPlayer).toBe(2);
+        expect(result.units[0].hasMoved).toBe(false);
+        expect(result.units[0].hasAttacked).toBe(false);
+        expect(result.activeUnitId).toBeNull();
+    });
+
+    it("computeEndTurn marque les points des villes en fin de round", () => {
+        const town = { q: 0, r: 0, s: 0 };
+        const u1 = createUnit("warrior", 1, town);
+        const s = makeState({ units: [u1], towns: [town], currentPlayer: 2 });
+        const result = computeEndTurn(s);
+        expect(result.scores[1]).toBe(1);
+    });
+
+    it("computeEndTurn ne fait rien si un gagnant existe déjà", () => {
+        const s = makeState({ winner: 1 });
+        const result = computeEndTurn(s);
+        expect(result).toEqual(s);
+    });
+
+    it("computeEndTurn incrémente le round en fin de round", () => {
+        const s = makeState({ currentPlayer: 2, round: 3 });
+        const result = computeEndTurn(s);
+        expect(result.round).toBe(4);
+        expect(result.currentPlayer).toBe(1);
+    });
+
+    it("computeEndTurn n'incrémente pas le round en milieu de round", () => {
+        const s = makeState({ currentPlayer: 1, round: 3 });
+        const result = computeEndTurn(s);
+        expect(result.round).toBe(3);
+        expect(result.currentPlayer).toBe(2);
+    });
+});
+
+describe("collines", () => {
+    it("une unité sur une colline peut tirer plus loin avec une arme à distance", () => {
+        const hill = { q: 0, r: 0, s: 0 };
+        const attacker = createUnit("warrior", 1, hill);
+        const target = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
+        const s = makeState({ units: [attacker, target], hills: [hill] });
+        const selected = handleClick(s, hill);
+        expect(selected.validTargets.some(t => t.id === target.id)).toBe(true);
+    });
+
+    it("sans colline, une arme de portée 2 ne peut pas atteindre distance 3", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
+        const s = makeState({ units: [attacker, target] });
+        const selected = handleClick(s, { q: 0, r: 0, s: 0 });
+        expect(selected.validTargets.some(t => t.id === target.id)).toBe(false);
+    });
+
+    it("la colline ne donne pas de bonus de portée aux armes de mêlée", () => {
+        const hill = { q: 0, r: 0, s: 0 };
+        const attacker = createUnit("knight", 1, hill);
+        const target = createUnit("warrior", 2, { q: 2, r: -2, s: 0 });
+        const s = makeState({ units: [attacker, target], hills: [hill] });
+        const selected = handleClick(s, hill);
+        expect(selected.validTargets.some(t => t.id === target.id)).toBe(false);
+    });
+
+    it("computeWeaponSelect accepte un tir à portée+1 depuis une colline", () => {
+        const hill = { q: 0, r: 0, s: 0 };
+        const attacker = createUnit("warrior", 1, hill);
+        const target = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
+        const weapon = attacker.weapons.find(w => w.id === "rifle");
+        const s = makeState({ units: [attacker, target], hills: [hill], pendingAttack: { attacker, target } });
+        const result = computeWeaponSelect(s, weapon);
+        expect(result.anim).not.toBeNull();
+    });
+
+    it("computeWeaponSelect refuse un tir melee depuis une colline au-delà de la portée", () => {
+        const hill = { q: 0, r: 0, s: 0 };
+        const attacker = createUnit("warrior", 1, hill);
+        const target = createUnit("warrior", 2, { q: 2, r: -2, s: 0 });
+        const weapon = attacker.weapons.find(w => w.id === "sword");
+        const s = makeState({ units: [attacker, target], hills: [hill], pendingAttack: { attacker, target } });
+        const result = computeWeaponSelect(s, weapon);
+        expect(result.anim).toBeNull();
+    });
+});
+
+describe("marais", () => {
+    it("entrer dans un marais inflige 1 dégât poison", () => {
+        const swamp = { q: 0, r: 0, s: 0 };
+        const attacker = createUnit("warrior", 1, { q: -1, r: 0, s: 1 });
+        const enemy = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
+        const s = makeState({ units: [attacker, enemy], swamps: [swamp] });
+        const selected = handleClick(s, { q: -1, r: 0, s: 1 });
+        const moved = handleClick(selected, swamp);
+        expect(moved.selectedUnit.currentWounds).toBe(attacker.wounds - 1);
+    });
+
+    it("une unité tuée par le poison du marais termine le tour automatiquement", () => {
+        const swamp = { q: 0, r: 0, s: 0 };
+        const attacker = createUnit("sniper", 1, { q: -1, r: 0, s: 1 });
+        const enemy = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
+        const s = makeState({ units: [attacker, enemy], swamps: [swamp] });
+        const selected = handleClick(s, { q: -1, r: 0, s: 1 });
+        const moved = handleClick(selected, swamp);
+        const dead = moved.units.find(u => u.id === attacker.id);
+        expect(dead.currentWounds).toBe(0);
+        expect(moved.autoEndTurn).toBe(true);
+        expect(moved.selectedUnit).toBeNull();
+    });
+});
+
+describe("déplacement", () => {
+    it("une unité avec mouvement 3 peut atteindre des hexes à 3 cases mais pas à 4", () => {
+        const origin = { q: 0, r: 0, s: 0 };
+        const reachable = reachableHexes(origin, 3, new Set());
+        const reachableKeys = new Set(reachable.map(hexKey));
+
+        expect(reachableKeys.has(hexKey({ q: 1, r: -1, s: 0 }))).toBe(true);
+        expect(reachableKeys.has(hexKey({ q: 3, r: -3, s: 0 }))).toBe(true);
+        expect(reachableKeys.has(hexKey({ q: 4, r: -4, s: 0 }))).toBe(false);
+    });
+
+    it("une unité ne peut pas traverser un hex occupé", () => {
+        const origin = { q: 0, r: 0, s: 0 };
+        const blocker = { q: 1, r: -1, s: 0 };
+        const occupied = new Set([hexKey(blocker)]);
+        const reachable = reachableHexes(origin, 3, occupied);
+        const reachableKeys = new Set(reachable.map(hexKey));
+
+        expect(reachableKeys.has(hexKey(blocker))).toBe(false);
+    });
+
+    it("une unité ne peut pas se déplacer hors de la grille", () => {
+        const edgeHex = { q: 5, r: -5, s: 0 };
+        const reachable = reachableHexes(edgeHex, 2, new Set());
+
+        for (const hex of reachable) {
+            expect(isValidHex(hex)).toBe(true);
+        }
+    });
+
+    it("le mouvement 0 ne produit aucune destination", () => {
+        const origin = { q: 0, r: 0, s: 0 };
+        const reachable = reachableHexes(origin, 0, new Set());
+        expect(reachable).toHaveLength(0);
+    });
+});
