@@ -44,9 +44,14 @@ const DIRECTIONS = [
 function generateRiver(reservedKeys) {
     const key = h => `${h.q},${h.r},${h.s}`;
     const isValid = h => Math.abs(h.q) <= 5 && Math.abs(h.r) <= 5 && Math.abs(h.s) <= 5;
-    const startQ = Math.floor(Math.random() * 5) - 2;
-    let current = { q: startQ, r: -5, s: -startQ + 5 };
-    if (!isValid(current)) current = { q: 0, r: -5, s: 5 };
+    const edgeHexes = [];
+    for (let q = -5; q <= 5; q++) {
+        const s = -q + 5;
+        const h = { q, r: -5, s };
+        if (isValid(h) && !reservedKeys.has(key(h))) edgeHexes.push(h);
+    }
+    if (edgeHexes.length === 0) return [];
+    let current = edgeHexes[Math.floor(Math.random() * edgeHexes.length)];
     const river = [current];
     const visited = new Set([key(current)]);
     while (current.r < 5) {
