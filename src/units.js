@@ -121,6 +121,35 @@ export function checkWinner(scores, round) {
     return "draw";
 }
 
+function generateSymmetricTowns(pairs, reservedKeys) {
+    const key = h => `${h.q},${h.r},${h.s}`;
+    const isValid = h => Math.abs(h.q) <= 5 && Math.abs(h.r) <= 5 && Math.abs(h.s) <= 5;
+    const allReserved = new Set(reservedKeys);
+    const towns = [];
+    for (let i = 0; i < pairs; i++) {
+        const candidates = [];
+        for (let q = -5; q <= 5; q++) {
+            for (let r = -5; r <= 5; r++) {
+                const s = -q - r;
+                if (Math.abs(s) > 5) continue;
+                const h = { q, r, s };
+                const mirror = { q: -q, r: -r, s: -s };
+                if (allReserved.has(key(h)) || allReserved.has(key(mirror))) continue;
+                if (key(h) === key(mirror)) continue;
+                if (!isValid(mirror)) continue;
+                candidates.push(h);
+            }
+        }
+        if (candidates.length === 0) break;
+        const picked = candidates[Math.floor(Math.random() * candidates.length)];
+        const mirror = { q: -picked.q, r: -picked.r, s: -picked.s };
+        towns.push(picked, mirror);
+        allReserved.add(key(picked));
+        allReserved.add(key(mirror));
+    }
+    return towns;
+}
+
 export function initState() {
     const units = [
         createUnit("warrior", 1, { q: -4, r: 0, s: 4 }),
@@ -137,7 +166,7 @@ export function initState() {
     const rivers = generateRiver(allReserved);
     const riverKeys = new Set(rivers.map(r => `${r.q},${r.r},${r.s}`));
     const allReserved2 = new Set([...allReserved, ...riverKeys]);
-    const towns = randomAvailableHexes(4, allReserved2);
+    const towns = generateSymmetricTowns(2, allReserved2);
     const townKeys = new Set(towns.map(t => `${t.q},${t.r},${t.s}`));
     const allReserved3 = new Set([...allReserved2, ...townKeys]);
     const forests = generateForests(3, allReserved3);
