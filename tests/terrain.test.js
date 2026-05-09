@@ -142,12 +142,21 @@ describe("forêts", () => {
         expect(new Set(reachable2.map(hexKey)).has(hexKey(forest))).toBe(true);
     });
 
-    it("une forêt ne bloque pas la ligne de vue", () => {
+    it("une forêt intermédiaire bloque la ligne de vue", () => {
         const a = { q: -2, r: 0, s: 2 };
         const b = { q: 2, r: 0, s: -2 };
-        const obstacleKeys = new Set();
+        const forest = { q: 0, r: 0, s: 0 };
+        const losKeys = new Set([hexKey(forest)]);
 
-        expect(hasLineOfSight(a, b, obstacleKeys)).toBe(true);
+        expect(hasLineOfSight(a, b, losKeys)).toBe(false);
+    });
+
+    it("une forêt sur la case de départ ou d'arrivée ne bloque pas la ligne de vue", () => {
+        const a = { q: -2, r: 0, s: 2 };
+        const b = { q: 2, r: 0, s: -2 };
+        const losKeys = new Set([hexKey(a), hexKey(b)]);
+
+        expect(hasLineOfSight(a, b, losKeys)).toBe(true);
     });
 
     it("une forêt réduit la portée de déplacement effective", () => {

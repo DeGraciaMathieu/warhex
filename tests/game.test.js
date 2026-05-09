@@ -177,6 +177,35 @@ describe("fin de tour", () => {
     });
 });
 
+describe("ligne de vue en jeu", () => {
+    it("une forêt intermédiaire empêche de cibler un ennemi", () => {
+        const forest = { q: 0, r: 0, s: 0 };
+        const attacker = createUnit("sniper", 1, { q: -2, r: 0, s: 2 });
+        const target = createUnit("warrior", 2, { q: 2, r: 0, s: -2 });
+        const s = makeState({ units: [attacker, target], forests: [forest] });
+        const selected = handleClick(s, attacker.hex);
+        expect(selected.validTargets.some(t => t.id === target.id)).toBe(false);
+    });
+
+    it("on peut tirer depuis une forêt vers une cible visible", () => {
+        const forest = { q: -2, r: 0, s: 2 };
+        const attacker = createUnit("sniper", 1, forest);
+        const target = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        const s = makeState({ units: [attacker, target], forests: [forest] });
+        const selected = handleClick(s, forest);
+        expect(selected.validTargets.some(t => t.id === target.id)).toBe(true);
+    });
+
+    it("on peut tirer sur une cible dans une forêt", () => {
+        const forest = { q: 1, r: -1, s: 0 };
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, forest);
+        const s = makeState({ units: [attacker, target], forests: [forest] });
+        const selected = handleClick(s, attacker.hex);
+        expect(selected.validTargets.some(t => t.id === target.id)).toBe(true);
+    });
+});
+
 describe("collines", () => {
     it("une unité sur une colline peut tirer plus loin avec une arme à distance", () => {
         const hill = { q: 0, r: 0, s: 0 };
