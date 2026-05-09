@@ -54,7 +54,7 @@ export function drawScene(canvas, state, hoveredHex) {
         if (isSwamp) fill = "#8aaa78";
         if (isForest) fill = "#b8d4a0";
         if (isRiver) fill = "#a0c8e8";
-        if (isTown) fill = "#d4c4a0";
+        if (isTown) fill = "#e8d8b0";
         if (isObstacle) fill = "#8a7a60";
         if (isMove) fill = isHover ? "rgba(58,128,196,0.35)" : "rgba(58,128,196,0.15)";
         if (isTarget) fill = isHover ? "rgba(200,50,50,0.35)" : "rgba(200,50,50,0.15)";
