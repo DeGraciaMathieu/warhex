@@ -1,7 +1,7 @@
 import { HEX_SIZE, hexToPixel, hexKey, isValidHex, hexCorners } from "./hex.js";
 
-export const CANVAS_W = 620;
-export const CANVAS_H = 540;
+export const CANVAS_W = 700;
+export const CANVAS_H = 616;
 export const OX = CANVAS_W / 2;
 export const OY = CANVAS_H / 2;
 
