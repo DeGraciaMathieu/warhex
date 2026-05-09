@@ -13,7 +13,7 @@ auto_invoke: true
 | **Obstacles** | Bloquent (infranchissable) | Bloquent | - |
 | **Rivieres** | Entrer stoppe le mouvement | Ne bloquent pas | - |
 | **Villes** | Entrer stoppe le mouvement | Bloquent | -1 au seuil de sauvegarde (cover bonus) |
-| **Forets** | Coutent 2 PM au lieu de 1 | Ne bloquent pas | Generees en 3 zones contigues de 2-5 hexes |
+| **Forets** | Coutent 2 PM au lieu de 1 | Bloquent (sauf depuis/vers) | Generees en 3 zones contigues de 2-5 hexes |
 | **Collines** | Normal | Ne bloquent pas | +1 portee armes a distance si tireur sur colline |
 | **Marais** | Entrer stoppe le mouvement | Ne bloquent pas | 1 degat poison a l'entree |
 
@@ -32,7 +32,7 @@ Trace une ligne hex entre source et cible. Bloquee par les hexes intermediaires 
 
 En `game.js`, le set de blocage LOS est construit via `buildLosKeys()` :
 ```js
-const losKeys = new Set([...s.obstacles, ...(s.towns || [])].map(hexKey));
+const losKeys = new Set([...s.obstacles, ...(s.towns || []), ...(s.forests || [])].map(hexKey));
 ```
 
 ### Generation (`units.js` - `initState()`)
