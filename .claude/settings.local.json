@@ -10,7 +10,8 @@
       "Skill(update-config)",
       "Bash(node:*)",
       "Read(//Users/mathieudegracia/.nvm/versions/node/**)",
-      "Bash(fnm list:*)"
+      "Bash(fnm list:*)",
+      "Bash(git push:*)"
     ]
   },
   "hooks": {
