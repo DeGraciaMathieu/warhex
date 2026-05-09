@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { hexDistance, hexKey, hexToPixel, pixelToHex, reachableHexes, isValidHex, hexNeighbors, hasLineOfSight } from "../src/hex.js";
 import { resolveAttack } from "../src/combat.js";
-import { createUnit, initState, resetUID } from "../src/units.js";
+import { createUnit, initState, resetUID, computeTownControl, checkWinner } from "../src/units.js";
 
 beforeEach(() => resetUID());
 
@@ -310,6 +310,15 @@ describe("rivières", () => {
         expect(hasLineOfSight(a, b, obstacleKeys)).toBe(true);
     });
 
+    it("une rivière combinée à des obstacles réduit davantage les options", () => {
+        const origin = { q: 0, r: 0, s: 0 };
+        const riverKeys = new Set([hexKey({ q: 1, r: -1, s: 0 })]);
+        const obsKeys = new Set([hexKey({ q: -1, r: 1, s: 0 })]);
+        const withBoth = reachableHexes(origin, 2, new Set(), obsKeys, riverKeys);
+        const withNone = reachableHexes(origin, 2, new Set(), new Set(), new Set());
+        expect(withBoth.length).toBeLessThan(withNone.length);
+    });
+
     it("on peut contourner une rivière si le mouvement le permet", () => {
         const origin = { q: -1, r: 0, s: 1 };
         const river = { q: 0, r: 0, s: 0 };
@@ -452,6 +461,119 @@ describe("état initial du jeu", () => {
                 if (w.type === "melee") expect(w.range).toBe(1);
             }
         }
+    });
+
+    it("les scores commencent à 0 pour chaque joueur", () => {
+        const state = initState();
+        expect(state.scores).toEqual({ 1: 0, 2: 0 });
+    });
+
+    it("aucune unité n'est active au début", () => {
+        const state = initState();
+        expect(state.activeUnitId).toBeNull();
+        expect(state.autoEndTurn).toBe(false);
+    });
+
+    it("la carte contient exactement 4 villes", () => {
+        const state = initState();
+        expect(state.towns).toHaveLength(4);
+    });
+});
+
+// ────────────────────────────────────────────────
+// CRÉATION D'UNITÉS
+// ────────────────────────────────────────────────
+
+describe("création d'unités", () => {
+    it("chaque unité créée a un ID unique", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const u2 = createUnit("warrior", 1, { q: 1, r: -1, s: 0 });
+        const u3 = createUnit("warrior", 2, { q: 2, r: -2, s: 0 });
+        expect(new Set([u1.id, u2.id, u3.id]).size).toBe(3);
+    });
+
+    it("l'unité est placée sur l'hex demandé avec le bon joueur", () => {
+        const hex = { q: 3, r: -2, s: -1 };
+        const unit = createUnit("warrior", 2, hex);
+        expect(unit.hex).toEqual(hex);
+        expect(unit.player).toBe(2);
+    });
+
+    it("l'unité warrior a les stats attendues", () => {
+        const unit = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        expect(unit.movement).toBe(3);
+        expect(unit.wounds).toBe(2);
+        expect(unit.currentWounds).toBe(2);
+        expect(unit.save).toBe(4);
+        expect(unit.weapons).toHaveLength(2);
+    });
+});
+
+// ────────────────────────────────────────────────
+// SYSTÈME DE POINTS
+// ────────────────────────────────────────────────
+
+describe("système de points", () => {
+    const town1 = { q: 0, r: 0, s: 0 };
+    const town2 = { q: 3, r: -3, s: 0 };
+    const towns = [town1, town2];
+
+    it("une unité sur une ville rapporte 1 point à son joueur", () => {
+        const units = [
+            createUnit("warrior", 1, town1),
+        ];
+        const control = computeTownControl(units, towns);
+        expect(control[1]).toBe(1);
+        expect(control[2]).toBe(0);
+    });
+
+    it("chaque joueur marque pour les villes qu'il contrôle", () => {
+        const units = [
+            createUnit("warrior", 1, town1),
+            createUnit("warrior", 2, town2),
+        ];
+        const control = computeTownControl(units, towns);
+        expect(control[1]).toBe(1);
+        expect(control[2]).toBe(1);
+    });
+
+    it("un joueur peut contrôler plusieurs villes", () => {
+        const units = [
+            createUnit("warrior", 1, town1),
+            createUnit("warrior", 1, town2),
+        ];
+        const control = computeTownControl(units, towns);
+        expect(control[1]).toBe(2);
+    });
+
+    it("une unité morte ne contrôle pas de ville", () => {
+        const units = [
+            { ...createUnit("warrior", 1, town1), currentWounds: 0 },
+        ];
+        const control = computeTownControl(units, towns);
+        expect(control[1]).toBe(0);
+    });
+
+    it("une unité hors d'une ville ne rapporte rien", () => {
+        const units = [
+            createUnit("warrior", 1, { q: 1, r: -1, s: 0 }),
+        ];
+        const control = computeTownControl(units, towns);
+        expect(control[1]).toBe(0);
+    });
+
+    it("la partie ne se termine pas avant le tour 5", () => {
+        expect(checkWinner({ 1: 5, 2: 0 }, 4)).toBeNull();
+        expect(checkWinner({ 1: 5, 2: 0 }, 3)).toBeNull();
+    });
+
+    it("le joueur avec le plus de points gagne au tour 5", () => {
+        expect(checkWinner({ 1: 7, 2: 3 }, 5)).toBe(1);
+        expect(checkWinner({ 1: 2, 2: 6 }, 5)).toBe(2);
+    });
+
+    it("égalité de points au tour 5 donne un match nul", () => {
+        expect(checkWinner({ 1: 4, 2: 4 }, 5)).toBe("draw");
     });
 });
 
