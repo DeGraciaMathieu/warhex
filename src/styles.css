@@ -1,0 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
+* { box-sizing: border-box; }
+
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-thumb { background: #c8b898; }
+
+.btn {
+    display: block; width: 100%; padding: 7px 12px; margin-bottom: 6px;
+    font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: .08em;
+    border-radius: 1px; cursor: pointer; transition: filter .15s, opacity .15s; text-align: center;
+}
+.btn:hover:not(:disabled) { filter: brightness(1.35); }
+.btn:disabled { opacity: .3; cursor: not-allowed; }
+.btn-blue  { background: rgba(42,111,168,.1); border: 1px solid #2a6fa8; color: #2a6fa8; }
+.btn-red   { background: rgba(160,48,48,.1); border: 1px solid #a03030; color: #a03030; }
+.btn-gold  { background: rgba(150,110,10,.1); border: 1px solid #8a6a08; color: #8a6a08; }
+.btn-grey  { background: transparent; border: 1px solid #c8b898; color: #8a7a60; }
+
+.weapon-card {
+    width: 100%; background: #ece5d8; border: 1px solid #d5cbb8; color: #2a2015;
+    font-family: 'Crimson Text', serif; text-align: left; padding: 8px 10px; margin-bottom: 5px;
+    cursor: pointer; transition: border-color .15s, background .15s; border-radius: 2px;
+}
+.weapon-card:hover { border-color: #8a6a08; background: #e0d8c8; }
+.weapon-card.disabled { opacity: .35; cursor: not-allowed; }
+
+.sr { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; }
+.sl { color: #8a7a60; font-size: 12px; }
+.sv { font-size: 13px; font-weight: 600; }
+
+.roll-chip {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 3px; font-size: 12px; font-weight: 700;
+    margin: 1px; border: 1px solid;
+}
+.roll-hit { background: rgba(76,175,80,.15); border-color: #4caf50; color: #2e7d32; }
+.roll-miss { background: rgba(244,67,54,.1); border-color: #e53935; color: #c62828; }
+.roll-save { background: rgba(42,111,168,.15); border-color: #2a6fa8; color: #1a5a8a; }
+.roll-save-fail { background: rgba(138,122,96,.1); border-color: #c8b898; color: #8a7a60; }
+
+canvas { cursor: crosshair; display: block; }
+
+.roll-new { animation: diceAppear .45s ease-out; }
+
+@keyframes diceAppear {
+    0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+    50% { transform: scale(1.4) rotate(15deg); opacity: 1; }
+    75% { transform: scale(0.9) rotate(-5deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: .4; }
+    50% { opacity: 1; }
+}
