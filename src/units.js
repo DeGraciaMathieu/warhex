@@ -171,12 +171,20 @@ export function initState() {
     const townKeys = new Set(towns.map(t => `${t.q},${t.r},${t.s}`));
     const allReserved3 = new Set([...allReserved2, ...townKeys]);
     const forests = generateForests(3, allReserved3);
+    const forestKeys = new Set(forests.map(f => `${f.q},${f.r},${f.s}`));
+    const allReserved4 = new Set([...allReserved3, ...forestKeys]);
+    const hills = randomAvailableHexes(4, allReserved4);
+    const hillKeys = new Set(hills.map(h => `${h.q},${h.r},${h.s}`));
+    const allReserved5 = new Set([...allReserved4, ...hillKeys]);
+    const swamps = randomAvailableHexes(4, allReserved5);
     return {
         units,
         obstacles,
         rivers,
         towns,
         forests,
+        hills,
+        swamps,
         currentPlayer: 1,
         phase: "select",
         selectedUnit: null,

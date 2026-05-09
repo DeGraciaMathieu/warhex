@@ -27,6 +27,8 @@ export function drawScene(canvas, state, hoveredHex) {
     const riverKeys = new Set((state.rivers || []).map(hexKey));
     const townKeys = new Set((state.towns || []).map(hexKey));
     const forestKeys = new Set((state.forests || []).map(hexKey));
+    const hillKeys = new Set((state.hills || []).map(hexKey));
+    const swampKeys = new Set((state.swamps || []).map(hexKey));
 
     hexes.forEach(hex => {
         const { x, y } = hexToPixel(hex.q, hex.r);
@@ -36,6 +38,8 @@ export function drawScene(canvas, state, hoveredHex) {
         const isRiver = riverKeys.has(k);
         const isTown = townKeys.has(k);
         const isForest = forestKeys.has(k);
+        const isHill = hillKeys.has(k);
+        const isSwamp = swampKeys.has(k);
         const isMove = validMoveKeys.has(k);
         const isTarget = validTargetKeys.has(k);
         const isHover = hoveredHex && hexKey(hoveredHex) === k;
@@ -46,6 +50,8 @@ export function drawScene(canvas, state, hoveredHex) {
         ctx.closePath();
 
         let fill = "#e8e0d0";
+        if (isHill) fill = "#d4c8a0";
+        if (isSwamp) fill = "#8aaa78";
         if (isForest) fill = "#b8d4a0";
         if (isRiver) fill = "#a0c8e8";
         if (isTown) fill = "#d4c4a0";
@@ -54,7 +60,7 @@ export function drawScene(canvas, state, hoveredHex) {
         if (isTarget) fill = isHover ? "rgba(200,50,50,0.35)" : "rgba(200,50,50,0.15)";
         ctx.fillStyle = fill;
         ctx.fill();
-        ctx.strokeStyle = isTarget ? "#cc3333" : isMove ? "#3a7abf" : isObstacle ? "#6a5a40" : isRiver ? "#5a9abf" : isTown ? "#8a7040" : isForest ? "#5a8a40" : "#c8b898";
+        ctx.strokeStyle = isTarget ? "#cc3333" : isMove ? "#3a7abf" : isObstacle ? "#6a5a40" : isRiver ? "#5a9abf" : isTown ? "#8a7040" : isForest ? "#5a8a40" : isHill ? "#8a7a40" : isSwamp ? "#5a7a40" : "#c8b898";
         ctx.lineWidth = isTarget || isMove ? 1.5 : 0.8;
         ctx.stroke();
 
@@ -88,6 +94,22 @@ export function drawScene(canvas, state, hoveredHex) {
             ctx.textBaseline = "middle";
             ctx.fillStyle = "#3a6a20";
             ctx.fillText("🌲", px, py);
+        }
+
+        if (isHill) {
+            ctx.font = `${HEX_SIZE * 0.5}px serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillStyle = "#6a5a20";
+            ctx.fillText("⛰", px, py);
+        }
+
+        if (isSwamp) {
+            ctx.font = `${HEX_SIZE * 0.5}px serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillStyle = "#4a6a30";
+            ctx.fillText("☠", px, py);
         }
     });
 

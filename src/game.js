@@ -8,13 +8,13 @@ function buildLosKeys(state) {
 
 function buildTerrainKeys(state) {
     const obsKeys = new Set(state.obstacles.map(hexKey));
-    const stopKeys = new Set([...(state.rivers || []), ...(state.towns || [])].map(hexKey));
+    const stopKeys = new Set([...(state.rivers || []), ...(state.towns || []), ...(state.swamps || [])].map(hexKey));
     const forestKeys = new Set((state.forests || []).map(hexKey));
     return { obsKeys, stopKeys, forestKeys };
 }
 
-function findValidTargets(unit, enemies, losKeys) {
-    const maxRange = Math.max(...unit.weapons.map(w => w.range));
+function findValidTargets(unit, enemies, losKeys, rangeBonus = 0) {
+    const maxRange = Math.max(...unit.weapons.map(w => w.range + (w.type === "ranged" ? rangeBonus : 0)));
     return enemies.filter(e => hexDistance(unit.hex, e.hex) <= maxRange && hasLineOfSight(unit.hex, e.hex, losKeys));
 }
 
@@ -32,12 +32,21 @@ export function handleClick(s, hex) {
 
     if ((s.phase === "select" || s.phase === "move") && moveKeys.has(k)) {
         const movedUnit = { ...s.selectedUnit, hex, hasMoved: true };
-        const units = s.units.map(u => u.id === movedUnit.id ? movedUnit : u);
+        const swampKeys = new Set((s.swamps || []).map(hexKey));
+        const hillKeys = new Set((s.hills || []).map(hexKey));
+        const poisoned = swampKeys.has(k)
+            ? { ...movedUnit, currentWounds: Math.max(0, movedUnit.currentWounds - 1) }
+            : movedUnit;
+        const units = s.units.map(u => u.id === poisoned.id ? poisoned : u);
+        if (poisoned.currentWounds <= 0) {
+            return { ...s, units, selectedUnit: null, activeUnitId: null, phase: "select", validMoves: [], validTargets: [], autoEndTurn: true };
+        }
         const losKeys = buildLosKeys(s);
         const enemies = units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
-        const validTargets = movedUnit.hasAttacked ? [] : findValidTargets(movedUnit, enemies, losKeys);
+        const rangeBonus = hillKeys.has(hexKey(poisoned.hex)) ? 1 : 0;
+        const validTargets = poisoned.hasAttacked ? [] : findValidTargets(poisoned, enemies, losKeys, rangeBonus);
         const autoEnd = validTargets.length === 0;
-        return { ...s, units, selectedUnit: movedUnit, activeUnitId: movedUnit.id, phase: "select", validMoves: [], validTargets, autoEndTurn: autoEnd };
+        return { ...s, units, selectedUnit: poisoned, activeUnitId: poisoned.id, phase: "select", validMoves: [], validTargets, autoEndTurn: autoEnd };
     }
 
     if (unitOnHex && unitOnHex.player === s.currentPlayer) {
@@ -48,7 +57,9 @@ export function handleClick(s, hex) {
         const validMoves = cur.hasMoved ? [] : reachableHexes(cur.hex, cur.movement, occupied, obsKeys, stopKeys, forestKeys);
         const enemies = s.units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
         const losKeys = buildLosKeys(s);
-        const validTargets = cur.hasAttacked ? [] : findValidTargets(cur, enemies, losKeys);
+        const hillKeys = new Set((s.hills || []).map(hexKey));
+        const rangeBonus = hillKeys.has(hexKey(cur.hex)) ? 1 : 0;
+        const validTargets = cur.hasAttacked ? [] : findValidTargets(cur, enemies, losKeys, rangeBonus);
         return { ...s, selectedUnit: cur, phase: "select", validMoves, validTargets };
     }
 
@@ -68,7 +79,9 @@ export function computeAttack(s) {
     if (!cur || cur.hasAttacked) return s;
     const enemies = s.units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
     const losKeys = buildLosKeys(s);
-    const validTargets = findValidTargets(cur, enemies, losKeys);
+    const hillKeys = new Set((s.hills || []).map(hexKey));
+    const rangeBonus = hillKeys.has(hexKey(cur.hex)) ? 1 : 0;
+    const validTargets = findValidTargets(cur, enemies, losKeys, rangeBonus);
     return { ...s, phase: "attack", validTargets, validMoves: [], selectedUnit: cur };
 }
 
@@ -76,7 +89,9 @@ export function computeWeaponSelect(s, weapon) {
     if (!s.pendingAttack) return null;
     const { attacker, target } = s.pendingAttack;
     const dist = hexDistance(attacker.hex, target.hex);
-    if (dist > weapon.range) {
+    const hillKeys = new Set((s.hills || []).map(hexKey));
+    const rangeBonus = (weapon.type === "ranged" && hillKeys.has(hexKey(attacker.hex))) ? 1 : 0;
+    if (dist > weapon.range + rangeBonus) {
         return { state: { ...s, phase: "select", pendingAttack: null, validTargets: [], validMoves: [] }, anim: null };
     }
 
