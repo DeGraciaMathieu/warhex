@@ -75,6 +75,18 @@ export function pickMoveTarget(unit, state) {
 
     const { townKeys, emptyTowns, enemyOnTown } = townContext(state);
 
+    // Stay on town unless first activation and an ally can replace us
+    if (townKeys.has(hexKey(unit.hex))) {
+        if (state.activationsUsed > 0) return null;
+        const allies = state.units.filter(u => u.player === 2 && u.currentWounds > 0 && u.id !== unit.id && !u.hasMoved);
+        const canReplace = allies.some(ally => {
+            const allyOccupied = new Set(state.units.filter(u => u.currentWounds > 0 && u.id !== ally.id && u.id !== unit.id).map(u => hexKey(u.hex)));
+            const allyReachable = reachableHexes(ally.hex, ally.movement, allyOccupied, obsKeys, stopKeys, forestKeys);
+            return allyReachable.some(h => hexKey(h) === hexKey(unit.hex));
+        });
+        if (!canReplace) return null;
+    }
+
     // 1. Can reach an empty town directly — take it
     const reachableTown = reachable.find(h => townKeys.has(hexKey(h)) && emptyTowns.some(t => hexKey(t) === hexKey(h)));
     if (reachableTown) return reachableTown;

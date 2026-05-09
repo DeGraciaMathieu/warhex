@@ -200,6 +200,45 @@ describe("IA — contrôle des villes", () => {
         expect(action.weapon.id).toBe("sword");
     });
 
+    it("une unité sur une ville ne la quitte pas si aucun allié ne peut la remplacer", () => {
+        const u1 = createUnit("warrior", 1, { q: -4, r: 0, s: 4 });
+        const town = { q: 0, r: 0, s: 0 };
+        const u2 = createUnit("warrior", 2, town);
+        const state = makeState({ units: [u1, u2], towns: [town] });
+        const dest = pickMoveTarget(u2, state);
+        expect(dest).toBeNull();
+    });
+
+    it("une unité sur une ville ne la quitte pas en 2e activation même si un allié peut la remplacer", () => {
+        const u1 = createUnit("warrior", 1, { q: -4, r: 0, s: 4 });
+        const town = { q: 0, r: 0, s: 0 };
+        const u2 = createUnit("warrior", 2, town);
+        const u2b = createUnit("warrior", 2, { q: 1, r: 0, s: -1 });
+        const state = makeState({ units: [u1, u2, u2b], towns: [town], activationsUsed: 1 });
+        const dest = pickMoveTarget(u2, state);
+        expect(dest).toBeNull();
+    });
+
+    it("une unité sur une ville peut la quitter si un allié peut la remplacer", () => {
+        const u1 = createUnit("warrior", 1, { q: -4, r: 0, s: 4 });
+        const town = { q: 0, r: 0, s: 0 };
+        const u2 = createUnit("warrior", 2, town);
+        const u2b = createUnit("warrior", 2, { q: 1, r: 0, s: -1 }); // adjacent à la ville
+        const state = makeState({ units: [u1, u2, u2b], towns: [town] });
+        const dest = pickMoveTarget(u2, state);
+        expect(dest).not.toBeNull();
+    });
+
+    it("une unité sur une ville ne la quitte pas si l'allié est trop loin pour la remplacer", () => {
+        const u1 = createUnit("warrior", 1, { q: -4, r: 0, s: 4 });
+        const town = { q: 0, r: 0, s: 0 };
+        const u2 = createUnit("warrior", 2, town);
+        const u2b = createUnit("warrior", 2, { q: 4, r: -4, s: 0 }); // trop loin (distance 4, mouvement 3)
+        const state = makeState({ units: [u1, u2, u2b], towns: [town] });
+        const dest = pickMoveTarget(u2, state);
+        expect(dest).toBeNull();
+    });
+
     it("se dirige vers un ennemi sur une ville quand pas de ville vide", () => {
         const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
         const u2 = createUnit("warrior", 2, { q: 4, r: 0, s: -4 });
