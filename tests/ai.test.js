@@ -185,6 +185,21 @@ describe("IA — contrôle des villes", () => {
         expect(best.id).toBe(u2b.id);
     });
 
+    it("l'IA choisit l'arme avec le meilleur output de dégâts", () => {
+        const u1 = createUnit("warrior", 1, { q: 1, r: 0, s: -1 });
+        const u2 = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        const state = makeState({
+            units: [u1, u2],
+            phase: "weapon_select",
+            selectedUnit: u2,
+            pendingAttack: { attacker: u2, target: u1 },
+        });
+        const action = computeAIAction(state);
+        expect(action.type).toBe("weapon");
+        // Sword (3 attacks × 1 damage = 3) > Rifle (2 attacks × 1 damage = 2)
+        expect(action.weapon.id).toBe("sword");
+    });
+
     it("se dirige vers un ennemi sur une ville quand pas de ville vide", () => {
         const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
         const u2 = createUnit("warrior", 2, { q: 4, r: 0, s: -4 });

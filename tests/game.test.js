@@ -432,6 +432,113 @@ describe("double activation", () => {
     });
 });
 
+describe("phases bloquantes", () => {
+    it("handleClick ne fait rien en phase weapon_select", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const enemy = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [u1, enemy], phase: "weapon_select", pendingAttack: { attacker: u1, target: enemy } });
+        const result = handleClick(s, { q: -1, r: 0, s: 1 });
+        expect(result).toEqual(s);
+    });
+
+    it("handleClick ne fait rien en phase resolving", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const enemy = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [u1, enemy], phase: "resolving" });
+        const result = handleClick(s, { q: 0, r: 0, s: 0 });
+        expect(result).toEqual(s);
+    });
+
+    it("cliquer sur un hex vide sans action valide ne change rien", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const enemy = createUnit("warrior", 2, { q: 4, r: -4, s: 0 });
+        const s = makeState({ units: [u1, enemy] });
+        const result = handleClick(s, { q: -3, r: 3, s: 0 });
+        expect(result).toEqual(s);
+    });
+
+    it("une unité morte ne peut pas être sélectionnée", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        u1.currentWounds = 0;
+        const enemy = createUnit("warrior", 2, { q: 2, r: -2, s: 0 });
+        const s = makeState({ units: [u1, enemy] });
+        const result = handleClick(s, u1.hex);
+        expect(result.selectedUnit).toBeNull();
+    });
+});
+
+describe("flux déplacement puis attaque", () => {
+    it("après un déplacement à portée d'un ennemi, les cibles sont affichées", () => {
+        const u1 = createUnit("warrior", 1, { q: -2, r: 0, s: 2 });
+        const enemy = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [u1, enemy] });
+        const selected = handleClick(s, u1.hex);
+        // Se déplacer vers un hex adjacent à l'ennemi
+        const moveTarget = { q: 0, r: 0, s: 0 };
+        expect(selected.validMoves.map(hexKey)).toContain(hexKey(moveTarget));
+        const moved = handleClick(selected, moveTarget);
+        expect(moved.validTargets.length).toBeGreaterThan(0);
+        expect(moved.validTargets.some(t => t.id === enemy.id)).toBe(true);
+    });
+
+    it("après un déplacement loin d'un ennemi, pas de cibles et activation consommée", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const enemy = createUnit("warrior", 2, { q: 4, r: -4, s: 0 });
+        const s = makeState({ units: [u1, enemy] });
+        const selected = handleClick(s, u1.hex);
+        const moveTarget = { q: -1, r: 0, s: 1 };
+        const moved = handleClick(selected, moveTarget);
+        expect(moved.activationsUsed).toBe(1);
+        expect(moved.selectedUnit).toBeNull();
+    });
+});
+
+describe("couvert de ville en combat", () => {
+    it("une cible dans une ville subit moins de dégâts en moyenne", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const town = { q: 1, r: -1, s: 0 };
+        const weapon = attacker.weapons.find(w => w.id === "sword");
+
+        let totalWithTown = 0, totalNoTown = 0;
+        for (let i = 0; i < 500; i++) {
+            const sWithTown = makeState({ units: [attacker, target], towns: [town], pendingAttack: { attacker, target } });
+            const sNoTown = makeState({ units: [attacker, target], towns: [], pendingAttack: { attacker, target } });
+            const rWith = computeWeaponSelect(sWithTown, weapon);
+            const rNo = computeWeaponSelect(sNoTown, weapon);
+            if (rWith.anim) totalWithTown += rWith.anim.damage;
+            if (rNo.anim) totalNoTown += rNo.anim.damage;
+        }
+        expect(totalNoTown).toBeGreaterThan(totalWithTown);
+    });
+});
+
+describe("fin de partie", () => {
+    it("computeEndTurn déclare un gagnant au round 5", () => {
+        const town = { q: 0, r: 0, s: 0 };
+        const u1 = createUnit("warrior", 1, town);
+        const enemy = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
+        const s = makeState({
+            units: [u1, enemy], towns: [town], currentPlayer: 2,
+            round: 5, scores: { 1: 3, 2: 1 },
+        });
+        const result = computeEndTurn(s);
+        expect(result.winner).not.toBeNull();
+    });
+
+    it("computeEndTurn ne déclare pas de gagnant avant le round 5", () => {
+        const town = { q: 0, r: 0, s: 0 };
+        const u1 = createUnit("warrior", 1, town);
+        const enemy = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
+        const s = makeState({
+            units: [u1, enemy], towns: [town], currentPlayer: 2,
+            round: 4, scores: { 1: 10, 2: 0 },
+        });
+        const result = computeEndTurn(s);
+        expect(result.winner).toBeNull();
+    });
+});
+
 describe("déplacement", () => {
     it("une unité avec mouvement 3 peut atteindre des hexes à 3 cases mais pas à 4", () => {
         const origin = { q: 0, r: 0, s: 0 };
