@@ -60,7 +60,7 @@ describe("création d'unités", () => {
 
     it("le berserker a les stats attendues", () => {
         const unit = createUnit("berserker", 1, { q: 0, r: 0, s: 0 });
-        expect(unit.movement).toBe(4);
+        expect(unit.movement).toBe(3);
         expect(unit.weaponSkill).toBe(2);
         expect(unit.wounds).toBe(2);
         expect(unit.save).toBe(6);

@@ -29,7 +29,7 @@ export const UNIT_TEMPLATES = {
     },
     berserker: {
         name: "Berserker", symbol: "🪓",
-        movement: 4, weaponSkill: 2, ballisticSkill: 6,
+        movement: 3, weaponSkill: 2, ballisticSkill: 6,
         toughness: 4, wounds: 2, save: 6,
         weapons: [
             { id: "chain_axe", name: "Chain Axe", type: "melee", range: 1, attacks: 4, strength: 5, ap: -1, damage: 1 },
