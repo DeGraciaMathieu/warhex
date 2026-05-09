@@ -3,6 +3,7 @@ import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.j
 import { initState, resetUID, UNIT_TEMPLATES } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY } from "./renderer.js";
 import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn } from "./game.js";
+import { computeAIAction } from "./ai.js";
 import Guide from "./Guide.jsx";
 import "./styles.css";
 
@@ -13,6 +14,7 @@ export default function HexWarhammer() {
     const canvasRef = useRef(null);
     const [armyPhase, setArmyPhase] = useState(true);
     const [showGuide, setShowGuide] = useState(false);
+    const [vsAI, setVsAI] = useState(false);
     const [selections, setSelections] = useState({ 1: [], 2: [] });
     const [state, setState] = useState(null);
     const [hoveredHex, setHoveredHex] = useState(null);
@@ -48,7 +50,27 @@ export default function HexWarhammer() {
         }
     }, [state?.autoEndTurn]);
 
+    useEffect(() => {
+        if (!vsAI || !state || state.currentPlayer !== 2 || state.winner) return;
+        if (state.autoEndTurn) return;
+        if (diceAnim && !diceAnim.done) return;
+        const action = computeAIAction(state);
+        if (!action) return;
+        const delay = action.type === "weapon" ? 600 : 500;
+        const timer = setTimeout(() => {
+            if (action.type === "click") {
+                setState(prev => handleClick(prev, action.hex));
+            } else if (action.type === "weapon") {
+                selectWeapon(action.weapon);
+            } else if (action.type === "endTurn") {
+                endTurn();
+            }
+        }, delay);
+        return () => clearTimeout(timer);
+    }, [state, vsAI, diceAnim]);
+
     function onCanvasClick(e) {
+        if (vsAI && state?.currentPlayer === 2) return;
         if (diceAnim && !diceAnim.done) return;
         if (diceAnim?.done) setDiceAnim(null);
         const rect = canvasRef.current.getBoundingClientRect();
@@ -82,7 +104,7 @@ export default function HexWarhammer() {
     }
 
     function endTurn() { setState(computeEndTurn); }
-    function restart() { resetUID(); setSelections({ 1: [], 2: [] }); setArmyPhase(true); setState(null); }
+    function restart() { resetUID(); setSelections({ 1: [], 2: [] }); setArmyPhase(true); setState(null); setVsAI(false); }
 
     function addUnit(player, type) {
         setSelections(prev => {
@@ -123,11 +145,21 @@ export default function HexWarhammer() {
                 <div style={{ fontFamily: "'Cinzel', serif", fontSize: 24, fontWeight: 700, letterSpacing: ".2em", color: "#8a6a08" }}>
                     ⚔ SÉLECTION D'ARMÉE ⚔
                 </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                    <button className={`btn ${!vsAI ? "btn-gold" : "btn-grey"}`} onClick={() => { setVsAI(false); setSelections(prev => ({ ...prev, 2: [] })); }} style={{ width: "auto", padding: "6px 16px", fontSize: 12 }}>
+                        2 Joueurs
+                    </button>
+                    <button className={`btn ${vsAI ? "btn-gold" : "btn-grey"}`} onClick={() => { setVsAI(true); randomArmy(2); }} style={{ width: "auto", padding: "6px 16px", fontSize: 12 }}>
+                        vs IA
+                    </button>
+                </div>
                 <div style={{ display: "flex", gap: 48 }}>
-                    {[1, 2].map(player => (
-                        <div key={player} style={{ width: 280, border: `2px solid ${P[player]}`, borderRadius: 4, padding: 16, background: "#ece5d8" }}>
+                    {[1, 2].map(player => {
+                        const isAIPlayer = vsAI && player === 2;
+                        return (
+                        <div key={player} style={{ width: 280, border: `2px solid ${P[player]}`, borderRadius: 4, padding: 16, background: "#ece5d8", opacity: isAIPlayer ? 0.5 : 1, pointerEvents: isAIPlayer ? "none" : "auto" }}>
                             <div style={{ fontFamily: "'Cinzel', serif", fontSize: 14, fontWeight: 700, color: P[player], marginBottom: 12, textAlign: "center" }}>
-                                JOUEUR {player} ({selections[player].length}/{ARMY_SIZE})
+                                {isAIPlayer ? "IA" : `JOUEUR ${player}`} ({selections[player].length}/{ARMY_SIZE})
                             </div>
                             <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
                                 {UNIT_TYPES.map(type => {
@@ -159,7 +191,8 @@ export default function HexWarhammer() {
                                 )}
                             </div>
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
                 <div style={{ display: "flex", gap: 12 }}>
                     <button className="btn btn-gold" disabled={!canStart} onClick={startGame} style={{ fontSize: 16, padding: "10px 32px" }}>
