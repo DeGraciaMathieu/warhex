@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { hexDistance, hexKey, hexToPixel, pixelToHex, reachableHexes, isValidHex, hexNeighbors, hasLineOfSight } from "../src/hex.js";
-import { resolveAttack, damageMultiplier } from "../src/combat.js";
+import { resolveAttack } from "../src/combat.js";
 import { createUnit, initState, resetUID } from "../src/units.js";
 
 beforeEach(() => resetUID());
@@ -75,12 +75,11 @@ describe("combat", () => {
         }
     });
 
-    it("les dégâts ne dépassent jamais attaques × damage × multiplicateur max", () => {
+    it("les dégâts ne dépassent jamais attaques × damage", () => {
         const attacker = createUnit("chaosWarrior", 2, { q: 0, r: 0, s: 0 });
         const target = createUnit("orcBoy", 1, { q: 1, r: -1, s: 0 });
         const weapon = attacker.weapons[0]; // Chainsword: 4 attacks, 2 damage
-        const mult = damageMultiplier(weapon.strength, target.toughness);
-        const maxDamage = Math.round(weapon.attacks * weapon.damage * mult);
+        const maxDamage = weapon.attacks * weapon.damage;
 
         for (let i = 0; i < 100; i++) {
             const result = resolveAttack(attacker, weapon, target);
@@ -88,7 +87,7 @@ describe("combat", () => {
         }
     });
 
-    it("le log de combat suit la séquence To Hit → Save → Puissance → Summary", () => {
+    it("le log de combat suit la séquence To Hit → Save → Summary", () => {
         const attacker = createUnit("spaceMarine", 1, { q: 0, r: 0, s: 0 });
         const target = createUnit("chaosWarrior", 2, { q: 1, r: -1, s: 0 });
         const weapon = attacker.weapons[1]; // Combat Knife (melee)
@@ -105,10 +104,9 @@ describe("combat", () => {
             // Le dernier est toujours le summary des dégâts
             expect(labels[labels.length - 1]).toContain("Dégâts infligés");
 
-            if (result.log.length === 4) {
+            if (result.log.length === 3) {
                 foundFullSequence = true;
                 expect(labels[1]).toContain("Sauvegarde");
-                expect(labels[2]).toContain("Puissance");
             }
         }
         expect(foundFullSequence).toBe(true);
@@ -129,49 +127,18 @@ describe("combat", () => {
         expect(totalWithPA).toBeGreaterThan(totalNoPA);
     });
 
-    it("une arme forte contre une cible faible fait plus de dégâts qu'une arme faible contre une cible résistante", () => {
-        // Choppa (str 5) vs Space Marine (toughness 4) → mult 1.5
-        const orc = createUnit("orcBoy", 1, { q: 0, r: 0, s: 0 });
-        const marine = createUnit("spaceMarine", 2, { q: 1, r: -1, s: 0 });
-        const choppa = orc.weapons[0];
+    it("une arme avec plus d'attaques fait plus de dégâts en moyenne", () => {
+        const attacker = createUnit("spaceMarine", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("orcBoy", 2, { q: 1, r: -1, s: 0 });
+        const manyAttacks = { id: "test", name: "Test", type: "melee", range: 1, attacks: 4, strength: 4, ap: 0, damage: 1 };
+        const fewAttacks = { id: "test2", name: "Test2", type: "melee", range: 1, attacks: 1, strength: 4, ap: 0, damage: 1 };
 
-        // Slugga (str 4) vs Chaos Warrior (toughness 5) → mult 0.5
-        const orc2 = createUnit("orcBoy", 1, { q: 0, r: 0, s: 0 });
-        const chaos = createUnit("chaosWarrior", 2, { q: 1, r: -1, s: 0 });
-        const slugga = orc2.weapons[1];
-
-        let totalStrong = 0, totalWeak = 0;
+        let totalMany = 0, totalFew = 0;
         for (let i = 0; i < 500; i++) {
-            totalStrong += resolveAttack(orc, choppa, marine).damage;
-            totalWeak += resolveAttack(orc2, slugga, chaos).damage;
+            totalMany += resolveAttack(attacker, manyAttacks, target).damage;
+            totalFew += resolveAttack(attacker, fewAttacks, target).damage;
         }
-        expect(totalStrong).toBeGreaterThan(totalWeak);
-    });
-});
-
-// ────────────────────────────────────────────────
-// MULTIPLICATEUR DE DÉGÂTS (Force vs Endurance)
-// ────────────────────────────────────────────────
-
-describe("multiplicateur de dégâts", () => {
-    it("force double de l'endurance → ×2", () => {
-        expect(damageMultiplier(8, 4)).toBe(2);
-    });
-
-    it("force supérieure à l'endurance → ×1.5", () => {
-        expect(damageMultiplier(5, 4)).toBe(1.5);
-    });
-
-    it("force égale à l'endurance → ×1", () => {
-        expect(damageMultiplier(4, 4)).toBe(1);
-    });
-
-    it("force inférieure à l'endurance → ×0.5", () => {
-        expect(damageMultiplier(3, 4)).toBe(0.5);
-    });
-
-    it("force moitié de l'endurance → ×0.25", () => {
-        expect(damageMultiplier(2, 4)).toBe(0.25);
+        expect(totalMany).toBeGreaterThan(totalFew);
     });
 });
 

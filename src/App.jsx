@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex, reachableHexes, hasLineOfSight } from "./hex.js";
-import { resolveAttack, damageMultiplier } from "./combat.js";
+import { resolveAttack } from "./combat.js";
 import { initState, resetUID } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY } from "./renderer.js";
 
@@ -302,21 +302,18 @@ export default function HexWarhammer() {
                                 const target = state.pendingAttack.target;
                                 const townKeys = new Set((state.towns || []).map(hexKey));
                                 const inTown = townKeys.has(hexKey(target.hex));
-                                const mult = damageMultiplier(w.strength, target.toughness);
                                 const effectiveSave = target.save - (inTown ? 1 : 0) + Math.abs(w.ap);
                                 const cantSave = effectiveSave > 6;
-                                const multColor = mult >= 2 ? "#2e7d32" : mult >= 1.5 ? "#558b2f" : mult === 1 ? "#8a7a60" : mult <= 0.25 ? "#c62828" : "#e65100";
                                 const saveColor = cantSave ? "#2e7d32" : effectiveSave >= 6 ? "#558b2f" : effectiveSave >= 4 ? "#8a7a60" : effectiveSave >= 3 ? "#e65100" : "#c62828";
                                 return (
                                     <button key={w.id} className={`weapon-card${ok ? "" : " disabled"}`} onClick={() => ok && selectWeapon(w)}>
                                         <div style={{ fontWeight: 600, fontSize: 13 }}>{w.name} {w.type === "ranged" ? "🏹" : "🗡"}</div>
                                         <div style={{ fontSize: 11, color: ok ? "#8a7a60" : "#b0a090", marginTop: 3 }}>
-                                            {w.type === "ranged" ? `Portée ${w.range}` : "Mêlée (adj.)"} · A{w.attacks} F{w.strength} PA{w.ap} D{w.damage}
+                                            {w.type === "ranged" ? `Portée ${w.range}` : "Mêlée (adj.)"} · A{w.attacks} PA{w.ap} D{w.damage}
                                             {!ok && ` · (trop loin: ${dist})`}
                                         </div>
                                         {ok && (
                                             <div style={{ display: "flex", gap: 8, marginTop: 5, fontSize: 10 }}>
-                                                <span style={{ color: multColor, fontWeight: 600 }}>Force ×{mult}</span>
                                                 <span style={{ color: saveColor, fontWeight: 600 }}>{cantSave ? "Svg impossible" : `Svg ${effectiveSave}+`}{inTown ? " 🏰" : ""}</span>
                                             </div>
                                         )}

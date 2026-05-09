@@ -1,14 +1,6 @@
 function rollD6() { return Math.floor(Math.random() * 6) + 1; }
 function rollDice(n) { return Array.from({ length: n }, rollD6); }
 
-export function damageMultiplier(str, tough) {
-    if (str >= tough * 2) return 2;
-    if (str > tough) return 1.5;
-    if (str === tough) return 1;
-    if (str * 2 <= tough) return 0.25;
-    return 0.5;
-}
-
 export function resolveAttack(attacker, weapon, target, { coverBonus = 0 } = {}) {
     const log = [];
     const skillStat = weapon.type === "ranged" ? attacker.ballisticSkill : attacker.weaponSkill;
@@ -33,12 +25,7 @@ export function resolveAttack(attacker, weapon, target, { coverBonus = 0 } = {})
             isSave: true,
         });
 
-        // — Dégâts avec multiplicateur Force vs Endurance
-        const mult = damageMultiplier(weapon.strength, target.toughness);
-        const rawDamage = unsaved * weapon.damage;
-        totalDamage = Math.max(1, Math.round(rawDamage * mult));
-        if (unsaved === 0) totalDamage = 0;
-        log.push({ label: `🩸 Puissance (×${mult})`, rolls: [], success: null });
+        totalDamage = unsaved * weapon.damage;
     }
 
     log.push({ label: `💥 Dégâts infligés : ${totalDamage}`, rolls: [], success: totalDamage, isSummary: true });
