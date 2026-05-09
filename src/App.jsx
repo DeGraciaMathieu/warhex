@@ -84,12 +84,12 @@ export default function HexWarhammer() {
         const moveKeys = new Set(s.validMoves.map(hexKey));
         const targetKeys = new Set((s.validTargets || []).map(u => hexKey(u.hex)));
 
-        if (s.phase === "attack" && targetKeys.has(k)) {
+        if ((s.phase === "select" || s.phase === "attack") && targetKeys.has(k)) {
             const target = s.validTargets.find(u => hexKey(u.hex) === k);
             return { ...s, phase: "weapon_select", pendingAttack: { attacker: s.selectedUnit, target }, roundLog: null };
         }
 
-        if (s.phase === "move" && moveKeys.has(k)) {
+        if ((s.phase === "select" || s.phase === "move") && moveKeys.has(k)) {
             const movedUnit = { ...s.selectedUnit, hex, hasMoved: true };
             const units = s.units.map(u => u.id === movedUnit.id ? movedUnit : u);
             return { ...s, units, selectedUnit: movedUnit, phase: "select", validMoves: [], validTargets: [], roundLog: null };
