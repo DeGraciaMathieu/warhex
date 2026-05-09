@@ -214,6 +214,25 @@ describe("collines", () => {
         expect(result.anim).not.toBeNull();
     });
 
+    it("le flux complet sélection → cible → arme fonctionne depuis une colline à portée+1", () => {
+        const hill = { q: 0, r: 0, s: 0 };
+        const attacker = createUnit("warrior", 1, hill);
+        const target = createUnit("warrior", 2, { q: 3, r: -3, s: 0 }); // distance 3, rifle range 2
+        const s = makeState({ units: [attacker, target], hills: [hill] });
+        // Sélection : la cible apparaît
+        const selected = handleClick(s, hill);
+        expect(selected.validTargets.some(t => t.id === target.id)).toBe(true);
+        // Clic sur la cible : passage en weapon_select
+        const clicked = handleClick(selected, target.hex);
+        expect(clicked.phase).toBe("weapon_select");
+        // Choix de l'arme à distance : l'attaque se résout
+        const rifle = attacker.weapons.find(w => w.id === "rifle");
+        const result = computeWeaponSelect(clicked, rifle);
+        expect(result.anim).not.toBeNull();
+        expect(result.anim.weaponName).toBe("Rifle");
+        expect(result.anim.damage).toBeGreaterThanOrEqual(0);
+    });
+
     it("computeWeaponSelect refuse un tir melee depuis une colline au-delà de la portée", () => {
         const hill = { q: 0, r: 0, s: 0 };
         const attacker = createUnit("warrior", 1, hill);
