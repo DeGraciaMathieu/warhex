@@ -37,6 +37,49 @@ export function createUnit(type, player, hex) {
     return { ...t, id: UID++, player, hex, currentWounds: t.wounds, hasMoved: false, hasAttacked: false };
 }
 
+function randomAvailableHexes(count, reservedKeys) {
+    const allHexes = [];
+    for (let q = -5; q <= 5; q++) {
+        for (let r = -5; r <= 5; r++) {
+            const s = -q - r;
+            if (Math.abs(s) <= 5) allHexes.push({ q, r, s });
+        }
+    }
+    const available = allHexes.filter(h => !reservedKeys.has(`${h.q},${h.r},${h.s}`));
+    const result = [];
+    for (let i = 0; i < count && available.length > 0; i++) {
+        const idx = Math.floor(Math.random() * available.length);
+        result.push(available.splice(idx, 1)[0]);
+    }
+    return result;
+}
+
+const DIRECTIONS = [
+    { q: 1, r: -1, s: 0 }, { q: 1, r: 0, s: -1 }, { q: 0, r: 1, s: -1 },
+    { q: -1, r: 1, s: 0 }, { q: -1, r: 0, s: 1 }, { q: 0, r: -1, s: 1 },
+];
+
+function generateRiver(reservedKeys) {
+    const key = h => `${h.q},${h.r},${h.s}`;
+    const isValid = h => Math.abs(h.q) <= 5 && Math.abs(h.r) <= 5 && Math.abs(h.s) <= 5;
+    const startQ = Math.floor(Math.random() * 5) - 2;
+    let current = { q: startQ, r: -5, s: -startQ + 5 };
+    if (!isValid(current)) current = { q: 0, r: -5, s: 5 };
+    const river = [current];
+    const visited = new Set([key(current)]);
+    while (current.r < 5) {
+        const forward = DIRECTIONS.filter(d => d.r >= 0);
+        const candidates = forward
+            .map(d => ({ q: current.q + d.q, r: current.r + d.r, s: current.s + d.s }))
+            .filter(h => isValid(h) && !visited.has(key(h)) && !reservedKeys.has(key(h)));
+        if (candidates.length === 0) break;
+        current = candidates[Math.floor(Math.random() * candidates.length)];
+        river.push(current);
+        visited.add(key(current));
+    }
+    return river;
+}
+
 export function initState() {
     const units = [
         createUnit("spaceMarine", 1, { q: -4, r: 0, s: 4 }),
@@ -46,20 +89,15 @@ export function initState() {
         createUnit("orcBoy", 2, { q: 3, r: -3, s: 0 }),
         createUnit("chaosWarrior", 2, { q: 4, r: -2, s: -2 }),
     ];
-    const obstacles = [
-        { q: 0, r: 0, s: 0 },
-        { q: 0, r: -1, s: 1 },
-        { q: 0, r: 1, s: -1 },
-        { q: -2, r: -1, s: 3 },
-        { q: -2, r: -2, s: 4 },
-        { q: 2, r: 1, s: -3 },
-        { q: 2, r: 2, s: -4 },
-        { q: -1, r: 3, s: -2 },
-        { q: 1, r: -3, s: 2 },
-    ];
+    const reservedKeys = new Set(units.map(u => `${u.hex.q},${u.hex.r},${u.hex.s}`));
+    const obstacles = randomAvailableHexes(9, reservedKeys);
+    const obstacleKeys = new Set(obstacles.map(o => `${o.q},${o.r},${o.s}`));
+    const allReserved = new Set([...reservedKeys, ...obstacleKeys]);
+    const rivers = generateRiver(allReserved);
     return {
         units,
         obstacles,
+        rivers,
         currentPlayer: 1,
         phase: "select",
         selectedUnit: null,

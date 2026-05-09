@@ -99,7 +99,8 @@ export default function HexWarhammer() {
             const cur = s.units.find(u => u.id === unitOnHex.id);
             const occupied = new Set(s.units.filter(u => u.currentWounds > 0 && u.id !== cur.id).map(u => hexKey(u.hex)));
             const obsKeys = new Set(s.obstacles.map(hexKey));
-            const validMoves = cur.hasMoved ? [] : reachableHexes(cur.hex, cur.movement, occupied, obsKeys);
+            const riverKeys = new Set((s.rivers || []).map(hexKey));
+            const validMoves = cur.hasMoved ? [] : reachableHexes(cur.hex, cur.movement, occupied, obsKeys, riverKeys);
             const enemies = s.units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
             const maxRange = Math.max(...cur.weapons.map(w => w.range));
             const validTargets = cur.hasAttacked ? [] : enemies.filter(e => hexDistance(cur.hex, e.hex) <= maxRange && hasLineOfSight(cur.hex, e.hex, obsKeys));
@@ -115,7 +116,8 @@ export default function HexWarhammer() {
             if (!cur || cur.hasMoved) return s;
             const occupied = new Set(s.units.filter(u => u.currentWounds > 0 && u.id !== cur.id).map(u => hexKey(u.hex)));
             const obsKeys = new Set(s.obstacles.map(hexKey));
-            return { ...s, phase: "move", validMoves: reachableHexes(cur.hex, cur.movement, occupied, obsKeys), validTargets: [] };
+            const riverKeys = new Set((s.rivers || []).map(hexKey));
+            return { ...s, phase: "move", validMoves: reachableHexes(cur.hex, cur.movement, occupied, obsKeys, riverKeys), validTargets: [] };
         });
     }
 

@@ -24,12 +24,14 @@ export function drawScene(canvas, state, hoveredHex) {
         }
 
     const obstacleKeys = new Set((state.obstacles || []).map(hexKey));
+    const riverKeys = new Set((state.rivers || []).map(hexKey));
 
     hexes.forEach(hex => {
         const { x, y } = hexToPixel(hex.q, hex.r);
         const px = x + OX, py = y + OY;
         const k = hexKey(hex);
         const isObstacle = obstacleKeys.has(k);
+        const isRiver = riverKeys.has(k);
         const isMove = validMoveKeys.has(k);
         const isTarget = validTargetKeys.has(k);
         const isHover = hoveredHex && hexKey(hoveredHex) === k;
@@ -40,12 +42,13 @@ export function drawScene(canvas, state, hoveredHex) {
         ctx.closePath();
 
         let fill = "#e8e0d0";
+        if (isRiver) fill = "#a0c8e8";
         if (isObstacle) fill = "#8a7a60";
         if (isMove) fill = isHover ? "rgba(58,128,196,0.35)" : "rgba(58,128,196,0.15)";
         if (isTarget) fill = isHover ? "rgba(200,50,50,0.35)" : "rgba(200,50,50,0.15)";
         ctx.fillStyle = fill;
         ctx.fill();
-        ctx.strokeStyle = isTarget ? "#cc3333" : isMove ? "#3a7abf" : isObstacle ? "#6a5a40" : "#c8b898";
+        ctx.strokeStyle = isTarget ? "#cc3333" : isMove ? "#3a7abf" : isObstacle ? "#6a5a40" : isRiver ? "#5a9abf" : "#c8b898";
         ctx.lineWidth = isTarget || isMove ? 1.5 : 0.8;
         ctx.stroke();
 
@@ -55,6 +58,14 @@ export function drawScene(canvas, state, hoveredHex) {
             ctx.textBaseline = "middle";
             ctx.fillStyle = "#4a3a20";
             ctx.fillText("▲", px, py);
+        }
+
+        if (isRiver) {
+            ctx.font = `${HEX_SIZE * 0.45}px serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillStyle = "#3a7abf";
+            ctx.fillText("〰", px, py);
         }
     });
 
