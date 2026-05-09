@@ -92,10 +92,10 @@ export default function HexWarhammer() {
         if ((s.phase === "select" || s.phase === "move") && moveKeys.has(k)) {
             const movedUnit = { ...s.selectedUnit, hex, hasMoved: true };
             const units = s.units.map(u => u.id === movedUnit.id ? movedUnit : u);
-            const obsKeys = new Set(s.obstacles.map(hexKey));
+            const losKeys = new Set([...s.obstacles, ...(s.towns || [])].map(hexKey));
             const enemies = units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
             const maxRange = Math.max(...movedUnit.weapons.map(w => w.range));
-            const validTargets = movedUnit.hasAttacked ? [] : enemies.filter(e => hexDistance(movedUnit.hex, e.hex) <= maxRange && hasLineOfSight(movedUnit.hex, e.hex, obsKeys));
+            const validTargets = movedUnit.hasAttacked ? [] : enemies.filter(e => hexDistance(movedUnit.hex, e.hex) <= maxRange && hasLineOfSight(movedUnit.hex, e.hex, losKeys));
             const autoEnd = validTargets.length === 0;
             return { ...s, units, selectedUnit: movedUnit, activeUnitId: movedUnit.id, phase: "select", validMoves: [], validTargets, autoEndTurn: autoEnd };
         }
@@ -110,7 +110,8 @@ export default function HexWarhammer() {
             const validMoves = cur.hasMoved ? [] : reachableHexes(cur.hex, cur.movement, occupied, obsKeys, stopKeys, forestKeys);
             const enemies = s.units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
             const maxRange = Math.max(...cur.weapons.map(w => w.range));
-            const validTargets = cur.hasAttacked ? [] : enemies.filter(e => hexDistance(cur.hex, e.hex) <= maxRange && hasLineOfSight(cur.hex, e.hex, obsKeys));
+            const losKeys = new Set([...s.obstacles, ...(s.towns || [])].map(hexKey));
+            const validTargets = cur.hasAttacked ? [] : enemies.filter(e => hexDistance(cur.hex, e.hex) <= maxRange && hasLineOfSight(cur.hex, e.hex, losKeys));
             return { ...s, selectedUnit: cur, phase: "select", validMoves, validTargets };
         }
 
@@ -135,8 +136,8 @@ export default function HexWarhammer() {
             if (!cur || cur.hasAttacked) return s;
             const enemies = s.units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
             const maxRange = Math.max(...cur.weapons.map(w => w.range));
-            const obsKeys = new Set(s.obstacles.map(hexKey));
-            const validTargets = enemies.filter(e => hexDistance(cur.hex, e.hex) <= maxRange && hasLineOfSight(cur.hex, e.hex, obsKeys));
+            const losKeys = new Set([...s.obstacles, ...(s.towns || [])].map(hexKey));
+            const validTargets = enemies.filter(e => hexDistance(cur.hex, e.hex) <= maxRange && hasLineOfSight(cur.hex, e.hex, losKeys));
             return { ...s, phase: "attack", validTargets, validMoves: [], selectedUnit: cur };
         });
     }
