@@ -61,16 +61,6 @@ export default function HexWarhammer() {
         }
     }, [state.autoEndTurn]);
 
-    useEffect(() => {
-        if (state.activeUnitId && state.phase === "select" && state.selectedUnit) {
-            const sel = state.units.find(u => u.id === state.selectedUnit.id);
-            if (sel && sel.hasMoved && !sel.hasAttacked && (state.validTargets || []).length === 0) {
-                const timer = setTimeout(() => endTurn(), 800);
-                return () => clearTimeout(timer);
-            }
-        }
-    }, [state.activeUnitId, state.phase, state.selectedUnit, state.validTargets]);
-
     function onCanvasClick(e) {
         if (diceAnim && !diceAnim.done) return;
         if (diceAnim?.done) setDiceAnim(null);
@@ -111,7 +101,8 @@ export default function HexWarhammer() {
             const enemies = units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
             const maxRange = Math.max(...movedUnit.weapons.map(w => w.range));
             const validTargets = movedUnit.hasAttacked ? [] : enemies.filter(e => hexDistance(movedUnit.hex, e.hex) <= maxRange && hasLineOfSight(movedUnit.hex, e.hex, obsKeys));
-            return { ...s, units, selectedUnit: movedUnit, activeUnitId: movedUnit.id, phase: "select", validMoves: [], validTargets, roundLog: null };
+            const autoEnd = validTargets.length === 0;
+            return { ...s, units, selectedUnit: movedUnit, activeUnitId: movedUnit.id, phase: "select", validMoves: [], validTargets, roundLog: null, autoEndTurn: autoEnd };
         }
 
         if (unitOnHex && unitOnHex.player === s.currentPlayer) {
