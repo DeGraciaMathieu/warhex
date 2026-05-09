@@ -432,6 +432,32 @@ describe("double activation", () => {
     });
 });
 
+describe("tour de l'adversaire", () => {
+    it("le joueur 1 ne peut pas sélectionner ses unités quand currentPlayer est 2", () => {
+        const u1 = createUnit("warrior", 1, { q: -1, r: 0, s: 1 });
+        const enemy = createUnit("warrior", 2, { q: 1, r: 0, s: -1 });
+        const s = makeState({ units: [u1, enemy], currentPlayer: 2 });
+        const result = handleClick(s, u1.hex);
+        expect(result.selectedUnit).toBeNull();
+    });
+
+    it("le joueur 2 ne peut pas sélectionner les unités du joueur 1 quand currentPlayer est 1", () => {
+        const u1 = createUnit("warrior", 1, { q: -1, r: 0, s: 1 });
+        const enemy = createUnit("warrior", 2, { q: 1, r: 0, s: -1 });
+        const s = makeState({ units: [u1, enemy], currentPlayer: 1 });
+        const result = handleClick(s, enemy.hex);
+        expect(result.selectedUnit).toBeNull();
+    });
+
+    it("computeEndTurn change le joueur actif", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const enemy = createUnit("warrior", 2, { q: 2, r: -2, s: 0 });
+        const s = makeState({ units: [u1, enemy], currentPlayer: 1 });
+        const result = computeEndTurn(s);
+        expect(result.currentPlayer).toBe(2);
+    });
+});
+
 describe("phases bloquantes", () => {
     it("handleClick ne fait rien en phase weapon_select", () => {
         const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
