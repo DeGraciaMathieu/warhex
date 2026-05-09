@@ -18,8 +18,10 @@ src/
   hex.js              → Maths hexagonales (coordonnées cube, pathfinding, distance, ligne de vue)
   combat.js           → Résolution de combat (jets de dés, To Hit / Save / dégâts)
   units.js            → Templates d'unités, factory createUnit(), état initial (unités + obstacles)
+  game.js             → Logique de jeu pure (handleClick, computeMove, computeAttack, endTurn…)
   renderer.js         → Rendu canvas (grille, obstacles, unités, barres de vie)
-  App.jsx             → Composant React principal (state, handlers, UI panneau droit)
+  styles.css          → Styles CSS (boutons, dés, animations)
+  App.jsx             → Composant React (state, effets, rendu UI)
   ai.js               → (à créer) IA basique pour le joueur 2
 ```
 
