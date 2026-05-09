@@ -17,7 +17,7 @@ export function resolveAttack(attacker, weapon, target, { coverBonus = 0 } = {})
         const saveRolls = rollDice(3);
         const cantSave = effectiveSave > 6;
         const saved = cantSave ? 0 : saveRolls.filter(r => r >= effectiveSave).length;
-        const unsaved = hits - saved;
+        const unsaved = Math.max(0, hits - saved);
         log.push({
             label: cantSave ? `🛡 Sauvegarde (impossible, PA trop fort)` : `🛡 Sauvegarde (${effectiveSave}+)`,
             rolls: saveRolls,
