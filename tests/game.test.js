@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { hexKey, reachableHexes, isValidHex } from "../src/hex.js";
 import { createUnit, resetUID } from "../src/units.js";
-import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn } from "../src/game.js";
+import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect } from "../src/game.js";
 
 beforeEach(() => resetUID());
 
@@ -27,6 +27,8 @@ function makeState(overrides = {}) {
         round: 1,
         scores: { 1: 0, 2: 0 },
         activeUnitId: null,
+        activationsUsed: 0,
+        activatedUnitIds: [],
         autoEndTurn: false,
         ...overrides,
     };
@@ -281,7 +283,8 @@ describe("marais", () => {
         const s = makeState({ units: [attacker, enemy], swamps: [swamp] });
         const selected = handleClick(s, { q: -1, r: 0, s: 1 });
         const moved = handleClick(selected, swamp);
-        expect(moved.selectedUnit.currentWounds).toBe(attacker.wounds - 1);
+        const unit = moved.units.find(u => u.id === attacker.id);
+        expect(unit.currentWounds).toBe(attacker.wounds - 1);
     });
 
     it("une unité tuée par le poison du marais termine le tour automatiquement", () => {
@@ -295,6 +298,137 @@ describe("marais", () => {
         expect(dead.currentWounds).toBe(0);
         expect(moved.autoEndTurn).toBe(true);
         expect(moved.selectedUnit).toBeNull();
+    });
+});
+
+describe("double activation", () => {
+    it("après une activation, le joueur peut sélectionner une autre unité", () => {
+        const u1 = createUnit("warrior", 1, { q: -2, r: 0, s: 2 });
+        const u2 = createUnit("warrior", 1, { q: -3, r: 0, s: 3 });
+        const enemy = createUnit("warrior", 2, { q: 4, r: -4, s: 0 });
+        const s = makeState({ units: [u1, u2, enemy] });
+        // Sélectionner et déplacer u1
+        const selected = handleClick(s, u1.hex);
+        const moveTarget = selected.validMoves[0];
+        const moved = handleClick(selected, moveTarget);
+        // u1 a terminé (pas de cibles), activation consommée
+        expect(moved.activationsUsed).toBe(1);
+        expect(moved.autoEndTurn).toBe(false);
+        // On peut sélectionner u2
+        const selected2 = handleClick(moved, u2.hex);
+        expect(selected2.selectedUnit).not.toBeNull();
+        expect(selected2.selectedUnit.id).toBe(u2.id);
+    });
+
+    it("on ne peut pas sélectionner une unité déjà activée ce tour", () => {
+        const u1 = createUnit("warrior", 1, { q: -2, r: 0, s: 2 });
+        const u2 = createUnit("warrior", 1, { q: -3, r: 0, s: 3 });
+        const enemy = createUnit("warrior", 2, { q: 4, r: -4, s: 0 });
+        const s = makeState({ units: [u1, u2, enemy] });
+        const selected = handleClick(s, u1.hex);
+        const moved = handleClick(selected, selected.validMoves[0]);
+        // Tenter de re-sélectionner u1
+        const movedU1 = moved.units.find(u => u.id === u1.id);
+        const retry = handleClick(moved, movedU1.hex);
+        expect(retry.selectedUnit).toBeNull();
+    });
+
+    it("après 2 activations, autoEndTurn passe à true", () => {
+        const u1 = createUnit("warrior", 1, { q: -2, r: 0, s: 2 });
+        const u2 = createUnit("warrior", 1, { q: -3, r: 0, s: 3 });
+        const enemy = createUnit("warrior", 2, { q: 4, r: -4, s: 0 });
+        const s = makeState({ units: [u1, u2, enemy] });
+        // Activation 1
+        const s1 = handleClick(s, u1.hex);
+        const s2 = handleClick(s1, s1.validMoves[0]);
+        expect(s2.activationsUsed).toBe(1);
+        // Activation 2
+        const s3 = handleClick(s2, u2.hex);
+        const s4 = handleClick(s3, s3.validMoves[0]);
+        expect(s4.activationsUsed).toBe(2);
+        expect(s4.autoEndTurn).toBe(true);
+    });
+
+    it("computeEndTurn réinitialise les compteurs d'activation", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const s = makeState({ units: [u1], activationsUsed: 2, activatedUnitIds: [u1.id] });
+        const result = computeEndTurn(s);
+        expect(result.activationsUsed).toBe(0);
+        expect(result.activatedUnitIds).toEqual([]);
+    });
+
+    it("computeDeselect consomme une activation si l'unité a agi", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const u2 = createUnit("warrior", 1, { q: -2, r: 0, s: 2 });
+        const enemy = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        u1.hasMoved = true;
+        const s = makeState({ units: [u1, u2, enemy], selectedUnit: u1, activeUnitId: u1.id });
+        const result = computeDeselect(s);
+        expect(result.activationsUsed).toBe(1);
+        expect(result.activatedUnitIds).toContain(u1.id);
+        expect(result.selectedUnit).toBeNull();
+    });
+
+    it("computeDeselect ne consomme pas d'activation si l'unité n'a pas agi", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const enemy = createUnit("warrior", 2, { q: 2, r: -2, s: 0 });
+        const s = makeState({ units: [u1, enemy], selectedUnit: u1 });
+        const result = computeDeselect(s);
+        expect(result.activationsUsed).toBe(0);
+        expect(result.selectedUnit).toBeNull();
+    });
+
+    it("une attaque consomme une activation", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const u2 = createUnit("warrior", 1, { q: -3, r: 0, s: 3 });
+        const enemy = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [u1, u2, enemy] });
+        // Sélectionner u1, cliquer sur l'ennemi pour attaquer
+        const selected = handleClick(s, u1.hex);
+        const clicked = handleClick(selected, enemy.hex);
+        expect(clicked.phase).toBe("weapon_select");
+        // Choisir l'arme
+        const weapon = u1.weapons.find(w => w.id === "sword");
+        const result = computeWeaponSelect(clicked, weapon);
+        // Appliquer les dégâts
+        const afterDmg = applyDamage(result.state, result.anim);
+        expect(afterDmg.activationsUsed).toBe(1);
+        expect(afterDmg.activatedUnitIds).toContain(u1.id);
+        // On peut encore sélectionner u2
+        expect(afterDmg.autoEndTurn).toBe(false);
+        const next = handleClick(afterDmg, u2.hex);
+        expect(next.selectedUnit).not.toBeNull();
+        expect(next.selectedUnit.id).toBe(u2.id);
+    });
+
+    it("tuer un ennemi en 1ère activation permet de jouer la 2e", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const u2 = createUnit("warrior", 1, { q: -3, r: 0, s: 3 });
+        const enemy = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        enemy.currentWounds = 1;
+        const s = makeState({ units: [u1, u2, enemy] });
+        const selected = handleClick(s, u1.hex);
+        const clicked = handleClick(selected, enemy.hex);
+        const weapon = u1.weapons.find(w => w.id === "sword");
+        const result = computeWeaponSelect(clicked, weapon);
+        // Simuler dégâts fatals
+        const fatalAnim = { ...result.anim, damage: 99, isDead: true };
+        const afterKill = applyDamage(result.state, fatalAnim);
+        expect(afterKill.activationsUsed).toBe(1);
+        expect(afterKill.autoEndTurn).toBe(false);
+        // u2 est toujours sélectionnable
+        const next = handleClick(afterKill, u2.hex);
+        expect(next.selectedUnit.id).toBe(u2.id);
+    });
+
+    it("autoEndTurn si une seule unité vivante et déjà activée", () => {
+        const u1 = createUnit("warrior", 1, { q: -2, r: 0, s: 2 });
+        const enemy = createUnit("warrior", 2, { q: 4, r: -4, s: 0 });
+        const s = makeState({ units: [u1, enemy] });
+        const s1 = handleClick(s, u1.hex);
+        const s2 = handleClick(s1, s1.validMoves[0]);
+        // Une seule unité alliée → autoEndTurn même avec 1 activation
+        expect(s2.autoEndTurn).toBe(true);
     });
 });
 

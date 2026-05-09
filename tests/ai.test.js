@@ -28,6 +28,8 @@ function makeState(overrides = {}) {
         round: 1,
         scores: { 1: 0, 2: 0 },
         activeUnitId: null,
+        activationsUsed: 0,
+        activatedUnitIds: [],
         autoEndTurn: false,
         ...overrides,
     };
@@ -102,6 +104,42 @@ describe("IA basique", () => {
         const state = makeState({ phase: "resolving" });
         const action = computeAIAction(state);
         expect(action).toBeNull();
+    });
+});
+
+describe("IA — double activation", () => {
+    it("l'IA sélectionne une 2e unité après la 1ère activation", () => {
+        const u1 = createUnit("warrior", 1, { q: -4, r: 0, s: 4 });
+        const u2a = createUnit("warrior", 2, { q: 2, r: 0, s: -2 });
+        const u2b = createUnit("warrior", 2, { q: 3, r: 0, s: -3 });
+        // Simuler la 1ère activation terminée : u2a a déjà bougé
+        u2a.hasMoved = true;
+        u2a.hasAttacked = true;
+        const state = makeState({
+            units: [u1, u2a, u2b],
+            activationsUsed: 1,
+            activatedUnitIds: [u2a.id],
+        });
+        const action = computeAIAction(state);
+        expect(action.type).toBe("click");
+        expect(hexKey(action.hex)).toBe(hexKey(u2b.hex));
+    });
+
+    it("l'IA fait endTurn quand les 2 unités ont déjà agi", () => {
+        const u1 = createUnit("warrior", 1, { q: -4, r: 0, s: 4 });
+        const u2a = createUnit("warrior", 2, { q: 2, r: 0, s: -2 });
+        const u2b = createUnit("warrior", 2, { q: 3, r: 0, s: -3 });
+        u2a.hasMoved = true;
+        u2a.hasAttacked = true;
+        u2b.hasMoved = true;
+        u2b.hasAttacked = true;
+        const state = makeState({
+            units: [u1, u2a, u2b],
+            activationsUsed: 2,
+            activatedUnitIds: [u2a.id, u2b.id],
+        });
+        const action = computeAIAction(state);
+        expect(action.type).toBe("endTurn");
     });
 });
 
