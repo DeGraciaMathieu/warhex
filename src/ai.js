@@ -16,24 +16,92 @@ function findValidTargets(unit, enemies, losKeys, rangeBonus = 0) {
     return enemies.filter(e => hexDistance(unit.hex, e.hex) <= maxRange && hasLineOfSight(unit.hex, e.hex, losKeys));
 }
 
-function pickBestUnit(state) {
+function townContext(state) {
+    const townKeys = new Set((state.towns || []).map(hexKey));
+    const aliveUnits = state.units.filter(u => u.currentWounds > 0);
+    const unitOnTown = new Map();
+    for (const u of aliveUnits) {
+        const k = hexKey(u.hex);
+        if (townKeys.has(k)) unitOnTown.set(k, u);
+    }
+    const emptyTowns = (state.towns || []).filter(t => !unitOnTown.has(hexKey(t)));
+    const enemyOnTown = [...unitOnTown.values()].filter(u => u.player === 1);
+    return { townKeys, unitOnTown, emptyTowns, enemyOnTown };
+}
+
+export function pickBestUnit(state) {
     const units = state.units.filter(u => u.player === 2 && u.currentWounds > 0 && !u.hasMoved && !u.hasAttacked);
     if (units.length === 0) return null;
+
     const losKeys = buildLosKeys(state);
     const enemies = state.units.filter(u => u.player === 1 && u.currentWounds > 0);
     const hillKeys = new Set((state.hills || []).map(hexKey));
+    const { enemyOnTown, emptyTowns } = townContext(state);
+    const enemyOnTownKeys = new Set(enemyOnTown.map(u => hexKey(u.hex)));
+
+    let best = null;
+    let bestScore = -Infinity;
+
     for (const unit of units) {
+        let score = 0;
         const rangeBonus = hillKeys.has(hexKey(unit.hex)) ? 1 : 0;
-        if (findValidTargets(unit, enemies, losKeys, rangeBonus).length > 0) return unit;
+        const targets = findValidTargets(unit, enemies, losKeys, rangeBonus);
+
+        // Can attack an enemy sitting on a town — highest priority
+        const canHitTownEnemy = targets.some(t => enemyOnTownKeys.has(hexKey(t.hex)));
+        if (canHitTownEnemy) score += 100;
+        else if (targets.length > 0) score += 10;
+
+        // Close to an empty town — good candidate to capture
+        if (emptyTowns.length > 0) {
+            const distToTown = Math.min(...emptyTowns.map(t => hexDistance(unit.hex, t)));
+            score += 20 / (1 + distToTown);
+        }
+
+        if (score > bestScore) {
+            bestScore = score;
+            best = unit;
+        }
     }
-    return units[0];
+
+    return best;
 }
 
-function pickMoveTarget(unit, state) {
+export function pickMoveTarget(unit, state) {
     const occupied = new Set(state.units.filter(u => u.currentWounds > 0 && u.id !== unit.id).map(u => hexKey(u.hex)));
     const { obsKeys, stopKeys, forestKeys } = buildTerrainKeys(state);
     const reachable = reachableHexes(unit.hex, unit.movement, occupied, obsKeys, stopKeys, forestKeys);
     if (reachable.length === 0) return null;
+
+    const { townKeys, emptyTowns, enemyOnTown } = townContext(state);
+
+    // 1. Can reach an empty town directly — take it
+    const reachableTown = reachable.find(h => townKeys.has(hexKey(h)) && emptyTowns.some(t => hexKey(t) === hexKey(h)));
+    if (reachableTown) return reachableTown;
+
+    // 2. Move toward closest empty town
+    if (emptyTowns.length > 0) {
+        reachable.sort((a, b) => {
+            const da = Math.min(...emptyTowns.map(t => hexDistance(a, t)));
+            const db = Math.min(...emptyTowns.map(t => hexDistance(b, t)));
+            return da - db;
+        });
+        const bestDist = Math.min(...emptyTowns.map(t => hexDistance(reachable[0], t)));
+        const currentDist = Math.min(...emptyTowns.map(t => hexDistance(unit.hex, t)));
+        if (bestDist < currentDist) return reachable[0];
+    }
+
+    // 3. Move toward enemy on town (to attack next turn)
+    if (enemyOnTown.length > 0) {
+        reachable.sort((a, b) => {
+            const da = Math.min(...enemyOnTown.map(e => hexDistance(a, e.hex)));
+            const db = Math.min(...enemyOnTown.map(e => hexDistance(b, e.hex)));
+            return da - db;
+        });
+        return reachable[0];
+    }
+
+    // 4. Fallback: move toward closest enemy
     const enemies = state.units.filter(u => u.player === 1 && u.currentWounds > 0);
     if (enemies.length === 0) return reachable[0];
     const closest = enemies.reduce((best, e) => {
@@ -44,14 +112,23 @@ function pickMoveTarget(unit, state) {
     return reachable[0];
 }
 
-function pickTarget(unit, state) {
+export function pickTarget(unit, state) {
     const losKeys = buildLosKeys(state);
     const enemies = state.units.filter(u => u.player === 1 && u.currentWounds > 0);
     const hillKeys = new Set((state.hills || []).map(hexKey));
     const rangeBonus = hillKeys.has(hexKey(unit.hex)) ? 1 : 0;
     const targets = findValidTargets(unit, enemies, losKeys, rangeBonus);
     if (targets.length === 0) return null;
-    targets.sort((a, b) => a.currentWounds - b.currentWounds);
+
+    const { townKeys } = townContext(state);
+
+    // Priority: enemies on towns first, then lowest HP
+    targets.sort((a, b) => {
+        const aOnTown = townKeys.has(hexKey(a.hex)) ? 1 : 0;
+        const bOnTown = townKeys.has(hexKey(b.hex)) ? 1 : 0;
+        if (aOnTown !== bOnTown) return bOnTown - aOnTown;
+        return a.currentWounds - b.currentWounds;
+    });
     return targets[0];
 }
 

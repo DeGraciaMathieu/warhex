@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { hexKey } from "../src/hex.js";
 import { createUnit, resetUID } from "../src/units.js";
 import { handleClick, computeEndTurn } from "../src/game.js";
-import { computeAIAction } from "../src/ai.js";
+import { computeAIAction, pickBestUnit, pickMoveTarget, pickTarget } from "../src/ai.js";
 
 beforeEach(() => resetUID());
 
@@ -102,5 +102,60 @@ describe("IA basique", () => {
         const state = makeState({ phase: "resolving" });
         const action = computeAIAction(state);
         expect(action).toBeNull();
+    });
+});
+
+describe("IA — contrôle des villes", () => {
+    it("se déplace vers une ville vide plutôt que vers l'ennemi", () => {
+        const u1 = createUnit("warrior", 1, { q: -4, r: 0, s: 4 });
+        const u2 = createUnit("warrior", 2, { q: 2, r: 0, s: -2 });
+        const town = { q: 0, r: 0, s: 0 };
+        const state = makeState({ units: [u1, u2], towns: [town] });
+        const dest = pickMoveTarget(u2, state);
+        const distToTown = Math.abs(dest.q - town.q) + Math.abs(dest.r - town.r) + Math.abs(dest.s - town.s);
+        const origDistToTown = Math.abs(u2.hex.q - town.q) + Math.abs(u2.hex.r - town.r) + Math.abs(u2.hex.s - town.s);
+        expect(distToTown).toBeLessThan(origDistToTown);
+    });
+
+    it("capture une ville vide atteignable directement", () => {
+        const u1 = createUnit("warrior", 1, { q: -4, r: 0, s: 4 });
+        const u2 = createUnit("warrior", 2, { q: 1, r: 0, s: -1 });
+        const town = { q: 0, r: 0, s: 0 };
+        const state = makeState({ units: [u1, u2], towns: [town] });
+        const dest = pickMoveTarget(u2, state);
+        expect(hexKey(dest)).toBe(hexKey(town));
+    });
+
+    it("priorise l'attaque d'un ennemi sur une ville", () => {
+        const u1OnTown = createUnit("warrior", 1, { q: 1, r: 0, s: -1 });
+        const u1Far = createUnit("warrior", 1, { q: -1, r: 0, s: 1 });
+        u1Far.currentWounds = 1;
+        const u2 = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        const town = { q: 1, r: 0, s: -1 };
+        const state = makeState({ units: [u1OnTown, u1Far, u2], towns: [town] });
+        const target = pickTarget(u2, state);
+        expect(hexKey(target.hex)).toBe(hexKey(u1OnTown.hex));
+    });
+
+    it("sélectionne en priorité une unité qui peut attaquer un ennemi sur une ville", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const u2a = createUnit("warrior", 2, { q: 3, r: 0, s: -3 });
+        const u2b = createUnit("warrior", 2, { q: 1, r: 0, s: -1 });
+        const town = { q: 0, r: 0, s: 0 };
+        const state = makeState({ units: [u1, u2a, u2b], towns: [town] });
+        const best = pickBestUnit(state);
+        expect(best.id).toBe(u2b.id);
+    });
+
+    it("se dirige vers un ennemi sur une ville quand pas de ville vide", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const u2 = createUnit("warrior", 2, { q: 4, r: 0, s: -4 });
+        const town = { q: 0, r: 0, s: 0 };
+        const state = makeState({ units: [u1, u2], towns: [town] });
+        const dest = pickMoveTarget(u2, state);
+        expect(dest).toBeDefined();
+        const distBefore = Math.max(Math.abs(u2.hex.q - u1.hex.q), Math.abs(u2.hex.r - u1.hex.r), Math.abs(u2.hex.s - u1.hex.s));
+        const distAfter = Math.max(Math.abs(dest.q - u1.hex.q), Math.abs(dest.r - u1.hex.r), Math.abs(dest.s - u1.hex.s));
+        expect(distAfter).toBeLessThan(distBefore);
     });
 });
