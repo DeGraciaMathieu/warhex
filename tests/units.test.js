@@ -358,6 +358,35 @@ describe("sélection d'armée", () => {
         expect(p1.filter(u => u.name === "Warrior")).toHaveLength(2);
     });
 
+    it("fairTowns place les villes en miroir symétrique", () => {
+        for (let i = 0; i < 20; i++) {
+            resetUID();
+            const state = initState(null, { fairTowns: true });
+            expect(state.towns).toHaveLength(4);
+            const keys = new Set(state.towns.map(hexKey));
+            for (const t of state.towns) {
+                const mirror = { q: -t.q, r: -t.r, s: -t.s };
+                expect(keys.has(hexKey(mirror))).toBe(true);
+            }
+        }
+    });
+
+    it("fairTowns peut placer des villes sur l'axe central (q === 0)", () => {
+        let found = false;
+        for (let i = 0; i < 200; i++) {
+            resetUID();
+            const state = initState(null, { fairTowns: true });
+            if (state.towns.some(t => t.q === 0)) { found = true; break; }
+        }
+        expect(found).toBe(true);
+    });
+
+    it("fairTowns false utilise le placement aléatoire sans contrainte d'équidistance", () => {
+        resetUID();
+        const state = initState(null, { fairTowns: false });
+        expect(state.towns).toHaveLength(4);
+    });
+
     it("initState avec armées custom initialise autoEndTurn à false", () => {
         const armies = {
             1: ["warrior", "warrior", "warrior", "warrior", "warrior"],
