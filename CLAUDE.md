@@ -34,7 +34,7 @@ src/
 - Les fonctions pures (hex, combat) n'importent jamais React
 - Thème clair (fond beige `#f5f0e8`, texte foncé `#2a2015`)
 - Couleurs joueurs : bleu `#2a6fa8` (J1), rouge `#a03030` (J2)
-- Terrains (obstacles, rivières, villes, forêts) et armes : voir skills `terrains` et `weapons`
+- Terrains (obstacles, rivières, villes, forêts, collines, marais) et armes : voir skills `terrains` et `weapons`
 
 ## Phases de jeu
 
@@ -56,10 +56,16 @@ Chaque tour, un joueur agit avec **une seule unité** (déplacement et/ou attaqu
 
 ## Tests
 
-- Fichier : `tests/mechanics.test.js`
 - Commande : `source ~/.nvm/nvm.sh && nvm use 22 && npx vitest run`
 - Tests macro uniquement : on teste le comportement fonctionnel, pas les détails d'implémentation
 - Utiliser les fonctions exportées comme un utilisateur du module le ferait
+- Fichiers :
+  - `tests/hex.test.js` → distances, conversions hex/pixel, voisins, ligne de vue
+  - `tests/terrain.test.js` → effets de mouvement/LOS des terrains (obstacles, rivières, villes, forêts, marais)
+  - `tests/combat.test.js` → résolution d'attaque, PA, sauvegarde, compétences
+  - `tests/units.test.js` → création d'unités, état initial, génération de la carte
+  - `tests/scoring.test.js` → contrôle de villes, victoire, système de points
+  - `tests/game.test.js` → logique de jeu (sélection, déplacement, attaque, fin de tour, collines, marais)
 
 ## Pour ajouter une feature
 
