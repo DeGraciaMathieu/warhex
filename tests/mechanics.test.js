@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { hexDistance, hexKey, hexToPixel, pixelToHex, reachableHexes, isValidHex, hexNeighbors, hasLineOfSight } from "../src/hex.js";
 import { resolveAttack } from "../src/combat.js";
 import { createUnit, initState, resetUID, computeTownControl, checkWinner } from "../src/units.js";
+import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn } from "../src/game.js";
 
 beforeEach(() => resetUID());
 
@@ -813,5 +814,161 @@ describe("compétences de combat", () => {
             }
         }
         expect(foundNoHits).toBe(true);
+    });
+});
+
+// ────────────────────────────────────────────────
+// LOGIQUE DE JEU (game.js)
+// ────────────────────────────────────────────────
+
+describe("logique de jeu", () => {
+    function makeState(overrides = {}) {
+        const u1 = createUnit("warrior", 1, { q: -1, r: 0, s: 1 });
+        const u2 = createUnit("warrior", 2, { q: 1, r: 0, s: -1 });
+        return {
+            units: [u1, u2],
+            obstacles: [],
+            rivers: [],
+            towns: [],
+            forests: [],
+            currentPlayer: 1,
+            phase: "select",
+            selectedUnit: null,
+            validMoves: [],
+            validTargets: [],
+            pendingAttack: null,
+            roundLog: null,
+            winner: null,
+            round: 1,
+            scores: { 1: 0, 2: 0 },
+            activeUnitId: null,
+            autoEndTurn: false,
+            ...overrides,
+        };
+    }
+
+    it("cliquer sur une unité alliée la sélectionne", () => {
+        const s = makeState();
+        const result = handleClick(s, { q: -1, r: 0, s: 1 });
+        expect(result.selectedUnit).not.toBeNull();
+        expect(result.selectedUnit.id).toBe(s.units[0].id);
+        expect(result.validMoves.length).toBeGreaterThan(0);
+    });
+
+    it("on ne peut pas sélectionner une unité ennemie", () => {
+        const s = makeState();
+        const result = handleClick(s, { q: 1, r: 0, s: -1 });
+        expect(result.selectedUnit).toBeNull();
+    });
+
+    it("on ne peut pas sélectionner une autre unité quand activeUnitId est défini", () => {
+        createUnit("warrior", 1, { q: 0, r: 0, s: 0 }); // consomme id 0
+        const u1 = createUnit("warrior", 1, { q: -1, r: 0, s: 1 }); // id 1 (truthy)
+        const u2 = createUnit("warrior", 1, { q: -2, r: 1, s: 1 });
+        const enemy = createUnit("warrior", 2, { q: 2, r: -1, s: -1 });
+        const s = makeState({ units: [u1, u2, enemy], activeUnitId: u1.id, selectedUnit: u1 });
+        const result = handleClick(s, u2.hex);
+        expect(result.selectedUnit.id).toBe(u1.id);
+    });
+
+    it("cliquer sur un hex de déplacement valide déplace l'unité", () => {
+        const s = makeState();
+        const selected = handleClick(s, { q: -1, r: 0, s: 1 });
+        const moveTarget = selected.validMoves[0];
+        const moved = handleClick(selected, moveTarget);
+        expect(moved.selectedUnit.hex).toEqual(moveTarget);
+        expect(moved.selectedUnit.hasMoved).toBe(true);
+    });
+
+    it("handleClick ne fait rien si la partie est gagnée", () => {
+        const s = makeState({ winner: 1 });
+        const result = handleClick(s, { q: -1, r: 0, s: 1 });
+        expect(result).toEqual(s);
+    });
+
+    it("computeMove ne donne pas de mouvements si l'unité a déjà bougé", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        u1.hasMoved = true;
+        const s = makeState({ units: [u1], selectedUnit: u1 });
+        const result = computeMove(s);
+        expect(result.validMoves).toHaveLength(0);
+    });
+
+    it("computeAttack ne donne pas de cibles si l'unité a déjà attaqué", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        u1.hasAttacked = true;
+        const enemy = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [u1, enemy], selectedUnit: u1 });
+        const result = computeAttack(s);
+        expect(result).toEqual(s);
+    });
+
+    it("computeWeaponSelect annule si la cible est hors de portée", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 4, r: -4, s: 0 });
+        const weapon = attacker.weapons.find(w => w.id === "rifle"); // range 2
+        const s = makeState({ units: [attacker, target], pendingAttack: { attacker, target } });
+        const result = computeWeaponSelect(s, weapon);
+        expect(result.anim).toBeNull();
+        expect(result.state.phase).toBe("select");
+    });
+
+    it("computeWeaponSelect résout l'attaque si la cible est à portée", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const weapon = attacker.weapons.find(w => w.id === "sword"); // range 1
+        const s = makeState({ units: [attacker, target], pendingAttack: { attacker, target } });
+        const result = computeWeaponSelect(s, weapon);
+        expect(result.anim).not.toBeNull();
+        expect(result.state.phase).toBe("resolving");
+        expect(result.anim.damage).toBeGreaterThanOrEqual(0);
+    });
+
+    it("applyDamage réduit les PV de la cible et marque l'attaquant comme ayant attaqué", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [attacker, target] });
+        const anim = { attacker, target, damage: 1, weaponName: "Sword", log: [], isDead: false };
+        const result = applyDamage(s, anim);
+        const tgt = result.units.find(u => u.id === target.id);
+        const atk = result.units.find(u => u.id === attacker.id);
+        expect(tgt.currentWounds).toBe(target.currentWounds - 1);
+        expect(atk.hasAttacked).toBe(true);
+    });
+
+    it("applyDamage ne descend pas les PV sous 0", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [attacker, target] });
+        const anim = { attacker, target, damage: 99, weaponName: "Sword", log: [], isDead: true };
+        const result = applyDamage(s, anim);
+        const tgt = result.units.find(u => u.id === target.id);
+        expect(tgt.currentWounds).toBe(0);
+    });
+
+    it("computeEndTurn passe au joueur suivant et réinitialise les flags", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        u1.hasMoved = true;
+        u1.hasAttacked = true;
+        const s = makeState({ units: [u1], currentPlayer: 1 });
+        const result = computeEndTurn(s);
+        expect(result.currentPlayer).toBe(2);
+        expect(result.units[0].hasMoved).toBe(false);
+        expect(result.units[0].hasAttacked).toBe(false);
+        expect(result.activeUnitId).toBeNull();
+    });
+
+    it("computeEndTurn marque les points des villes en fin de round", () => {
+        const town = { q: 0, r: 0, s: 0 };
+        const u1 = createUnit("warrior", 1, town);
+        const s = makeState({ units: [u1], towns: [town], currentPlayer: 2 }); // J2 finit → fin de round
+        const result = computeEndTurn(s);
+        expect(result.scores[1]).toBe(1);
+    });
+
+    it("computeEndTurn ne fait rien si un gagnant existe déjà", () => {
+        const s = makeState({ winner: 1 });
+        const result = computeEndTurn(s);
+        expect(result).toEqual(s);
     });
 });
