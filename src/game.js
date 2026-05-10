@@ -71,7 +71,8 @@ export function handleClick(s, hex) {
             ? { ...s.townOwnership, [k]: s.currentPlayer }
             : s.townOwnership;
         if (poisoned.currentWounds <= 0) {
-            return { ...s, units, townOwnership, ...finishActivation(s, poisoned.id, units) };
+            const dyingUnits = [...(s.dyingUnits || []), { hex: poisoned.hex, symbol: poisoned.symbol, player: poisoned.player, deathTime: Date.now() }];
+            return { ...s, units, townOwnership, dyingUnits, ...finishActivation(s, poisoned.id, units) };
         }
         const losKeys = buildLosKeys(s);
         const enemies = units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
@@ -144,13 +145,17 @@ export function computeWeaponSelect(s, weapon) {
 export function applyDamage(s, anim) {
     const { attacker, target, damage } = anim;
     const newWounds = Math.max(0, target.currentWounds - damage);
+    const isDead = newWounds <= 0;
     const units = s.units.map(u => {
         if (u.id === attacker.id) return { ...u, hasAttacked: true };
         if (u.id === target.id) return { ...u, currentWounds: newWounds };
         return u;
     });
+    const dyingUnits = isDead
+        ? [...(s.dyingUnits || []), { hex: target.hex, symbol: target.symbol, player: target.player, deathTime: Date.now() }]
+        : (s.dyingUnits || []);
     return {
-        ...s, units, ...finishActivation(s, attacker.id, units),
+        ...s, units, dyingUnits, ...finishActivation(s, attacker.id, units),
         roundLog: { weapon: anim.weaponName, attacker: attacker.name, target: target.name, log: anim.log, isDead: anim.isDead, damage },
     };
 }

@@ -262,5 +262,6 @@ export function initState(armies, options = {}) {
         activatedUnitIds: [],
         townOwnership: {},
         autoEndTurn: false,
+        dyingUnits: [],
     };
 }

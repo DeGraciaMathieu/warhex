@@ -5,6 +5,8 @@ export const CANVAS_H = 616;
 export const OX = CANVAS_W / 2;
 export const OY = CANVAS_H / 2;
 
+export const DEATH_ANIM_DURATION = 600;
+
 export function drawScene(canvas, state, hoveredHex) {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -166,5 +168,43 @@ export function drawScene(canvas, state, hoveredHex) {
         ctx.arc(px + r - 4, py - r + 4, 4, 0, Math.PI * 2);
         ctx.fillStyle = unit.player === 1 ? "#2a6fa8" : "#a03030";
         ctx.fill();
+    });
+
+    // Dying units animation
+    const now = Date.now();
+    (state.dyingUnits || []).forEach(dying => {
+        const elapsed = now - dying.deathTime;
+        if (elapsed >= DEATH_ANIM_DURATION) return;
+        const progress = elapsed / DEATH_ANIM_DURATION;
+        const { x, y } = hexToPixel(dying.hex.q, dying.hex.r);
+        const px = x + OX, py = y + OY;
+        const scale = 1 - progress;
+        const alpha = 1 - progress;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(px, py);
+        ctx.scale(scale, scale);
+
+        const r = HEX_SIZE * 0.52;
+        const P1 = { fill: "#d0e4f5", ring: "#2a6fa8" };
+        const P2 = { fill: "#f5d0d0", ring: "#a03030" };
+        const col = dying.player === 1 ? P1 : P2;
+
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.fillStyle = col.fill;
+        ctx.fill();
+        ctx.strokeStyle = col.ring;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.font = `${HEX_SIZE * 0.52}px serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "#2a2015";
+        ctx.fillText(dying.symbol, 0, 0);
+
+        ctx.restore();
     });
 }

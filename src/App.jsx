@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.js";
 import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN } from "./units.js";
-import { drawScene, CANVAS_W, CANVAS_H, OX, OY } from "./renderer.js";
+import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION } from "./renderer.js";
 import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect } from "./game.js";
 import { computeAIAction } from "./ai.js";
 import Guide from "./Guide.jsx";
@@ -43,6 +43,23 @@ export default function HexWarhammer() {
         const timer = setTimeout(() => setDiceAnim(a => ({ ...a, dice: a.dice + 1 })), 350);
         return () => clearTimeout(timer);
     }, [diceAnim]);
+
+    useEffect(() => {
+        if (!state || !state.dyingUnits?.length) return;
+        let frameId;
+        const animate = () => {
+            drawScene(canvasRef.current, state, hoveredHex);
+            const now = Date.now();
+            const stillAnimating = state.dyingUnits.some(d => now - d.deathTime < DEATH_ANIM_DURATION);
+            if (stillAnimating) {
+                frameId = requestAnimationFrame(animate);
+            } else {
+                setState(s => ({ ...s, dyingUnits: [] }));
+            }
+        };
+        frameId = requestAnimationFrame(animate);
+        return () => cancelAnimationFrame(frameId);
+    }, [state?.dyingUnits]);
 
     useEffect(() => {
         if (state && state.autoEndTurn) {

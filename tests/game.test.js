@@ -31,6 +31,7 @@ function makeState(overrides = {}) {
         activatedUnitIds: [],
         townOwnership: {},
         autoEndTurn: false,
+        dyingUnits: [],
         ...overrides,
     };
 }
@@ -135,6 +136,28 @@ describe("attaque et armes", () => {
         const result = applyDamage(s, anim);
         const tgt = result.units.find(u => u.id === target.id);
         expect(tgt.currentWounds).toBe(0);
+    });
+
+    it("applyDamage ajoute l'unité tuée à dyingUnits", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [attacker, target] });
+        const anim = { attacker, target, damage: 99, weaponName: "Sword", log: [], isDead: true };
+        const result = applyDamage(s, anim);
+        expect(result.dyingUnits).toHaveLength(1);
+        expect(result.dyingUnits[0].symbol).toBe(target.symbol);
+        expect(result.dyingUnits[0].player).toBe(2);
+        expect(result.dyingUnits[0].hex).toEqual(target.hex);
+        expect(result.dyingUnits[0].deathTime).toBeGreaterThan(0);
+    });
+
+    it("applyDamage ne remplit pas dyingUnits si la cible survit", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [attacker, target] });
+        const anim = { attacker, target, damage: 1, weaponName: "Sword", log: [], isDead: false };
+        const result = applyDamage(s, anim);
+        expect(result.dyingUnits).toHaveLength(0);
     });
 });
 
@@ -299,6 +322,17 @@ describe("marais", () => {
         expect(dead.currentWounds).toBe(0);
         expect(moved.autoEndTurn).toBe(true);
         expect(moved.selectedUnit).toBeNull();
+    });
+
+    it("une unité tuée par le marais est ajoutée à dyingUnits", () => {
+        const swamp = { q: 0, r: 0, s: 0 };
+        const attacker = createUnit("sniper", 1, { q: -1, r: 0, s: 1 });
+        const enemy = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
+        const s = makeState({ units: [attacker, enemy], swamps: [swamp] });
+        const selected = handleClick(s, { q: -1, r: 0, s: 1 });
+        const moved = handleClick(selected, swamp);
+        expect(moved.dyingUnits).toHaveLength(1);
+        expect(moved.dyingUnits[0].symbol).toBe(attacker.symbol);
     });
 });
 
