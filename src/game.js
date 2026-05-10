@@ -47,7 +47,7 @@ export function computeDeselect(s) {
 }
 
 export function handleClick(s, hex) {
-    if (s.winner || s.phase === "weapon_select" || s.phase === "resolving") return s;
+    if (s.winner || s.phase === "weapon_select" || s.phase === "resolving" || s.autoEndTurn) return s;
     const k = hexKey(hex);
     const unitOnHex = s.units.find(u => u.currentWounds > 0 && hexKey(u.hex) === k);
     const moveKeys = new Set(s.validMoves.map(hexKey));

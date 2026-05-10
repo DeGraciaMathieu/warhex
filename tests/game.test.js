@@ -465,6 +465,21 @@ describe("double activation", () => {
         // Une seule unité alliée → autoEndTurn même avec 1 activation
         expect(s2.autoEndTurn).toBe(true);
     });
+
+    it("on ne peut pas sélectionner une 3e unité quand autoEndTurn est true", () => {
+        const u1 = createUnit("warrior", 1, { q: -2, r: 0, s: 2 });
+        const u2 = createUnit("warrior", 1, { q: -3, r: 0, s: 3 });
+        const u3 = createUnit("warrior", 1, { q: -4, r: 1, s: 3 });
+        const enemy = createUnit("warrior", 2, { q: 4, r: -4, s: 0 });
+        const s = makeState({
+            units: [u1, u2, u3, enemy],
+            activationsUsed: 2,
+            activatedUnitIds: [u1.id, u2.id],
+            autoEndTurn: true,
+        });
+        const result = handleClick(s, u3.hex);
+        expect(result.selectedUnit).toBeNull();
+    });
 });
 
 describe("tour de l'adversaire", () => {
@@ -525,6 +540,15 @@ describe("phases bloquantes", () => {
         const s = makeState({ units: [u1, enemy] });
         const result = handleClick(s, u1.hex);
         expect(result.selectedUnit).toBeNull();
+    });
+
+    it("une unité morte n'est pas une cible d'attaque valide", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const deadEnemy = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        deadEnemy.currentWounds = 0;
+        const s = makeState({ units: [attacker, deadEnemy] });
+        const selected = handleClick(s, attacker.hex);
+        expect(selected.validTargets.some(t => t.id === deadEnemy.id)).toBe(false);
     });
 });
 
