@@ -270,9 +270,9 @@ export default function HexWarhammer() {
                             <div style={{ fontSize: 13, color: "#8a7a60", marginBottom: 10 }}>Joueur {sel.player}</div>
                             <div style={{ borderTop: "1px solid #d5cbb8", paddingTop: 10, display: "flex", flexDirection: "column", gap: 2 }}>
                                 {[
-                                    ["PV", `${sel.currentWounds}/${sel.wounds}`, sel.currentWounds > sel.wounds / 2 ? "#4caf50" : "#e53935"],
-                                    ["Mouvement", sel.movement], ["CC", `${sel.weaponSkill}+`], ["CT", `${sel.ballisticSkill}+`],
-                                    ["Endurance", sel.toughness], ["Sauvegarde", `${sel.save}+`],
+                                    ["PV (points de vie)", `${sel.currentWounds}/${sel.wounds}`, sel.currentWounds > sel.wounds / 2 ? "#4caf50" : "#e53935"],
+                                    ["MVT (mouvement)", sel.movement], ["CC (capacité combat)", `${sel.weaponSkill}+`], ["CT (capacité tir)", `${sel.ballisticSkill}+`],
+                                    ["END (endurance)", sel.toughness], ["SVG (sauvegarde)", `${sel.save}+`],
                                     ["Déplacé", sel.hasMoved ? "✓" : "—"], ["Attaqué", sel.hasAttacked ? "✓" : "—"],
                                 ].map(([label, val, c]) => (
                                     <div key={label} className="sr">
