@@ -397,3 +397,27 @@ describe("IA — annulation d'arme", () => {
         expect(action.type).toBe("cancel");
     });
 });
+
+describe("IA et marais", () => {
+    it("une unité à 1 PV n'entre pas dans un marais", () => {
+        const swamp = { q: 1, r: 0, s: -1 };
+        const enemy = createUnit("warrior", 1, { q: 3, r: 0, s: -3 });
+        const unit = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        unit.currentWounds = 1;
+        const state = makeState({ units: [enemy, unit], swamps: [swamp] });
+        const move = pickMoveTarget(unit, state);
+        if (move) {
+            expect(hexKey(move)).not.toBe(hexKey(swamp));
+        }
+    });
+
+    it("une unité avec plus de 1 PV peut entrer dans un marais", () => {
+        const swamp = { q: 1, r: 0, s: -1 };
+        const enemy = createUnit("warrior", 1, { q: 2, r: 0, s: -2 });
+        const unit = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        unit.currentWounds = 3;
+        const state = makeState({ units: [enemy, unit], swamps: [swamp] });
+        const move = pickMoveTarget(unit, state);
+        expect(move).not.toBeNull();
+    });
+});

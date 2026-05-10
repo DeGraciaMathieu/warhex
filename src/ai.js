@@ -95,7 +95,11 @@ export function pickBestUnit(state) {
 export function pickMoveTarget(unit, state) {
     const occupied = new Set(state.units.filter(u => u.currentWounds > 0 && u.id !== unit.id).map(u => hexKey(u.hex)));
     const { obsKeys, stopKeys, costKeys } = buildTerrainKeys(state);
-    const reachable = reachableHexes(unit.hex, unit.movement, occupied, obsKeys, stopKeys, costKeys);
+    const swampKeys = new Set((state.swamps || []).map(hexKey));
+    let reachable = reachableHexes(unit.hex, unit.movement, occupied, obsKeys, stopKeys, costKeys);
+    if (unit.currentWounds <= 1) {
+        reachable = reachable.filter(h => !swampKeys.has(hexKey(h)));
+    }
     if (reachable.length === 0) return null;
 
     const { townKeys, priorityTowns, enemyOnTown } = townContext(state);
