@@ -22,8 +22,8 @@ describe("création d'unités", () => {
     it("l'unité warrior a les stats attendues", () => {
         const unit = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
         expect(unit.movement).toBe(3);
-        expect(unit.wounds).toBe(2);
-        expect(unit.currentWounds).toBe(2);
+        expect(unit.wounds).toBe(3);
+        expect(unit.currentWounds).toBe(3);
         expect(unit.save).toBe(4);
         expect(unit.weapons).toHaveLength(2);
     });

@@ -6,7 +6,7 @@ export const UNIT_TEMPLATES = {
     warrior: {
         name: "Warrior", symbol: "⚔",
         movement: 3, weaponSkill: 3, ballisticSkill: 4,
-        toughness: 4, wounds: 2, save: 4,
+        toughness: 4, wounds: 3, save: 4,
         weapons: [
             { id: "rifle", name: "Rifle", type: "ranged", range: 2, attacks: 2, strength: 4, ap: -1, damage: 1 },
             { id: "sword", name: "Sword", type: "melee", range: 1, attacks: 3, strength: 4, ap: 0, damage: 1 },
