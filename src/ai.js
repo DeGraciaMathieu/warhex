@@ -77,6 +77,10 @@ export function pickBestUnit(state) {
         if (priorityTowns.length > 0) {
             const distToTown = Math.min(...priorityTowns.map(t => hexDistance(unit.hex, t)));
             score += 20 / (1 + distToTown);
+        } else if (enemies.length > 0) {
+            // No priority towns — prefer units close to enemies
+            const distToEnemy = Math.min(...enemies.map(e => hexDistance(unit.hex, e.hex)));
+            score += 5 / (1 + distToEnemy);
         }
 
         if (score > bestScore) {
@@ -96,16 +100,25 @@ export function pickMoveTarget(unit, state) {
 
     const { townKeys, priorityTowns, enemyOnTown } = townContext(state);
 
-    // Stay on town unless first activation and an ally can replace us
-    if (townKeys.has(hexKey(unit.hex))) {
-        if (state.activationsUsed > 0) return null;
-        const allies = state.units.filter(u => u.player === 2 && u.currentWounds > 0 && u.id !== unit.id && !u.hasMoved);
-        const canReplace = allies.some(ally => {
-            const allyOccupied = new Set(state.units.filter(u => u.currentWounds > 0 && u.id !== ally.id && u.id !== unit.id).map(u => hexKey(u.hex)));
-            const allyReachable = reachableHexes(ally.hex, ally.movement, allyOccupied, obsKeys, stopKeys, costKeys);
-            return allyReachable.some(h => hexKey(h) === hexKey(unit.hex));
-        });
-        if (!canReplace) return null;
+    // Decide whether to leave a town
+    const unitTownKey = hexKey(unit.hex);
+    if (townKeys.has(unitTownKey)) {
+        const ownership = state.townOwnership || {};
+        const isPriority = priorityTowns.some(t => hexKey(t) === unitTownKey);
+        // On a priority town (unowned/threatened) — stay to defend
+        if (isPriority) return null;
+        // On a town we hold — leave only if there are priority towns to capture or nearby enemies
+        if (ownership[unitTownKey] === 2) {
+            if (priorityTowns.length > 0) {
+                // There's a priority town to go capture — leave this one
+            } else {
+                // No priority towns — leave to engage enemies if they exist
+                const enemies = state.units.filter(u => u.player === 1 && u.currentWounds > 0);
+                if (enemies.length === 0) return null;
+            }
+        } else {
+            // Town not yet owned by us — free to leave
+        }
     }
 
     // 1. Can reach a priority town directly — take it

@@ -200,43 +200,39 @@ describe("IA — contrôle des villes", () => {
         expect(action.weapon.id).toBe("sword");
     });
 
-    it("une unité sur une ville ne la quitte pas si aucun allié ne peut la remplacer", () => {
+    it("une unité sur une ville possédée reste si pas d'ennemi ni de ville à capturer", () => {
+        const town = { q: 0, r: 0, s: 0 };
+        const u2 = createUnit("warrior", 2, town);
+        const state = makeState({ units: [u2], towns: [town], townOwnership: { [hexKey(town)]: 2 } });
+        const dest = pickMoveTarget(u2, state);
+        expect(dest).toBeNull();
+    });
+
+    it("une unité sur une ville possédée la quitte pour aller engager un ennemi", () => {
+        const u1 = createUnit("warrior", 1, { q: -4, r: 0, s: 4 });
+        const town = { q: 0, r: 0, s: 0 };
+        const u2 = createUnit("warrior", 2, town);
+        const state = makeState({ units: [u1, u2], towns: [town], townOwnership: { [hexKey(town)]: 2 } });
+        const dest = pickMoveTarget(u2, state);
+        expect(dest).not.toBeNull();
+    });
+
+    it("une unité sur une ville possédée la quitte pour capturer une ville prioritaire", () => {
+        const town1 = { q: 0, r: 0, s: 0 };
+        const town2 = { q: 2, r: -2, s: 0 };
+        const u2 = createUnit("warrior", 2, town1);
+        const state = makeState({ units: [u2], towns: [town1, town2], townOwnership: { [hexKey(town1)]: 2 } });
+        const dest = pickMoveTarget(u2, state);
+        expect(dest).not.toBeNull();
+    });
+
+    it("une unité sur une ville non possédée peut la quitter pour engager un ennemi", () => {
         const u1 = createUnit("warrior", 1, { q: -4, r: 0, s: 4 });
         const town = { q: 0, r: 0, s: 0 };
         const u2 = createUnit("warrior", 2, town);
         const state = makeState({ units: [u1, u2], towns: [town] });
         const dest = pickMoveTarget(u2, state);
-        expect(dest).toBeNull();
-    });
-
-    it("une unité sur une ville ne la quitte pas en 2e activation même si un allié peut la remplacer", () => {
-        const u1 = createUnit("warrior", 1, { q: -4, r: 0, s: 4 });
-        const town = { q: 0, r: 0, s: 0 };
-        const u2 = createUnit("warrior", 2, town);
-        const u2b = createUnit("warrior", 2, { q: 1, r: 0, s: -1 });
-        const state = makeState({ units: [u1, u2, u2b], towns: [town], activationsUsed: 1 });
-        const dest = pickMoveTarget(u2, state);
-        expect(dest).toBeNull();
-    });
-
-    it("une unité sur une ville peut la quitter si un allié peut la remplacer", () => {
-        const u1 = createUnit("warrior", 1, { q: -4, r: 0, s: 4 });
-        const town = { q: 0, r: 0, s: 0 };
-        const u2 = createUnit("warrior", 2, town);
-        const u2b = createUnit("warrior", 2, { q: 1, r: 0, s: -1 }); // adjacent à la ville
-        const state = makeState({ units: [u1, u2, u2b], towns: [town] });
-        const dest = pickMoveTarget(u2, state);
         expect(dest).not.toBeNull();
-    });
-
-    it("une unité sur une ville ne la quitte pas si l'allié est trop loin pour la remplacer", () => {
-        const u1 = createUnit("warrior", 1, { q: -4, r: 0, s: 4 });
-        const town = { q: 0, r: 0, s: 0 };
-        const u2 = createUnit("warrior", 2, town);
-        const u2b = createUnit("warrior", 2, { q: 4, r: -4, s: 0 }); // trop loin (distance 4, mouvement 3)
-        const state = makeState({ units: [u1, u2, u2b], towns: [town] });
-        const dest = pickMoveTarget(u2, state);
-        expect(dest).toBeNull();
     });
 
     it("se dirige vers un ennemi sur une ville quand pas de ville vide", () => {
@@ -335,5 +331,69 @@ describe("IA — capture de ville prioritaire sur attaque", () => {
         // La ville est trop loin, l'IA devrait attaquer l'ennemi à portée
         expect(action.type).toBe("click");
         expect(hexKey(action.hex)).toBe(hexKey(u1.hex));
+    });
+});
+
+describe("IA — sélection d'unité sans ville prioritaire", () => {
+    it("préfère l'unité la plus proche d'un ennemi quand aucune ville prioritaire", () => {
+        const u1 = createUnit("warrior", 1, { q: -3, r: 0, s: 3 });
+        const u2a = createUnit("warrior", 2, { q: 4, r: 0, s: -4 });
+        const u2b = createUnit("warrior", 2, { q: 1, r: 0, s: -1 });
+        const state = makeState({ units: [u1, u2a, u2b] });
+        const best = pickBestUnit(state);
+        expect(best.id).toBe(u2b.id);
+    });
+
+
+});
+
+describe("IA — mouvement sur villes prioritaires", () => {
+    it("avec plusieurs villes prioritaires, se dirige vers la plus proche", () => {
+        const town1 = { q: -3, r: 0, s: 3 };
+        const town2 = { q: 1, r: 0, s: -1 };
+        const u1 = createUnit("warrior", 1, { q: -5, r: 0, s: 5 });
+        const u2 = createUnit("warrior", 2, { q: 2, r: 0, s: -2 });
+        const state = makeState({ units: [u1, u2], towns: [town1, town2] });
+        const dest = pickMoveTarget(u2, state);
+        expect(hexKey(dest)).toBe(hexKey(town2));
+    });
+});
+
+describe("IA — sélection de cible", () => {
+    it("cible l'ennemi avec le moins de PV quand aucun n'est sur une ville", () => {
+        const u1a = createUnit("warrior", 1, { q: 1, r: -1, s: 0 });
+        const u1b = createUnit("warrior", 1, { q: -1, r: 1, s: 0 });
+        u1b.currentWounds = 1;
+        const u2 = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        const state = makeState({ units: [u1a, u1b, u2] });
+        const target = pickTarget(u2, state);
+        expect(target.id).toBe(u1b.id);
+    });
+
+    it("entre deux ennemis sur des villes, cible celui avec le moins de PV", () => {
+        const town1 = { q: 1, r: -1, s: 0 };
+        const town2 = { q: -1, r: 1, s: 0 };
+        const u1a = createUnit("warrior", 1, town1);
+        const u1b = createUnit("warrior", 1, town2);
+        u1b.currentWounds = 1;
+        const u2 = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        const state = makeState({ units: [u1a, u1b, u2], towns: [town1, town2] });
+        const target = pickTarget(u2, state);
+        expect(target.id).toBe(u1b.id);
+    });
+});
+
+describe("IA — annulation d'arme", () => {
+    it("annule si aucune arme n'est utilisable à cette portée", () => {
+        const u1 = createUnit("warrior", 1, { q: 4, r: -4, s: 0 });
+        const u2 = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        const state = makeState({
+            units: [u1, u2],
+            phase: "weapon_select",
+            selectedUnit: u2,
+            pendingAttack: { attacker: u2, target: u1 },
+        });
+        const action = computeAIAction(state);
+        expect(action.type).toBe("cancel");
     });
 });
