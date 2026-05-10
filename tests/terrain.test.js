@@ -179,6 +179,21 @@ describe("collines", () => {
         expect(new Set(reachable2.map(hexKey)).has(hexKey(hill))).toBe(true);
     });
 
+    it("une colline intermédiaire bloque la ligne de vue", () => {
+        const a = { q: -2, r: 0, s: 2 };
+        const b = { q: 2, r: 0, s: -2 };
+        const hill = { q: 0, r: 0, s: 0 };
+        const losKeys = new Set([hexKey(hill)]);
+        expect(hasLineOfSight(a, b, losKeys)).toBe(false);
+    });
+
+    it("une colline sur la case de départ ou d'arrivée ne bloque pas la ligne de vue", () => {
+        const a = { q: 0, r: 0, s: 0 };
+        const b = { q: 2, r: -2, s: 0 };
+        const losKeys = new Set([hexKey(a), hexKey(b)]);
+        expect(hasLineOfSight(a, b, losKeys)).toBe(true);
+    });
+
     it("une colline réduit la portée de déplacement effective", () => {
         const origin = { q: 0, r: 0, s: 0 };
         const costKeys = new Set([hexKey({ q: 1, r: -1, s: 0 })]);

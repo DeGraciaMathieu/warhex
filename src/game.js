@@ -3,7 +3,7 @@ import { resolveAttack } from "./combat.js";
 import { computeTownControl, checkWinner, ACTIVATIONS_PER_TURN } from "./units.js";
 
 function buildLosKeys(state) {
-    return new Set([...state.obstacles, ...(state.towns || []), ...(state.forests || [])].map(hexKey));
+    return new Set([...state.obstacles, ...(state.towns || []), ...(state.forests || []), ...(state.hills || [])].map(hexKey));
 }
 
 function buildTerrainKeys(state) {

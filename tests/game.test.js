@@ -233,6 +233,15 @@ describe("ligne de vue en jeu", () => {
 });
 
 describe("collines", () => {
+    it("une colline intermédiaire empêche de cibler un ennemi", () => {
+        const hill = { q: 0, r: 0, s: 0 };
+        const attacker = createUnit("warrior", 1, { q: -1, r: 0, s: 1 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [attacker, target], hills: [hill] });
+        const selected = handleClick(s, attacker.hex);
+        expect(selected.validTargets.some(t => t.id === target.id)).toBe(false);
+    });
+
     it("une unité sur une colline peut tirer plus loin avec une arme à distance", () => {
         const hill = { q: 0, r: 0, s: 0 };
         const attacker = createUnit("warrior", 1, hill);
