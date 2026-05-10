@@ -95,6 +95,29 @@ function MiniCanvas({ width, height, draw }) {
     return <canvas ref={ref} width={width} height={height} style={{ display: "block" }} />;
 }
 
+function SceneObstacleMove() {
+    return (
+        <MiniCanvas width={200} height={80} draw={(ctx) => {
+            const ox = 100, oy = 40;
+            const hexes = [{ q: -2, r: 0 }, { q: -1, r: 0 }, { q: 0, r: 0 }, { q: 1, r: 0 }];
+            hexes.forEach(h => {
+                const { x, y } = miniHexToPixel(h.q, h.r);
+                const isObs = h.q === 0;
+                drawMiniHex(ctx, x + ox, y + oy,
+                    isObs ? "#8a7a60" : "#e8e0d0",
+                    isObs ? "#6a5a40" : "#c8b898",
+                    isObs ? "▲" : null
+                );
+            });
+            const p1 = miniHexToPixel(-2, 0);
+            drawUnit(ctx, p1.x + ox, p1.y + oy, 1, "⚔");
+            const obsPos = miniHexToPixel(0, 0);
+            drawDashedLine(ctx, p1.x + ox + 12, p1.y + oy, obsPos.x + ox - 12, obsPos.y + oy, "#e53935");
+            drawCross(ctx, obsPos.x + ox, obsPos.y + oy + MINI_HEX + 8, "#e53935");
+        }} />
+    );
+}
+
 function SceneLosBlocked() {
     return (
         <MiniCanvas width={200} height={80} draw={(ctx) => {
@@ -145,6 +168,93 @@ function SceneForestLos() {
     );
 }
 
+function SceneForestCost() {
+    return (
+        <MiniCanvas width={200} height={80} draw={(ctx) => {
+            const ox = 100, oy = 40;
+            const hexes = [{ q: -2, r: 0 }, { q: -1, r: 0 }, { q: 0, r: 0 }, { q: 1, r: 0 }];
+            hexes.forEach(h => {
+                const { x, y } = miniHexToPixel(h.q, h.r);
+                const isForest = h.q === 0;
+                drawMiniHex(ctx, x + ox, y + oy,
+                    isForest ? "#b8d4a0" : "#e8e0d0",
+                    isForest ? "#5a8a40" : "#c8b898",
+                    isForest ? "🌲" : null
+                );
+            });
+            const p1 = miniHexToPixel(-2, 0);
+            drawUnit(ctx, p1.x + ox, p1.y + oy, 1, "⚔");
+            const forestPos = miniHexToPixel(0, 0);
+            ctx.font = "bold 10px 'Cinzel', serif";
+            ctx.textAlign = "center";
+            ctx.fillStyle = "#2a6fa8";
+            ctx.fillText("×2", forestPos.x + ox, forestPos.y + oy + MINI_HEX + 8);
+            drawDashedLine(ctx, p1.x + ox + 12, p1.y + oy, forestPos.x + ox, forestPos.y + oy, "#2a6fa8");
+        }} />
+    );
+}
+
+function SceneForestShoot() {
+    return (
+        <MiniCanvas width={280} height={110} draw={(ctx) => {
+            const ox = 100, oy = 50;
+            const hexes = [
+                { q: -2, r: 0 }, { q: -2, r: 1 },
+                { q: -1, r: 0 }, { q: -1, r: 1 },
+                { q: 0, r: 0 }, { q: 1, r: 0 }, { q: 2, r: 0 },
+            ];
+            const forestHexes = [{ q: -2, r: 0 }, { q: -2, r: 1 }, { q: -1, r: 0 }, { q: -1, r: 1 }];
+            const forestSet = new Set(forestHexes.map(h => `${h.q},${h.r}`));
+            hexes.forEach(h => {
+                const { x, y } = miniHexToPixel(h.q, h.r);
+                const isForest = forestSet.has(`${h.q},${h.r}`);
+                drawMiniHex(ctx, x + ox, y + oy,
+                    isForest ? "#b8d4a0" : "#e8e0d0",
+                    isForest ? "#5a8a40" : "#c8b898",
+                    isForest && !(h.q === -1 && h.r === 0) ? "🌲" : null
+                );
+            });
+            const sniper = miniHexToPixel(-1, 0);
+            const target = miniHexToPixel(2, 0);
+            drawUnit(ctx, sniper.x + ox, sniper.y + oy, 1, "🎯");
+            drawUnit(ctx, target.x + ox, target.y + oy, 2, "⚔");
+            drawDashedLine(ctx, sniper.x + ox + 12, sniper.y + oy, target.x + ox - 12, target.y + oy, "#4caf50");
+            ctx.font = "bold 10px 'Cinzel', serif";
+            ctx.textAlign = "center";
+            ctx.fillStyle = "#2e7d32";
+            ctx.fillText("✓ tir depuis forêt", ox, oy + 45);
+        }} />
+    );
+}
+
+function SceneRiverLos() {
+    return (
+        <MiniCanvas width={200} height={80} draw={(ctx) => {
+            const ox = 100, oy = 40;
+            const hexes = [{ q: -2, r: 0 }, { q: -1, r: 0 }, { q: 0, r: 0 }, { q: 1, r: 0 }, { q: 2, r: 0 }];
+            hexes.forEach(h => {
+                const { x, y } = miniHexToPixel(h.q, h.r);
+                const isRiver = h.q === 0;
+                drawMiniHex(ctx, x + ox, y + oy,
+                    isRiver ? "#a0c8e8" : "#e8e0d0",
+                    isRiver ? "#5a9abf" : "#c8b898",
+                    isRiver ? "〰" : null
+                );
+            });
+            const p1 = miniHexToPixel(-2, 0);
+            const p2 = miniHexToPixel(2, 0);
+            drawUnit(ctx, p1.x + ox, p1.y + oy, 1, "🎯");
+            drawUnit(ctx, p2.x + ox, p2.y + oy, 2, "⚔");
+            drawDashedLine(ctx, p1.x + ox + 12, p1.y + oy, p2.x + ox - 12, p2.y + oy, "#4caf50");
+            ctx.font = "bold 10px 'Cinzel', serif";
+            ctx.textAlign = "center";
+            ctx.fillStyle = "#2e7d32";
+            const mid = miniHexToPixel(0, 0);
+            ctx.fillText("✓ LOS", mid.x + ox, mid.y + oy + MINI_HEX + 8);
+        }} />
+    );
+}
+
 function SceneRiverCost() {
     return (
         <MiniCanvas width={200} height={80} draw={(ctx) => {
@@ -165,8 +275,59 @@ function SceneRiverCost() {
             ctx.font = "bold 10px 'Cinzel', serif";
             ctx.textAlign = "center";
             ctx.fillStyle = "#2a6fa8";
-            ctx.fillText("×2", riverPos.x + ox, riverPos.y + oy + MINI_HEX + 8);
+            ctx.fillText("STOP", riverPos.x + ox, riverPos.y + oy + MINI_HEX + 8);
             drawDashedLine(ctx, p1.x + ox + 12, p1.y + oy, riverPos.x + ox, riverPos.y + oy, "#2a6fa8");
+        }} />
+    );
+}
+
+function SceneTownStop() {
+    return (
+        <MiniCanvas width={200} height={80} draw={(ctx) => {
+            const ox = 100, oy = 40;
+            const hexes = [{ q: -2, r: 0 }, { q: -1, r: 0 }, { q: 0, r: 0 }, { q: 1, r: 0 }];
+            hexes.forEach(h => {
+                const { x, y } = miniHexToPixel(h.q, h.r);
+                const isTown = h.q === 0;
+                drawMiniHex(ctx, x + ox, y + oy,
+                    isTown ? "#d4c4a0" : "#e8e0d0",
+                    isTown ? "#8a7040" : "#c8b898",
+                    null
+                );
+            });
+            const p1 = miniHexToPixel(-2, 0);
+            drawUnit(ctx, p1.x + ox, p1.y + oy, 1, "⚔");
+            const townPos = miniHexToPixel(0, 0);
+            ctx.font = "bold 10px 'Cinzel', serif";
+            ctx.textAlign = "center";
+            ctx.fillStyle = "#a03030";
+            ctx.fillText("STOP", townPos.x + ox, townPos.y + oy + MINI_HEX + 8);
+            drawDashedLine(ctx, p1.x + ox + 12, p1.y + oy, townPos.x + ox, townPos.y + oy, "#8a7a60");
+        }} />
+    );
+}
+
+function SceneTownLos() {
+    return (
+        <MiniCanvas width={200} height={80} draw={(ctx) => {
+            const ox = 100, oy = 40;
+            const hexes = [{ q: -2, r: 0 }, { q: -1, r: 0 }, { q: 0, r: 0 }, { q: 1, r: 0 }, { q: 2, r: 0 }];
+            hexes.forEach(h => {
+                const { x, y } = miniHexToPixel(h.q, h.r);
+                const isTown = h.q === 0;
+                drawMiniHex(ctx, x + ox, y + oy,
+                    isTown ? "#d4c4a0" : "#e8e0d0",
+                    isTown ? "#8a7040" : "#c8b898",
+                    null
+                );
+            });
+            const p1 = miniHexToPixel(-2, 0);
+            const p2 = miniHexToPixel(2, 0);
+            drawUnit(ctx, p1.x + ox, p1.y + oy, 1, "🎯");
+            drawUnit(ctx, p2.x + ox, p2.y + oy, 2, "⚔");
+            const mid = miniHexToPixel(0, 0);
+            drawDashedLine(ctx, p1.x + ox, p1.y + oy, p2.x + ox, p2.y + oy, "#e53935");
+            drawCross(ctx, mid.x + ox, mid.y + oy - 14, "#e53935");
         }} />
     );
 }
@@ -198,6 +359,60 @@ function SceneTownCover() {
     );
 }
 
+function SceneHillCost() {
+    return (
+        <MiniCanvas width={200} height={80} draw={(ctx) => {
+            const ox = 100, oy = 40;
+            const hexes = [{ q: -2, r: 0 }, { q: -1, r: 0 }, { q: 0, r: 0 }, { q: 1, r: 0 }];
+            hexes.forEach(h => {
+                const { x, y } = miniHexToPixel(h.q, h.r);
+                const isHill = h.q === 0;
+                drawMiniHex(ctx, x + ox, y + oy,
+                    isHill ? "#d4c8a0" : "#e8e0d0",
+                    isHill ? "#8a7a40" : "#c8b898",
+                    null
+                );
+            });
+            const p1 = miniHexToPixel(-2, 0);
+            drawUnit(ctx, p1.x + ox, p1.y + oy, 1, "⚔");
+            const hillPos = miniHexToPixel(0, 0);
+            ctx.font = "bold 10px 'Cinzel', serif";
+            ctx.textAlign = "center";
+            ctx.fillStyle = "#2a6fa8";
+            ctx.fillText("×2", hillPos.x + ox, hillPos.y + oy + MINI_HEX + 8);
+            drawDashedLine(ctx, p1.x + ox + 12, p1.y + oy, hillPos.x + ox, hillPos.y + oy, "#2a6fa8");
+        }} />
+    );
+}
+
+function SceneHillLos() {
+    return (
+        <MiniCanvas width={200} height={80} draw={(ctx) => {
+            const ox = 100, oy = 40;
+            const hexes = [{ q: -2, r: 0 }, { q: -1, r: 0 }, { q: 0, r: 0 }, { q: 1, r: 0 }, { q: 2, r: 0 }];
+            hexes.forEach(h => {
+                const { x, y } = miniHexToPixel(h.q, h.r);
+                const isHill = h.q === 0;
+                drawMiniHex(ctx, x + ox, y + oy,
+                    isHill ? "#d4c8a0" : "#e8e0d0",
+                    isHill ? "#8a7a40" : "#c8b898",
+                    null
+                );
+            });
+            const p1 = miniHexToPixel(-2, 0);
+            const p2 = miniHexToPixel(2, 0);
+            drawUnit(ctx, p1.x + ox, p1.y + oy, 1, "🎯");
+            drawUnit(ctx, p2.x + ox, p2.y + oy, 2, "⚔");
+            drawDashedLine(ctx, p1.x + ox + 12, p1.y + oy, p2.x + ox - 12, p2.y + oy, "#4caf50");
+            ctx.font = "bold 10px 'Cinzel', serif";
+            ctx.textAlign = "center";
+            ctx.fillStyle = "#2e7d32";
+            const mid = miniHexToPixel(0, 0);
+            ctx.fillText("✓ LOS", mid.x + ox, mid.y + oy + MINI_HEX + 8);
+        }} />
+    );
+}
+
 function SceneHillRange() {
     return (
         <MiniCanvas width={240} height={80} draw={(ctx) => {
@@ -221,6 +436,30 @@ function SceneHillRange() {
             ctx.textAlign = "center";
             ctx.fillStyle = "#2e7d32";
             ctx.fillText("⛰ +1 portée", hillPos.x + ox, hillPos.y + oy + MINI_HEX + 8);
+        }} />
+    );
+}
+
+function SceneSwampPoison() {
+    return (
+        <MiniCanvas width={200} height={80} draw={(ctx) => {
+            const ox = 100, oy = 40;
+            const hexes = [{ q: -1, r: 0 }, { q: 0, r: 0 }, { q: 1, r: 0 }];
+            hexes.forEach(h => {
+                const { x, y } = miniHexToPixel(h.q, h.r);
+                const isSwamp = h.q === 0;
+                drawMiniHex(ctx, x + ox, y + oy,
+                    isSwamp ? "#8aaa78" : "#e8e0d0",
+                    isSwamp ? "#5a7a40" : "#c8b898",
+                    isSwamp ? "☠" : null
+                );
+            });
+            const swampPos = miniHexToPixel(0, 0);
+            drawUnit(ctx, swampPos.x + ox, swampPos.y + oy, 1, "⚔");
+            ctx.font = "bold 10px 'Cinzel', serif";
+            ctx.textAlign = "center";
+            ctx.fillStyle = "#a03030";
+            ctx.fillText("-1 PV", swampPos.x + ox, swampPos.y + oy + MINI_HEX + 8);
         }} />
     );
 }
@@ -352,63 +591,90 @@ export default function Guide({ onBack }) {
                     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                         <div>
                             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>▲ Obstacles</div>
-                            <div style={TEXT_STYLE}>Bloquent le mouvement et la ligne de vue.</div>
+                            <div style={TEXT_STYLE}>Infranchissables.</div>
+                            <div style={{ marginTop: 6 }}>
+                                <SceneObstacleMove />
+                            </div>
+                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Bloquent la ligne de vue.</div>
                             <div style={{ marginTop: 6 }}>
                                 <SceneLosBlocked />
                             </div>
                         </div>
                         <div>
                             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>〰 Rivières</div>
-                            <div style={TEXT_STYLE}>Traverser une rivière coûte 2 points de mouvement. L'unité s'arrête en entrant.</div>
+                            <div style={TEXT_STYLE}>L'unité s'arrête immédiatement en entrant.</div>
                             <div style={{ marginTop: 6 }}>
                                 <SceneRiverCost />
+                            </div>
+                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Ne bloque pas la ligne de vue.</div>
+                            <div style={{ marginTop: 6 }}>
+                                <SceneRiverLos />
                             </div>
                         </div>
                         <div>
                             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>🏰 Villes</div>
-                            <div style={TEXT_STYLE}>Rapportent 1 point par unité présente en fin de tour. Accordent un bonus de couvert (-1 à la sauvegarde adverse). Bloquent la ligne de vue. L'unité s'arrête en entrant.</div>
+                            <div style={TEXT_STYLE}>L'unité s'arrête immédiatement en entrant.</div>
+                            <div style={{ marginTop: 6 }}>
+                                <SceneTownStop />
+                            </div>
+                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Chaque ville possédée rapporte 1 point en fin de tour.</div>
+                            <div style={{ marginTop: 6 }}>
+                                <SceneTownControl />
+                            </div>
+                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Accordent un bonus de couvert au défenseur (-1 au seuil de sauvegarde).</div>
                             <div style={{ marginTop: 6 }}>
                                 <SceneTownCover />
+                            </div>
+                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Bloquent la ligne de vue.</div>
+                            <div style={{ marginTop: 6 }}>
+                                <SceneTownLos />
                             </div>
                         </div>
                         <div>
                             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>🌲 Forêts</div>
-                            <div style={TEXT_STYLE}>Bloquent la ligne de vue. Les unités peuvent y entrer et s'y déplacer.</div>
+                            <div style={TEXT_STYLE}>Coûtent 2 points de mouvement pour y entrer.</div>
+                            <div style={{ marginTop: 6 }}>
+                                <SceneForestCost />
+                            </div>
+                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Bloquent la ligne de vue entre deux cases.</div>
                             <div style={{ marginTop: 6 }}>
                                 <SceneForestLos />
+                            </div>
+                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Mais on peut tirer depuis ou vers une forêt sans obstacle.</div>
+                            <div style={{ marginTop: 6 }}>
+                                <SceneForestShoot />
                             </div>
                         </div>
                         <div>
                             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>⛰ Collines</div>
-                            <div style={TEXT_STYLE}>Entrer sur une colline coûte 2 points de mouvement. Les unités à distance sur une colline gagnent +1 de portée pour leurs armes à distance.</div>
+                            <div style={TEXT_STYLE}>Coûtent 2 points de mouvement pour y entrer.</div>
+                            <div style={{ marginTop: 6 }}>
+                                <SceneHillCost />
+                            </div>
+                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Ne bloquent pas la ligne de vue.</div>
+                            <div style={{ marginTop: 6 }}>
+                                <SceneHillLos />
+                            </div>
+                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Les unités à distance sur une colline gagnent +1 de portée.</div>
                             <div style={{ marginTop: 6 }}>
                                 <SceneHillRange />
                             </div>
                         </div>
                         <div>
                             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>☠ Marais</div>
-                            <div style={TEXT_STYLE}>L'unité s'arrête immédiatement en entrant dans un marais.</div>
+                            <div style={TEXT_STYLE}>L'unité s'arrête immédiatement en entrant.</div>
                             <div style={{ marginTop: 6 }}>
                                 <SceneSwampStop />
+                            </div>
+                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Inflige 1 dégât à l'unité qui entre.</div>
+                            <div style={{ marginTop: 6 }}>
+                                <SceneSwampPoison />
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div style={SECTION_STYLE}>
-                    <div style={TITLE_STYLE}>INTELLIGENCE ARTIFICIELLE</div>
-                    <div style={TEXT_STYLE}>
-                        <p style={{ marginBottom: 8 }}>Le joueur 2 est contrôlé par une IA qui suit ces priorités :</p>
-                        <ol style={{ margin: 0, paddingLeft: 20 }}>
-                            <li><strong>Capturer une ville</strong> — si une ville prioritaire (non possédée ou menacée) est atteignable, l'IA s'y déplace avant toute attaque.</li>
-                            <li><strong>Attaquer</strong> — cible en priorité les ennemis sur les villes, puis les unités les plus faibles.</li>
-                            <li><strong>Se repositionner</strong> — se rapproche des villes prioritaires ou des ennemis.</li>
-                        </ol>
-                        <p style={{ marginTop: 8 }}>L'IA ignore les villes qu'elle possède déjà si aucun ennemi ne peut les atteindre.</p>
-                    </div>
-                </div>
-
-                <div style={{ textAlign: "center", marginTop: 8, marginBottom: 20 }}>
+<div style={{ textAlign: "center", marginTop: 8, marginBottom: 20 }}>
                     <button className="btn btn-grey" onClick={onBack} style={{ width: "auto", padding: "6px 16px" }}>
                         Retour
                     </button>
