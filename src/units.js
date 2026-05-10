@@ -22,10 +22,10 @@ export const UNIT_TEMPLATES = {
     },
     sniper: {
         name: "Sniper", symbol: "🎯",
-        movement: 2, weaponSkill: 5, ballisticSkill: 2,
+        movement: 2, weaponSkill: 5, ballisticSkill: 3,
         wounds: 1, save: 5,
         weapons: [
-            { id: "sniper_rifle", name: "Sniper Rifle", type: "ranged", range: 4, attacks: 1, ap: -2, damage: 2 },
+            { id: "sniper_rifle", name: "Sniper Rifle", type: "ranged", range: 3, attacks: 2, ap: -2, damage: 1 },
             { id: "pistol", name: "Pistol", type: "ranged", range: 1, attacks: 1, ap: 0, damage: 1 },
         ],
     },

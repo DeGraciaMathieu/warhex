@@ -47,14 +47,15 @@ describe("création d'unités", () => {
     it("le sniper a les stats attendues", () => {
         const unit = createUnit("sniper", 1, { q: 0, r: 0, s: 0 });
         expect(unit.movement).toBe(2);
-        expect(unit.ballisticSkill).toBe(2);
+        expect(unit.ballisticSkill).toBe(3);
         expect(unit.weaponSkill).toBe(5);
         expect(unit.wounds).toBe(1);
         expect(unit.save).toBe(5);
         expect(unit.weapons).toHaveLength(2);
         const sniper = unit.weapons.find(w => w.id === "sniper_rifle");
-        expect(sniper.range).toBe(4);
-        expect(sniper.damage).toBe(2);
+        expect(sniper.range).toBe(3);
+        expect(sniper.attacks).toBe(2);
+        expect(sniper.damage).toBe(1);
         expect(sniper.ap).toBe(-2);
     });
 

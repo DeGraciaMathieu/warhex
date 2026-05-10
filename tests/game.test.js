@@ -658,8 +658,8 @@ describe("arme hors portée rejetée", () => {
 
     it("computeWeaponSelect accepte une arme à distance avec bonus de colline", () => {
         const attacker = createUnit("sniper", 1, { q: 0, r: 0, s: 0 });
-        const target = createUnit("warrior", 2, { q: 5, r: -5, s: 0 });
-        const ranged = attacker.weapons[0]; // range 4
+        const target = createUnit("warrior", 2, { q: 4, r: -4, s: 0 });
+        const ranged = attacker.weapons[0]; // range 3
         const hill = { q: 0, r: 0, s: 0 };
         const s = makeState({
             units: [attacker, target],
