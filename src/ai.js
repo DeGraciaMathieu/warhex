@@ -7,8 +7,8 @@ function buildLosKeys(state) {
 function buildTerrainKeys(state) {
     const obsKeys = new Set(state.obstacles.map(hexKey));
     const stopKeys = new Set([...(state.rivers || []), ...(state.towns || []), ...(state.swamps || [])].map(hexKey));
-    const forestKeys = new Set((state.forests || []).map(hexKey));
-    return { obsKeys, stopKeys, forestKeys };
+    const costKeys = new Set([...(state.forests || []), ...(state.hills || [])].map(hexKey));
+    return { obsKeys, stopKeys, costKeys };
 }
 
 function findValidTargets(unit, enemies, losKeys, rangeBonus = 0) {
@@ -28,13 +28,13 @@ function townContext(state) {
     const enemyOnTown = [...unitOnTown.values()].filter(u => u.player === 1);
 
     const ownership = state.townOwnership || {};
-    const { obsKeys, stopKeys, forestKeys } = buildTerrainKeys(state);
+    const { obsKeys, stopKeys, costKeys } = buildTerrainKeys(state);
     const enemies = aliveUnits.filter(u => u.player === 1);
     const occupied = new Set(aliveUnits.map(u => hexKey(u.hex)));
 
     const threatenedKeys = new Set();
     for (const enemy of enemies) {
-        const reachable = reachableHexes(enemy.hex, enemy.movement, occupied, obsKeys, stopKeys, forestKeys);
+        const reachable = reachableHexes(enemy.hex, enemy.movement, occupied, obsKeys, stopKeys, costKeys);
         for (const h of reachable) {
             const k = hexKey(h);
             if (townKeys.has(k)) threatenedKeys.add(k);
@@ -90,8 +90,8 @@ export function pickBestUnit(state) {
 
 export function pickMoveTarget(unit, state) {
     const occupied = new Set(state.units.filter(u => u.currentWounds > 0 && u.id !== unit.id).map(u => hexKey(u.hex)));
-    const { obsKeys, stopKeys, forestKeys } = buildTerrainKeys(state);
-    const reachable = reachableHexes(unit.hex, unit.movement, occupied, obsKeys, stopKeys, forestKeys);
+    const { obsKeys, stopKeys, costKeys } = buildTerrainKeys(state);
+    const reachable = reachableHexes(unit.hex, unit.movement, occupied, obsKeys, stopKeys, costKeys);
     if (reachable.length === 0) return null;
 
     const { townKeys, priorityTowns, enemyOnTown } = townContext(state);
@@ -102,7 +102,7 @@ export function pickMoveTarget(unit, state) {
         const allies = state.units.filter(u => u.player === 2 && u.currentWounds > 0 && u.id !== unit.id && !u.hasMoved);
         const canReplace = allies.some(ally => {
             const allyOccupied = new Set(state.units.filter(u => u.currentWounds > 0 && u.id !== ally.id && u.id !== unit.id).map(u => hexKey(u.hex)));
-            const allyReachable = reachableHexes(ally.hex, ally.movement, allyOccupied, obsKeys, stopKeys, forestKeys);
+            const allyReachable = reachableHexes(ally.hex, ally.movement, allyOccupied, obsKeys, stopKeys, costKeys);
             return allyReachable.some(h => hexKey(h) === hexKey(unit.hex));
         });
         if (!canReplace) return null;

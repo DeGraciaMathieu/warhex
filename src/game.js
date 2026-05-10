@@ -9,8 +9,8 @@ function buildLosKeys(state) {
 function buildTerrainKeys(state) {
     const obsKeys = new Set(state.obstacles.map(hexKey));
     const stopKeys = new Set([...(state.rivers || []), ...(state.towns || []), ...(state.swamps || [])].map(hexKey));
-    const forestKeys = new Set((state.forests || []).map(hexKey));
-    return { obsKeys, stopKeys, forestKeys };
+    const costKeys = new Set([...(state.forests || []), ...(state.hills || [])].map(hexKey));
+    return { obsKeys, stopKeys, costKeys };
 }
 
 function findValidTargets(unit, enemies, losKeys, rangeBonus = 0) {
@@ -88,8 +88,8 @@ export function handleClick(s, hex) {
         if (s.activatedUnitIds.includes(unitOnHex.id)) return s;
         const cur = s.units.find(u => u.id === unitOnHex.id);
         const occupied = new Set(s.units.filter(u => u.currentWounds > 0 && u.id !== cur.id).map(u => hexKey(u.hex)));
-        const { obsKeys, stopKeys, forestKeys } = buildTerrainKeys(s);
-        const validMoves = cur.hasMoved ? [] : reachableHexes(cur.hex, cur.movement, occupied, obsKeys, stopKeys, forestKeys);
+        const { obsKeys, stopKeys, costKeys } = buildTerrainKeys(s);
+        const validMoves = cur.hasMoved ? [] : reachableHexes(cur.hex, cur.movement, occupied, obsKeys, stopKeys, costKeys);
         const enemies = s.units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
         const losKeys = buildLosKeys(s);
         const hillKeys = new Set((s.hills || []).map(hexKey));
@@ -105,8 +105,8 @@ export function computeMove(s) {
     const cur = s.units.find(u => u.id === s.selectedUnit?.id);
     if (!cur || cur.hasMoved) return s;
     const occupied = new Set(s.units.filter(u => u.currentWounds > 0 && u.id !== cur.id).map(u => hexKey(u.hex)));
-    const { obsKeys, stopKeys, forestKeys } = buildTerrainKeys(s);
-    return { ...s, phase: "move", validMoves: reachableHexes(cur.hex, cur.movement, occupied, obsKeys, stopKeys, forestKeys), validTargets: [] };
+    const { obsKeys, stopKeys, costKeys } = buildTerrainKeys(s);
+    return { ...s, phase: "move", validMoves: reachableHexes(cur.hex, cur.movement, occupied, obsKeys, stopKeys, costKeys), validTargets: [] };
 }
 
 export function computeAttack(s) {
