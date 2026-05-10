@@ -245,35 +245,28 @@ export default function HexWarhammer() {
                     ⚔ WARHEX ⚔
                 </div>
 
-                <div style={{ position: "relative" }}>
-                    <canvas
-                        ref={canvasRef}
-                        width={CANVAS_W}
-                        height={CANVAS_H}
-                        style={{ border: "1px solid #c8b898", maxWidth: "100%" }}
-                        onClick={onCanvasClick}
-                        onMouseMove={onMouseMove}
-                        onMouseLeave={() => setHoveredHex(null)}
-                    />
+                <canvas
+                    ref={canvasRef}
+                    width={CANVAS_W}
+                    height={CANVAS_H}
+                    style={{ border: "1px solid #c8b898", maxWidth: "100%" }}
+                    onClick={onCanvasClick}
+                    onMouseMove={onMouseMove}
+                    onMouseLeave={() => setHoveredHex(null)}
+                />
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", maxWidth: CANVAS_W, width: "100%", marginTop: 6 }}>
                     <div style={{
-                        position: "absolute", top: 10, left: 10,
-                        background: "rgba(245,240,232,.92)", border: `1px solid ${P[state.currentPlayer]}`,
+                        background: "#ece5d8", border: `1px solid ${P[state.currentPlayer]}`,
                         padding: "6px 14px", fontFamily: "'Cinzel', serif", fontSize: 13, letterSpacing: ".1em",
                         color: P[state.currentPlayer], borderRadius: 3,
                     }}>
                         {state.winner ? (state.winner === "draw" ? "⚖ ÉGALITÉ" : `🏆 JOUEUR ${state.winner} VICTORIEUX`) : `J${state.currentPlayer} — ${phaseLabel} · ⚡${ACTIVATIONS_PER_TURN - state.activationsUsed}`}
                     </div>
-                    <div style={{ position: "absolute", top: 10, right: 10, background: "rgba(245,240,232,.92)", border: "1px solid #c8b898", padding: "6px 12px", fontFamily: "'Cinzel', serif", fontSize: 12, color: "#8a7a60", display: "flex", gap: 12, alignItems: "center", borderRadius: 3 }}>
+                    <div style={{ background: "#ece5d8", border: "1px solid #c8b898", padding: "6px 12px", fontFamily: "'Cinzel', serif", fontSize: 12, color: "#8a7a60", display: "flex", gap: 12, alignItems: "center", borderRadius: 3 }}>
                         <span style={{ color: "#2a6fa8" }}>{state.scores[1]} pts</span>
                         <span>TOUR {state.round}/5</span>
                         <span style={{ color: "#a03030" }}>{state.scores[2]} pts</span>
-                    </div>
-                    <div style={{ position: "absolute", bottom: 10, left: 10, display: "flex", gap: 14, fontSize: 12, color: "#8a7a60" }}>
-                        <span style={{ color: "#2a6fa8" }}>● Joueur 1</span>
-                        <span style={{ color: "#a03030" }}>● Joueur 2</span>
-                        <span>■ Déplacement possible</span>
-                        <span style={{ color: "#b03030" }}>■ Cible</span>
-                        <span style={{ color: "#8a7a60" }}>▲ Obstacle</span>
                     </div>
                 </div>
             </div>
