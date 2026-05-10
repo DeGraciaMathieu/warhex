@@ -92,7 +92,7 @@ function MiniCanvas({ width, height, draw }) {
         ctx.clearRect(0, 0, width, height);
         draw(ctx);
     }, []);
-    return <canvas ref={ref} width={width} height={height} style={{ display: "block" }} />;
+    return <canvas ref={ref} width={width} height={height} style={{ display: "block", flexShrink: 0, minWidth: width }} />;
 }
 
 function SceneObstacleMove() {
@@ -590,8 +590,26 @@ const TITLE_STYLE = {
 };
 const TEXT_STYLE = { fontSize: 13, lineHeight: 1.6, color: "#2a2015" };
 
+const NAV_ITEMS = [
+    { id: "objectif", label: "Objectif" },
+    { id: "unites", label: "Unités" },
+    { id: "combat", label: "Combat" },
+    { id: "terrains", label: "Terrains" },
+];
+
+const TERRAIN_CELL = { padding: "6px 10px", fontSize: 12, borderBottom: "1px solid #d5cbb8", textAlign: "center" };
+const TERRAIN_HEADER = { ...TERRAIN_CELL, fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: ".1em", color: "#8a7a60", fontWeight: 700, background: "#e5ddd0" };
+
+const TERRAIN_SECTION = {
+    background: "#f5f0e8", border: "1px solid #d5cbb8", borderRadius: 4, padding: 14, marginBottom: 10,
+};
+
 export default function Guide({ onBack }) {
     const unitTypes = Object.entries(UNIT_TEMPLATES);
+
+    const scrollTo = (id) => {
+        document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
 
     return (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minHeight: "100vh", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif", padding: "30px 20px" }}>
@@ -605,7 +623,19 @@ export default function Guide({ onBack }) {
                     </button>
                 </div>
 
-                <div style={SECTION_STYLE}>
+                <div style={{ ...SECTION_STYLE, display: "flex", gap: 8, flexWrap: "wrap", padding: "10px 16px" }}>
+                    {NAV_ITEMS.map(item => (
+                        <button key={item.id} onClick={() => scrollTo(item.id)} style={{
+                            background: "none", border: "1px solid #c8b898", borderRadius: 3, padding: "4px 14px",
+                            fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: ".1em", color: "#8a6a08",
+                            cursor: "pointer",
+                        }}>
+                            {item.label}
+                        </button>
+                    ))}
+                </div>
+
+                <div id="objectif" style={SECTION_STYLE}>
                     <div style={TITLE_STYLE}>OBJECTIF</div>
                     <div style={TEXT_STYLE}>
                         <p style={{ margin: "0 0 8px" }}>Warhex est un jeu tactique au tour par tour sur grille hexagonale. Deux joueurs s'affrontent pendant <strong>5 tours</strong>.</p>
@@ -615,7 +645,7 @@ export default function Guide({ onBack }) {
                     <SceneTownControl />
                 </div>
 
-                <div style={SECTION_STYLE}>
+                <div id="unites" style={SECTION_STYLE}>
                     <div style={TITLE_STYLE}>UNITÉS</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                         {unitTypes.map(([key, t]) => (
@@ -642,7 +672,7 @@ export default function Guide({ onBack }) {
                     </div>
                 </div>
 
-                <div style={SECTION_STYLE}>
+                <div id="combat" style={SECTION_STYLE}>
                     <div style={TITLE_STYLE}>COMBAT</div>
                     <div style={TEXT_STYLE}>
                         <p style={{ margin: "0 0 6px" }}><strong>1. To Hit</strong> — Lancez autant de D6 que l'arme a d'attaques. Chaque dé supérieur ou égal à la compétence (CC au corps à corps, CT à distance) est une touche.</p>
@@ -651,117 +681,126 @@ export default function Guide({ onBack }) {
                     </div>
                 </div>
 
-                <div style={SECTION_STYLE}>
-                    <div style={TITLE_STYLE}>TERRAINS</div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                        <div>
-                            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>▲ Obstacles</div>
-                            <div style={TEXT_STYLE}>Infranchissables.</div>
-                            <div style={{ marginTop: 6 }}>
-                                <SceneObstacleMove />
-                            </div>
-                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Bloquent la ligne de vue.</div>
-                            <div style={{ marginTop: 6 }}>
-                                <SceneLosBlocked />
-                            </div>
-                        </div>
-                        <div>
-                            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>〰 Rivières</div>
-                            <div style={TEXT_STYLE}>L'unité s'arrête immédiatement en entrant.</div>
-                            <div style={{ marginTop: 6 }}>
-                                <SceneRiverCost />
-                            </div>
-                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Malus défensif : +1 au seuil de sauvegarde.</div>
-                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Ne bloque pas la ligne de vue.</div>
-                            <div style={{ marginTop: 6 }}>
-                                <SceneRiverLos />
-                            </div>
-                        </div>
-                        <div>
-                            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>🏰 Villes</div>
-                            <div style={TEXT_STYLE}>L'unité s'arrête immédiatement en entrant.</div>
-                            <div style={{ marginTop: 6 }}>
-                                <SceneTownStop />
-                            </div>
-                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Chaque ville possédée rapporte 1 point en fin de tour.</div>
-                            <div style={{ marginTop: 6 }}>
-                                <SceneTownControl />
-                            </div>
-                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Accordent un bonus de couvert au défenseur (-1 au seuil de sauvegarde).</div>
-                            <div style={{ marginTop: 6 }}>
-                                <SceneTownCover />
-                            </div>
-                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Bloquent la ligne de vue.</div>
-                            <div style={{ marginTop: 6 }}>
-                                <SceneTownLos />
-                            </div>
-                        </div>
-                        <div>
-                            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>🌲 Forêts</div>
-                            <div style={TEXT_STYLE}>Coûtent 2 points de mouvement pour y entrer.</div>
-                            <div style={{ marginTop: 6 }}>
-                                <SceneForestCost />
-                            </div>
-                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Offrent un bonus de couvert au défenseur (−1 au seuil de sauvegarde).</div>
-                            <div style={{ marginTop: 6 }}>
-                                <SceneForestCover />
-                            </div>
-                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Bloquent la ligne de vue entre deux cases.</div>
-                            <div style={{ marginTop: 6 }}>
-                                <SceneForestLos />
-                            </div>
-                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Mais on peut tirer depuis ou vers une forêt sans obstacle.</div>
-                            <div style={{ marginTop: 6 }}>
-                                <SceneForestShoot />
-                            </div>
-                        </div>
-                        <div>
-                            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>⛰ Collines</div>
-                            <div style={TEXT_STYLE}>Coûtent 2 points de mouvement pour y entrer.</div>
-                            <div style={{ marginTop: 6 }}>
-                                <SceneHillCost />
-                            </div>
-                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Ne bloquent pas la ligne de vue.</div>
-                            <div style={{ marginTop: 6 }}>
-                                <SceneHillLos />
-                            </div>
-                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Les unités à distance sur une colline gagnent +1 de portée.</div>
-                            <div style={{ marginTop: 6 }}>
-                                <SceneHillRange />
-                            </div>
-                        </div>
-                        <div>
-                            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>☠ Marais</div>
-                            <div style={TEXT_STYLE}>L'unité s'arrête immédiatement en entrant.</div>
-                            <div style={{ marginTop: 6 }}>
-                                <SceneSwampStop />
-                            </div>
-                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Inflige 1 dégât à l'unité qui entre.</div>
-                            <div style={{ marginTop: 6 }}>
-                                <SceneSwampPoison />
-                            </div>
-                        </div>
+                <div id="terrains" style={SECTION_STYLE}>
+                    <div style={TITLE_STYLE}>TERRAINS — RÉCAPITULATIF</div>
+                    <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #d5cbb8", borderRadius: 3, fontSize: 12 }}>
+                        <thead>
+                            <tr>
+                                <td style={TERRAIN_HEADER}>Terrain</td>
+                                <td style={TERRAIN_HEADER}>Mouvement</td>
+                                <td style={TERRAIN_HEADER}>LOS</td>
+                                <td style={TERRAIN_HEADER}>Combat</td>
+                                <td style={TERRAIN_HEADER}>Indicateur</td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style={{ ...TERRAIN_CELL, fontWeight: 600, textAlign: "left" }}>▲ Obstacles</td>
+                                <td style={TERRAIN_CELL}>Bloqué</td>
+                                <td style={TERRAIN_CELL}>Bloquée</td>
+                                <td style={TERRAIN_CELL}>—</td>
+                                <td style={TERRAIN_CELL}>—</td>
+                            </tr>
+                            <tr>
+                                <td style={{ ...TERRAIN_CELL, fontWeight: 600, textAlign: "left" }}>〰 Rivières</td>
+                                <td style={TERRAIN_CELL}>Stop</td>
+                                <td style={TERRAIN_CELL}>Libre</td>
+                                <td style={{ ...TERRAIN_CELL, color: "#e53935" }}>+1 save</td>
+                                <td style={TERRAIN_CELL}><IndicatorIcon type="river" /></td>
+                            </tr>
+                            <tr>
+                                <td style={{ ...TERRAIN_CELL, fontWeight: 600, textAlign: "left" }}>🏰 Villes</td>
+                                <td style={TERRAIN_CELL}>Stop</td>
+                                <td style={TERRAIN_CELL}>Bloquée</td>
+                                <td style={{ ...TERRAIN_CELL, color: "#4caf50" }}>−1 save</td>
+                                <td style={TERRAIN_CELL}><IndicatorIcon type="cover" /></td>
+                            </tr>
+                            <tr>
+                                <td style={{ ...TERRAIN_CELL, fontWeight: 600, textAlign: "left" }}>🌲 Forêts</td>
+                                <td style={TERRAIN_CELL}>Coût ×2</td>
+                                <td style={TERRAIN_CELL}>Bloquée*</td>
+                                <td style={{ ...TERRAIN_CELL, color: "#4caf50" }}>−1 save</td>
+                                <td style={TERRAIN_CELL}><IndicatorIcon type="cover" /></td>
+                            </tr>
+                            <tr>
+                                <td style={{ ...TERRAIN_CELL, fontWeight: 600, textAlign: "left" }}>⛰ Collines</td>
+                                <td style={TERRAIN_CELL}>Coût ×2</td>
+                                <td style={TERRAIN_CELL}>Libre</td>
+                                <td style={{ ...TERRAIN_CELL, color: "#1e88e5" }}>+1 portée</td>
+                                <td style={TERRAIN_CELL}><IndicatorIcon type="hill" /></td>
+                            </tr>
+                            <tr>
+                                <td style={{ ...TERRAIN_CELL, fontWeight: 600, textAlign: "left", borderBottom: "none" }}>☠ Marais</td>
+                                <td style={{ ...TERRAIN_CELL, borderBottom: "none" }}>Stop</td>
+                                <td style={{ ...TERRAIN_CELL, borderBottom: "none" }}>Libre</td>
+                                <td style={{ ...TERRAIN_CELL, borderBottom: "none", color: "#e53935" }}>−1 PV</td>
+                                <td style={{ ...TERRAIN_CELL, borderBottom: "none" }}>—</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div style={{ fontSize: 11, color: "#8a7a60", marginTop: 6 }}>* On peut tirer depuis ou vers une forêt, mais pas à travers.</div>
+                </div>
+
+                <div style={TERRAIN_SECTION}>
+                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>▲ Obstacles</div>
+                    <div style={TEXT_STYLE}>Infranchissables. Bloquent la ligne de vue.</div>
+                    <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
+                        <SceneObstacleMove />
+                        <SceneLosBlocked />
                     </div>
                 </div>
 
-                <div style={SECTION_STYLE}>
-                    <div style={TITLE_STYLE}>INDICATEURS DE TERRAIN</div>
-                    <div style={TEXT_STYLE}>
-                        <p style={{ margin: "0 0 8px" }}>Les unités affichent de petites icônes en haut à droite de leur cercle selon le terrain qu'elles occupent :</p>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <IndicatorIcon type="cover" />
-                                <span><strong>Bouclier vert</strong> — Couvert (ville ou forêt) : −1 au seuil de sauvegarde</span>
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <IndicatorIcon type="river" />
-                                <span><strong>Bouclier rouge</strong> — Rivière : +1 au seuil de sauvegarde</span>
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <IndicatorIcon type="hill" />
-                                <span><strong>Viseur bleu</strong> — Colline : +1 portée à distance</span>
-                            </div>
-                        </div>
+                <div style={TERRAIN_SECTION}>
+                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>〰 Rivières</div>
+                    <div style={TEXT_STYLE}>L'unité s'arrête immédiatement en entrant. Malus défensif : +1 au seuil de sauvegarde. Ne bloque pas la ligne de vue.</div>
+                    <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
+                        <SceneRiverCost />
+                        <SceneRiverLos />
+                    </div>
+                </div>
+
+                <div style={TERRAIN_SECTION}>
+                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>🏰 Villes</div>
+                    <div style={TEXT_STYLE}>L'unité s'arrête immédiatement en entrant. Chaque ville possédée rapporte 1 point en fin de tour. Bonus de couvert (−1 au seuil de sauvegarde). Bloquent la ligne de vue.</div>
+                    <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
+                        <SceneTownStop />
+                        <SceneTownControl />
+                    </div>
+                    <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
+                        <SceneTownCover />
+                        <SceneTownLos />
+                    </div>
+                </div>
+
+                <div style={TERRAIN_SECTION}>
+                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>🌲 Forêts</div>
+                    <div style={TEXT_STYLE}>Coûtent 2 points de mouvement. Bonus de couvert (−1 au seuil de sauvegarde). Bloquent la LOS entre deux cases, mais on peut tirer depuis ou vers une forêt.</div>
+                    <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
+                        <SceneForestCost />
+                        <SceneForestCover />
+                    </div>
+                    <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
+                        <SceneForestLos />
+                        <SceneForestShoot />
+                    </div>
+                </div>
+
+                <div style={TERRAIN_SECTION}>
+                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>⛰ Collines</div>
+                    <div style={TEXT_STYLE}>Coûtent 2 points de mouvement. Ne bloquent pas la ligne de vue. Les unités à distance gagnent +1 de portée.</div>
+                    <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
+                        <SceneHillCost />
+                        <SceneHillLos />
+                        <SceneHillRange />
+                    </div>
+                </div>
+
+                <div style={TERRAIN_SECTION}>
+                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>☠ Marais</div>
+                    <div style={TEXT_STYLE}>L'unité s'arrête immédiatement en entrant. Inflige 1 dégât à l'unité qui entre.</div>
+                    <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
+                        <SceneSwampStop />
+                        <SceneSwampPoison />
                     </div>
                 </div>
 
