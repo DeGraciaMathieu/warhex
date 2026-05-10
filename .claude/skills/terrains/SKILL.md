@@ -38,7 +38,7 @@ const losKeys = new Set([...s.obstacles, ...(s.towns || []), ...(s.forests || []
 ### Generation (`units.js` - `initState()`)
 
 - Obstacles : 9 hexes aleatoires
-- Riviere : chemin continu nord→sud via `generateRiver()`
+- Riviere : 3-5 plans d'eau contigus via `generateWaterBodies()`
 - Villes : 4 hexes aleatoires via `randomAvailableHexes()`
 - Forets : 3 zones contigues via `generateForests()`
 - Collines : 4 hexes aleatoires via `randomAvailableHexes()`
