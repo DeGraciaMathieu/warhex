@@ -565,6 +565,109 @@ describe("fin de partie", () => {
     });
 });
 
+describe("mort par marais et fin d'activation", () => {
+    it("une unité tuée par le poison du marais termine l'activation", () => {
+        const u1 = createUnit("warrior", 1, { q: -1, r: 0, s: 1 });
+        u1.currentWounds = 1;
+        const enemy = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
+        const swamp = { q: 0, r: 0, s: 0 };
+        const s = makeState({
+            units: [u1, enemy],
+            swamps: [swamp],
+            selectedUnit: u1,
+            activeUnitId: u1.id,
+            phase: "move",
+            validMoves: [swamp],
+        });
+        const result = handleClick(s, swamp);
+        const dead = result.units.find(u => u.id === u1.id);
+        expect(dead.currentWounds).toBe(0);
+        expect(result.selectedUnit).toBeNull();
+        expect(result.phase).toBe("select");
+    });
+
+    it("une unité tuée par le marais ne bloque pas l'activation de la suivante", () => {
+        const u1 = createUnit("warrior", 1, { q: -1, r: 0, s: 1 });
+        u1.currentWounds = 1;
+        const u2 = createUnit("warrior", 1, { q: -2, r: 1, s: 1 });
+        const enemy = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
+        const swamp = { q: 0, r: 0, s: 0 };
+        const s = makeState({
+            units: [u1, u2, enemy],
+            swamps: [swamp],
+            selectedUnit: u1,
+            activeUnitId: u1.id,
+            phase: "move",
+            validMoves: [swamp],
+        });
+        const result = handleClick(s, swamp);
+        expect(result.autoEndTurn).toBe(false);
+        expect(result.phase).toBe("select");
+    });
+});
+
+describe("autoEndTurn quand plus d'alliés disponibles", () => {
+    it("autoEndTurn est true si toutes les unités alliées ont été activées", () => {
+        const u1 = createUnit("warrior", 1, { q: -1, r: 0, s: 1 });
+        const u2 = createUnit("warrior", 1, { q: -2, r: 1, s: 1 });
+        const enemy = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
+        const s = makeState({
+            units: [u1, u2, enemy],
+            activationsUsed: 1,
+            activatedUnitIds: [u1.id],
+            selectedUnit: u2,
+            activeUnitId: u2.id,
+        });
+        const result = computeDeselect({ ...s, units: s.units.map(u => u.id === u2.id ? { ...u, hasMoved: true } : u) });
+        expect(result.autoEndTurn).toBe(true);
+    });
+
+    it("autoEndTurn est true si la seule unité restante meurt dans un marais", () => {
+        const u1 = createUnit("warrior", 1, { q: -1, r: 0, s: 1 });
+        u1.currentWounds = 1;
+        const enemy = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
+        const swamp = { q: 0, r: 0, s: 0 };
+        const s = makeState({
+            units: [u1, enemy],
+            swamps: [swamp],
+            selectedUnit: u1,
+            activeUnitId: u1.id,
+            phase: "move",
+            validMoves: [swamp],
+        });
+        const result = handleClick(s, swamp);
+        expect(result.autoEndTurn).toBe(true);
+    });
+});
+
+describe("arme hors portée rejetée", () => {
+    it("computeWeaponSelect rejette une arme mêlée si la cible est hors portée", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
+        const melee = attacker.weapons.find(w => w.type === "melee");
+        const s = makeState({
+            units: [attacker, target],
+            pendingAttack: { attacker, target },
+        });
+        const result = computeWeaponSelect(s, melee);
+        expect(result.anim).toBeNull();
+    });
+
+    it("computeWeaponSelect accepte une arme à distance avec bonus de colline", () => {
+        const attacker = createUnit("sniper", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 5, r: -5, s: 0 });
+        const ranged = attacker.weapons[0]; // range 4
+        const hill = { q: 0, r: 0, s: 0 };
+        const s = makeState({
+            units: [attacker, target],
+            hills: [hill],
+            pendingAttack: { attacker, target },
+        });
+        const result = computeWeaponSelect(s, ranged);
+        expect(result.anim).not.toBeNull();
+    });
+});
+
 describe("déplacement", () => {
     it("une unité avec mouvement 3 peut atteindre des hexes à 3 cases mais pas à 4", () => {
         const origin = { q: 0, r: 0, s: 0 };

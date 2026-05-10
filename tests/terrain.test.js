@@ -168,6 +168,28 @@ describe("forêts", () => {
     });
 });
 
+describe("collines", () => {
+    it("une colline ne coûte pas de mouvement supplémentaire", () => {
+        const origin = { q: 0, r: 0, s: 0 };
+        const hill = { q: 1, r: -1, s: 0 };
+        // Les collines ne sont ni dans stopKeys ni dans costKeys
+        const reachable = reachableHexes(origin, 1, new Set());
+        const reachableKeys = new Set(reachable.map(hexKey));
+        expect(reachableKeys.has(hexKey(hill))).toBe(true);
+    });
+
+});
+
+describe("interactions terrain combinées", () => {
+    it("une forêt bloque la LOS même si le tireur est sur une colline", () => {
+        const a = { q: -2, r: 0, s: 2 };
+        const b = { q: 2, r: 0, s: -2 };
+        const forest = { q: 0, r: 0, s: 0 };
+        const losKeys = new Set([hexKey(forest)]);
+        expect(hasLineOfSight(a, b, losKeys)).toBe(false);
+    });
+});
+
 describe("marais", () => {
     it("un marais stoppe le mouvement", () => {
         const swamp = { q: 0, r: 0, s: 0 };

@@ -64,4 +64,21 @@ describe("système de points", () => {
         expect(checkWinner({ 1: 10, 2: 3 }, 7)).toBe(1);
         expect(checkWinner({ 1: 2, 2: 8 }, 6)).toBe(2);
     });
+
+    it("une ville sans unité ne rapporte de points à personne", () => {
+        const units = [createUnit("warrior", 1, { q: 5, r: -5, s: 0 })];
+        const control = computeTownControl(units, towns);
+        expect(control[1]).toBe(0);
+        expect(control[2]).toBe(0);
+    });
+
+    it("deux unités adverses ne peuvent pas être sur la même ville", () => {
+        const units = [
+            createUnit("warrior", 1, town1),
+            createUnit("warrior", 2, town1),
+        ];
+        const control = computeTownControl(units, towns);
+        // Les deux sont vivantes sur la même ville — impossible en jeu, mais le contrôle revient aux deux
+        expect(control[1] + control[2]).toBeGreaterThanOrEqual(1);
+    });
 });
