@@ -607,6 +607,26 @@ describe("couvert de ville en combat", () => {
     });
 });
 
+describe("couvert de forêt en combat", () => {
+    it("une cible dans une forêt subit moins de dégâts en moyenne", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const forest = { q: 1, r: -1, s: 0 };
+        const weapon = attacker.weapons.find(w => w.id === "sword");
+
+        let totalWithForest = 0, totalNoForest = 0;
+        for (let i = 0; i < 500; i++) {
+            const sWithForest = makeState({ units: [attacker, target], forests: [forest], pendingAttack: { attacker, target } });
+            const sNoForest = makeState({ units: [attacker, target], forests: [], pendingAttack: { attacker, target } });
+            const rWith = computeWeaponSelect(sWithForest, weapon);
+            const rNo = computeWeaponSelect(sNoForest, weapon);
+            if (rWith.anim) totalWithForest += rWith.anim.damage;
+            if (rNo.anim) totalNoForest += rNo.anim.damage;
+        }
+        expect(totalNoForest).toBeGreaterThan(totalWithForest);
+    });
+});
+
 describe("fin de partie", () => {
     it("computeEndTurn déclare un gagnant au round 5", () => {
         const town = { q: 0, r: 0, s: 0 };

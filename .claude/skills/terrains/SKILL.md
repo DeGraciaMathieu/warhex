@@ -13,7 +13,7 @@ auto_invoke: true
 | **Obstacles** | Bloquent (infranchissable) | Bloquent | - |
 | **Rivieres** | Entrer stoppe le mouvement | Ne bloquent pas | - |
 | **Villes** | Entrer stoppe le mouvement | Bloquent | -1 au seuil de sauvegarde (cover bonus) |
-| **Forets** | Coutent 2 PM au lieu de 1 | Bloquent (sauf depuis/vers) | Generees en 3 zones contigues de 2-5 hexes |
+| **Forets** | Coutent 2 PM au lieu de 1 | Bloquent (sauf depuis/vers) | -1 au seuil de sauvegarde (cover bonus), generees en 3 zones contigues de 2-5 hexes |
 | **Collines** | Coutent 2 PM au lieu de 1 | Ne bloquent pas | +1 portee armes a distance si tireur sur colline |
 | **Marais** | Entrer stoppe le mouvement | Ne bloquent pas | 1 degat poison a l'entree |
 

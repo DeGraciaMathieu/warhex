@@ -132,7 +132,9 @@ export function computeWeaponSelect(s, weapon) {
     }
 
     const townKeys = new Set((s.towns || []).map(hexKey));
-    const coverBonus = townKeys.has(hexKey(target.hex)) ? 1 : 0;
+    const forestKeys = new Set((s.forests || []).map(hexKey));
+    const targetKey = hexKey(target.hex);
+    const coverBonus = (townKeys.has(targetKey) || forestKeys.has(targetKey)) ? 1 : 0;
     const { damage, log } = resolveAttack(attacker, weapon, target, { coverBonus });
     const isDead = Math.max(0, target.currentWounds - damage) <= 0;
 
