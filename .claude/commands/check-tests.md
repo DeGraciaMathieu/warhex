@@ -5,7 +5,8 @@ Les tests doivent être de **haut niveau** (macro) : ils vérifient le comportem
 1. Lis les fichiers sources dans `src/` pour identifier les fonctionnalités du jeu.
 2. Lis les tests existants dans `tests/` pour identifier ce qui est déjà couvert.
 3. Compare les fonctionnalités aux tests existants et identifie les manques.
-4. Pour chaque manque identifié, crée les tests dans le fichier approprié de `tests/`.
+4. Liste les tests proposés à l'utilisateur et attends sa validation avant de les écrire.
+5. Pour chaque test validé, crée-le dans le fichier approprié de `tests/`.
 5. Les tests doivent :
    - Vérifier des comportements macro (ex: "un tir hors portée ne fait pas de dégâts", "une unité morte ne peut plus agir")
    - Ne PAS tester les détails internes (ex: valeurs intermédiaires, structure des objets retournés)
