@@ -544,6 +544,44 @@ function SceneTownControl() {
     );
 }
 
+function IndicatorIcon({ type }) {
+    const ref = useRef(null);
+    useEffect(() => {
+        const canvas = ref.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, 20, 20);
+        const cx = 10, cy = 10;
+        if (type === "cover" || type === "river") {
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - 5);
+            ctx.lineTo(cx + 5, cy - 6);
+            ctx.lineTo(cx + 5, cy + 1);
+            ctx.quadraticCurveTo(cx, cy + 6, cx, cy + 6);
+            ctx.quadraticCurveTo(cx, cy + 6, cx - 5, cy + 1);
+            ctx.lineTo(cx - 5, cy - 6);
+            ctx.closePath();
+            ctx.fillStyle = type === "cover" ? "#4caf50" : "#e53935";
+            ctx.fill();
+        } else if (type === "hill") {
+            ctx.beginPath();
+            ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+            ctx.strokeStyle = "#1e88e5";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(cx - 5, cy);
+            ctx.lineTo(cx + 5, cy);
+            ctx.moveTo(cx, cy - 5);
+            ctx.lineTo(cx, cy + 5);
+            ctx.strokeStyle = "#1e88e5";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+    }, [type]);
+    return <canvas ref={ref} width={20} height={20} style={{ display: "inline-block", verticalAlign: "middle" }} />;
+}
+
 const SECTION_STYLE = {
     background: "#ece5d8", border: "1px solid #d5cbb8", borderRadius: 4, padding: 16, marginBottom: 16,
 };
@@ -706,7 +744,28 @@ export default function Guide({ onBack }) {
                     </div>
                 </div>
 
-<div style={{ textAlign: "center", marginTop: 8, marginBottom: 20 }}>
+                <div style={SECTION_STYLE}>
+                    <div style={TITLE_STYLE}>INDICATEURS DE TERRAIN</div>
+                    <div style={TEXT_STYLE}>
+                        <p style={{ margin: "0 0 8px" }}>Les unités affichent de petites icônes en haut à droite de leur cercle selon le terrain qu'elles occupent :</p>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <IndicatorIcon type="cover" />
+                                <span><strong>Bouclier vert</strong> — Couvert (ville ou forêt) : −1 au seuil de sauvegarde</span>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <IndicatorIcon type="river" />
+                                <span><strong>Bouclier rouge</strong> — Rivière : +1 au seuil de sauvegarde</span>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <IndicatorIcon type="hill" />
+                                <span><strong>Viseur bleu</strong> — Colline : +1 portée à distance</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ textAlign: "center", marginTop: 8, marginBottom: 20 }}>
                     <button className="btn btn-grey" onClick={onBack} style={{ width: "auto", padding: "6px 16px" }}>
                         Retour
                     </button>

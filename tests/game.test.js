@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { hexKey, reachableHexes, isValidHex } from "../src/hex.js";
 import { createUnit, resetUID } from "../src/units.js";
-import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect } from "../src/game.js";
+import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, getUnitTerrainEffects } from "../src/game.js";
 
 beforeEach(() => resetUID());
 
@@ -644,6 +644,49 @@ describe("malus rivière en combat", () => {
             if (rNo.anim) totalNoRiver += rNo.anim.damage;
         }
         expect(totalWithRiver).toBeGreaterThan(totalNoRiver);
+    });
+});
+
+describe("indicateurs de terrain", () => {
+    it("une unité sur une ville a l'effet cover", () => {
+        const town = { q: 0, r: 0, s: 0 };
+        const unit = createUnit("warrior", 1, town);
+        const s = makeState({ units: [unit], towns: [town] });
+        expect(getUnitTerrainEffects(unit, s)).toEqual(["cover"]);
+    });
+
+    it("une unité sur une forêt a l'effet cover", () => {
+        const forest = { q: 0, r: 0, s: 0 };
+        const unit = createUnit("warrior", 1, forest);
+        const s = makeState({ units: [unit], forests: [forest] });
+        expect(getUnitTerrainEffects(unit, s)).toEqual(["cover"]);
+    });
+
+    it("une unité sur une rivière a l'effet river", () => {
+        const river = { q: 0, r: 0, s: 0 };
+        const unit = createUnit("warrior", 1, river);
+        const s = makeState({ units: [unit], rivers: [river] });
+        expect(getUnitTerrainEffects(unit, s)).toEqual(["river"]);
+    });
+
+    it("une unité sur une colline a l'effet hill", () => {
+        const hill = { q: 0, r: 0, s: 0 };
+        const unit = createUnit("warrior", 1, hill);
+        const s = makeState({ units: [unit], hills: [hill] });
+        expect(getUnitTerrainEffects(unit, s)).toEqual(["hill"]);
+    });
+
+    it("une unité sur un terrain neutre n'a aucun effet", () => {
+        const unit = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const s = makeState({ units: [unit] });
+        expect(getUnitTerrainEffects(unit, s)).toEqual([]);
+    });
+
+    it("une unité sur un marais n'a aucun effet visuel", () => {
+        const swamp = { q: 0, r: 0, s: 0 };
+        const unit = createUnit("warrior", 1, swamp);
+        const s = makeState({ units: [unit], swamps: [swamp] });
+        expect(getUnitTerrainEffects(unit, s)).toEqual([]);
     });
 });
 

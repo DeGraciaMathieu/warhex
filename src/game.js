@@ -2,6 +2,19 @@ import { hexDistance, hexKey, reachableHexes, hasLineOfSight } from "./hex.js";
 import { resolveAttack } from "./combat.js";
 import { computeTownControl, checkWinner, ACTIVATIONS_PER_TURN } from "./units.js";
 
+export function getUnitTerrainEffects(unit, state) {
+    const k = hexKey(unit.hex);
+    const townKeys = new Set((state.towns || []).map(hexKey));
+    const forestKeys = new Set((state.forests || []).map(hexKey));
+    const riverKeys = new Set((state.rivers || []).map(hexKey));
+    const hillKeys = new Set((state.hills || []).map(hexKey));
+    const effects = [];
+    if (townKeys.has(k) || forestKeys.has(k)) effects.push("cover");
+    if (riverKeys.has(k)) effects.push("river");
+    if (hillKeys.has(k)) effects.push("hill");
+    return effects;
+}
+
 function buildLosKeys(state) {
     return new Set([...state.obstacles, ...(state.towns || []), ...(state.forests || []), ...(state.hills || [])].map(hexKey));
 }

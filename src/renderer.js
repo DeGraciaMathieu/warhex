@@ -1,4 +1,5 @@
 import { HEX_SIZE, hexToPixel, hexKey, isValidHex, hexCorners } from "./hex.js";
+import { getUnitTerrainEffects } from "./game.js";
 
 export const CANVAS_W = 700;
 export const CANVAS_H = 616;
@@ -163,11 +164,44 @@ export function drawScene(canvas, state, hoveredHex) {
         ctx.fillStyle = ratio > 0.5 ? "#4caf50" : ratio > 0.25 ? "#ff9800" : "#e53935";
         ctx.fillRect(bx, by, bw * ratio, bh);
 
-        // Player dot
-        ctx.beginPath();
-        ctx.arc(px + r - 4, py - r + 4, 4, 0, Math.PI * 2);
-        ctx.fillStyle = unit.player === 1 ? "#2a6fa8" : "#a03030";
-        ctx.fill();
+        // Terrain effect indicators (top-right of unit circle)
+        const effects = getUnitTerrainEffects(unit, state);
+        const iconSize = 10;
+        effects.forEach((effect, i) => {
+            const ix = px + r - 4 - i * (iconSize + 1);
+            const iy = py - r + 4;
+            if (effect === "cover" || effect === "river") {
+                ctx.beginPath();
+                ctx.moveTo(ix, iy - 4);
+                ctx.lineTo(ix + 4, iy - 5);
+                ctx.lineTo(ix + 4, iy + 1);
+                ctx.quadraticCurveTo(ix, iy + 5, ix, iy + 5);
+                ctx.quadraticCurveTo(ix, iy + 5, ix - 4, iy + 1);
+                ctx.lineTo(ix - 4, iy - 5);
+                ctx.closePath();
+                ctx.fillStyle = effect === "cover" ? "#4caf50" : "#e53935";
+                ctx.fill();
+                ctx.strokeStyle = "#000";
+                ctx.lineWidth = 0.8;
+                ctx.stroke();
+            } else if (effect === "hill") {
+                ctx.beginPath();
+                ctx.arc(ix, iy, 4, 0, Math.PI * 2);
+                ctx.fillStyle = "#1e88e5";
+                ctx.fill();
+                ctx.strokeStyle = "#000";
+                ctx.lineWidth = 0.8;
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(ix - 3, iy);
+                ctx.lineTo(ix + 3, iy);
+                ctx.moveTo(ix, iy - 3);
+                ctx.lineTo(ix, iy + 3);
+                ctx.strokeStyle = "#fff";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        });
     });
 
     // Dying units animation
