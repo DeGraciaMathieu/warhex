@@ -169,15 +169,23 @@ describe("forêts", () => {
 });
 
 describe("collines", () => {
-    it("une colline ne coûte pas de mouvement supplémentaire", () => {
+    it("entrer sur une colline coûte 2 points de mouvement", () => {
         const origin = { q: 0, r: 0, s: 0 };
         const hill = { q: 1, r: -1, s: 0 };
-        // Les collines ne sont ni dans stopKeys ni dans costKeys
-        const reachable = reachableHexes(origin, 1, new Set());
-        const reachableKeys = new Set(reachable.map(hexKey));
-        expect(reachableKeys.has(hexKey(hill))).toBe(true);
+        const costKeys = new Set([hexKey(hill)]);
+        const reachable1 = reachableHexes(origin, 1, new Set(), new Set(), new Set(), costKeys);
+        expect(new Set(reachable1.map(hexKey)).has(hexKey(hill))).toBe(false);
+        const reachable2 = reachableHexes(origin, 2, new Set(), new Set(), new Set(), costKeys);
+        expect(new Set(reachable2.map(hexKey)).has(hexKey(hill))).toBe(true);
     });
 
+    it("une colline réduit la portée de déplacement effective", () => {
+        const origin = { q: 0, r: 0, s: 0 };
+        const costKeys = new Set([hexKey({ q: 1, r: -1, s: 0 })]);
+        const withHill = reachableHexes(origin, 3, new Set(), new Set(), new Set(), costKeys);
+        const withoutHill = reachableHexes(origin, 3, new Set(), new Set(), new Set(), new Set());
+        expect(withHill.length).toBeLessThan(withoutHill.length);
+    });
 });
 
 describe("interactions terrain combinées", () => {

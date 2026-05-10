@@ -381,7 +381,7 @@ export default function Guide({ onBack }) {
                         </div>
                         <div>
                             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>⛰ Collines</div>
-                            <div style={TEXT_STYLE}>Les unités à distance sur une colline gagnent +1 de portée pour leurs armes à distance.</div>
+                            <div style={TEXT_STYLE}>Entrer sur une colline coûte 2 points de mouvement. Les unités à distance sur une colline gagnent +1 de portée pour leurs armes à distance.</div>
                             <div style={{ marginTop: 6 }}>
                                 <SceneHillRange />
                             </div>

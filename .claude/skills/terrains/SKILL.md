@@ -14,7 +14,7 @@ auto_invoke: true
 | **Rivieres** | Entrer stoppe le mouvement | Ne bloquent pas | - |
 | **Villes** | Entrer stoppe le mouvement | Bloquent | -1 au seuil de sauvegarde (cover bonus) |
 | **Forets** | Coutent 2 PM au lieu de 1 | Bloquent (sauf depuis/vers) | Generees en 3 zones contigues de 2-5 hexes |
-| **Collines** | Normal | Ne bloquent pas | +1 portee armes a distance si tireur sur colline |
+| **Collines** | Coutent 2 PM au lieu de 1 | Ne bloquent pas | +1 portee armes a distance si tireur sur colline |
 | **Marais** | Entrer stoppe le mouvement | Ne bloquent pas | 1 degat poison a l'entree |
 
 ## Implementation
@@ -24,7 +24,7 @@ auto_invoke: true
 3 categories de clefs hexagonales :
 - `obstacleKeys` — hexes totalement bloques (obstacles)
 - `stopKeys` — hexes qui stoppent le mouvement du tour (rivieres, villes, marais)
-- `costKeys` — hexes a cout double (forets)
+- `costKeys` — hexes a cout double (forets, collines)
 
 ### Ligne de vue (`hex.js` - `hasLineOfSight()`)
 
