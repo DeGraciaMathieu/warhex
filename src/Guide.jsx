@@ -633,6 +633,7 @@ export default function Guide({ onBack }) {
                             <div style={{ marginTop: 6 }}>
                                 <SceneRiverCost />
                             </div>
+                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Malus défensif : +1 au seuil de sauvegarde.</div>
                             <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Ne bloque pas la ligne de vue.</div>
                             <div style={{ marginTop: 6 }}>
                                 <SceneRiverLos />

@@ -627,6 +627,26 @@ describe("couvert de forêt en combat", () => {
     });
 });
 
+describe("malus rivière en combat", () => {
+    it("une cible sur une rivière subit plus de dégâts en moyenne", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const river = { q: 1, r: -1, s: 0 };
+        const weapon = attacker.weapons.find(w => w.id === "sword");
+
+        let totalWithRiver = 0, totalNoRiver = 0;
+        for (let i = 0; i < 500; i++) {
+            const sWithRiver = makeState({ units: [attacker, target], rivers: [river], pendingAttack: { attacker, target } });
+            const sNoRiver = makeState({ units: [attacker, target], rivers: [], pendingAttack: { attacker, target } });
+            const rWith = computeWeaponSelect(sWithRiver, weapon);
+            const rNo = computeWeaponSelect(sNoRiver, weapon);
+            if (rWith.anim) totalWithRiver += rWith.anim.damage;
+            if (rNo.anim) totalNoRiver += rNo.anim.damage;
+        }
+        expect(totalWithRiver).toBeGreaterThan(totalNoRiver);
+    });
+});
+
 describe("fin de partie", () => {
     it("computeEndTurn déclare un gagnant au round 5", () => {
         const town = { q: 0, r: 0, s: 0 };
