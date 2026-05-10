@@ -194,6 +194,33 @@ function SceneForestCost() {
     );
 }
 
+function SceneForestCover() {
+    return (
+        <MiniCanvas width={200} height={80} draw={(ctx) => {
+            const ox = 100, oy = 40;
+            const hexes = [{ q: -1, r: 0 }, { q: 0, r: 0 }, { q: 1, r: 0 }];
+            hexes.forEach(h => {
+                const { x, y } = miniHexToPixel(h.q, h.r);
+                const isForest = h.q === 0;
+                drawMiniHex(ctx, x + ox, y + oy,
+                    isForest ? "#b8d4a0" : "#e8e0d0",
+                    isForest ? "#5a8a40" : "#c8b898",
+                    isForest ? "🌲" : null
+                );
+            });
+            const forestPos = miniHexToPixel(0, 0);
+            drawUnit(ctx, forestPos.x + ox, forestPos.y + oy, 2, "⚔");
+            ctx.font = "bold 10px 'Cinzel', serif";
+            ctx.textAlign = "center";
+            ctx.fillStyle = "#2e7d32";
+            ctx.fillText("🛡 -1 save", forestPos.x + ox, forestPos.y + oy + MINI_HEX + 8);
+            const attPos = miniHexToPixel(-1, 0);
+            drawUnit(ctx, attPos.x + ox, attPos.y + oy, 1, "🎯");
+            drawDashedLine(ctx, attPos.x + ox + 12, attPos.y + oy, forestPos.x + ox - 12, forestPos.y + oy, "#2a6fa8");
+        }} />
+    );
+}
+
 function SceneForestShoot() {
     return (
         <MiniCanvas width={280} height={110} draw={(ctx) => {
@@ -635,6 +662,10 @@ export default function Guide({ onBack }) {
                             <div style={TEXT_STYLE}>Coûtent 2 points de mouvement pour y entrer.</div>
                             <div style={{ marginTop: 6 }}>
                                 <SceneForestCost />
+                            </div>
+                            <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Offrent un bonus de couvert au défenseur (−1 au seuil de sauvegarde).</div>
+                            <div style={{ marginTop: 6 }}>
+                                <SceneForestCover />
                             </div>
                             <div style={{ ...TEXT_STYLE, marginTop: 10 }}>Bloquent la ligne de vue entre deux cases.</div>
                             <div style={{ marginTop: 6 }}>
