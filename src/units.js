@@ -6,35 +6,35 @@ export const UNIT_TEMPLATES = {
     warrior: {
         name: "Warrior", symbol: "⚔",
         movement: 3, weaponSkill: 3, ballisticSkill: 4,
-        toughness: 4, wounds: 3, save: 4,
+        wounds: 3, save: 4,
         weapons: [
-            { id: "rifle", name: "Rifle", type: "ranged", range: 2, attacks: 2, strength: 4, ap: -1, damage: 1 },
-            { id: "sword", name: "Sword", type: "melee", range: 1, attacks: 3, strength: 4, ap: 0, damage: 1 },
+            { id: "rifle", name: "Rifle", type: "ranged", range: 2, attacks: 2, ap: -1, damage: 1 },
+            { id: "sword", name: "Sword", type: "melee", range: 1, attacks: 3, ap: 0, damage: 1 },
         ],
     },
     knight: {
         name: "Knight", symbol: "🐴",
         movement: 5, weaponSkill: 3, ballisticSkill: 4,
-        toughness: 4, wounds: 2, save: 4,
+        wounds: 2, save: 4,
         weapons: [
-            { id: "lance", name: "Lance", type: "melee", range: 1, attacks: 2, strength: 4, ap: -1, damage: 1 },
+            { id: "lance", name: "Lance", type: "melee", range: 1, attacks: 2, ap: -1, damage: 1 },
         ],
     },
     sniper: {
         name: "Sniper", symbol: "🎯",
         movement: 2, weaponSkill: 5, ballisticSkill: 2,
-        toughness: 3, wounds: 1, save: 5,
+        wounds: 1, save: 5,
         weapons: [
-            { id: "sniper_rifle", name: "Sniper Rifle", type: "ranged", range: 4, attacks: 1, strength: 5, ap: -2, damage: 2 },
-            { id: "pistol", name: "Pistol", type: "ranged", range: 1, attacks: 1, strength: 3, ap: 0, damage: 1 },
+            { id: "sniper_rifle", name: "Sniper Rifle", type: "ranged", range: 4, attacks: 1, ap: -2, damage: 2 },
+            { id: "pistol", name: "Pistol", type: "ranged", range: 1, attacks: 1, ap: 0, damage: 1 },
         ],
     },
     berserker: {
         name: "Berserker", symbol: "🪓",
         movement: 3, weaponSkill: 2, ballisticSkill: 6,
-        toughness: 4, wounds: 2, save: 6,
+        wounds: 2, save: 6,
         weapons: [
-            { id: "chain_axe", name: "Chain Axe", type: "melee", range: 1, attacks: 4, strength: 5, ap: -1, damage: 1 },
+            { id: "chain_axe", name: "Chain Axe", type: "melee", range: 1, attacks: 4, ap: -1, damage: 1 },
         ],
     },
 };

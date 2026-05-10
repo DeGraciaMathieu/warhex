@@ -325,7 +325,6 @@ export default function Guide({ onBack }) {
                                     <span>Sauvegarde : <strong>{t.save}+</strong></span>
                                     <span>CC : <strong>{t.weaponSkill}+</strong></span>
                                     <span>CT : <strong>{t.ballisticSkill}+</strong></span>
-                                    <span>Endurance : <strong>{t.toughness}</strong></span>
                                 </div>
                                 <div style={{ fontSize: 12, color: "#6a5a40" }}>
                                     {t.weapons.map(w => (

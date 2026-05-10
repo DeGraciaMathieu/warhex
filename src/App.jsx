@@ -272,7 +272,7 @@ export default function HexWarhammer() {
                                 {[
                                     ["PV (points de vie)", `${sel.currentWounds}/${sel.wounds}`, sel.currentWounds > sel.wounds / 2 ? "#4caf50" : "#e53935"],
                                     ["MVT (mouvement)", sel.movement], ["CC (capacité combat)", `${sel.weaponSkill}+`], ["CT (capacité tir)", `${sel.ballisticSkill}+`],
-                                    ["END (endurance)", sel.toughness], ["SVG (sauvegarde)", `${sel.save}+`],
+                                    ["SVG (sauvegarde)", `${sel.save}+`],
                                     ["Déplacé", sel.hasMoved ? "✓" : "—"], ["Attaqué", sel.hasAttacked ? "✓" : "—"],
                                 ].map(([label, val, c]) => (
                                     <div key={label} className="sr">
@@ -289,7 +289,6 @@ export default function HexWarhammer() {
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 12px", fontSize: 12, color: "#5a5040" }}>
                                             <span>Portée : {w.range}</span>
                                             <span>ATQ : {w.attacks}</span>
-                                            <span>F : {w.strength}</span>
                                             <span>PA : {w.ap}</span>
                                             <span>DGT : {w.damage}</span>
                                         </div>
