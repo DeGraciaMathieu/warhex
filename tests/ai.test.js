@@ -303,3 +303,37 @@ describe("IA — villes possédées vs menacées", () => {
         expect(hexKey(dest)).toBe(hexKey(freeTown));
     });
 });
+
+describe("IA — capture de ville prioritaire sur attaque", () => {
+    it("préfère capturer une ville atteignable plutôt qu'attaquer un ennemi à portée", () => {
+        const town = { q: 1, r: 0, s: -1 };
+        const u1 = createUnit("warrior", 1, { q: -1, r: 0, s: 1 });
+        const u2 = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        const state = makeState({
+            units: [u1, u2],
+            towns: [town],
+            selectedUnit: u2,
+            phase: "move",
+        });
+        const action = computeAIAction(state);
+        // L'IA devrait se déplacer vers la ville, pas attaquer l'ennemi adjacent
+        expect(action.type).toBe("click");
+        expect(hexKey(action.hex)).toBe(hexKey(town));
+    });
+
+    it("attaque si aucune ville prioritaire n'est atteignable", () => {
+        const town = { q: 5, r: 0, s: -5 };
+        const u1 = createUnit("warrior", 1, { q: -1, r: 0, s: 1 });
+        const u2 = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        const state = makeState({
+            units: [u1, u2],
+            towns: [town],
+            selectedUnit: u2,
+            phase: "move",
+        });
+        const action = computeAIAction(state);
+        // La ville est trop loin, l'IA devrait attaquer l'ennemi à portée
+        expect(action.type).toBe("click");
+        expect(hexKey(action.hex)).toBe(hexKey(u1.hex));
+    });
+});

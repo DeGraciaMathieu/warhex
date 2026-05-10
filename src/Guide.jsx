@@ -396,6 +396,19 @@ export default function Guide({ onBack }) {
                     </div>
                 </div>
 
+                <div style={SECTION_STYLE}>
+                    <div style={TITLE_STYLE}>INTELLIGENCE ARTIFICIELLE</div>
+                    <div style={TEXT_STYLE}>
+                        <p style={{ marginBottom: 8 }}>Le joueur 2 est contrôlé par une IA qui suit ces priorités :</p>
+                        <ol style={{ margin: 0, paddingLeft: 20 }}>
+                            <li><strong>Capturer une ville</strong> — si une ville prioritaire (non possédée ou menacée) est atteignable, l'IA s'y déplace avant toute attaque.</li>
+                            <li><strong>Attaquer</strong> — cible en priorité les ennemis sur les villes, puis les unités les plus faibles.</li>
+                            <li><strong>Se repositionner</strong> — se rapproche des villes prioritaires ou des ennemis.</li>
+                        </ol>
+                        <p style={{ marginTop: 8 }}>L'IA ignore les villes qu'elle possède déjà si aucun ennemi ne peut les atteindre.</p>
+                    </div>
+                </div>
+
                 <div style={{ textAlign: "center", marginTop: 8, marginBottom: 20 }}>
                     <button className="btn btn-grey" onClick={onBack} style={{ width: "auto", padding: "6px 16px" }}>
                         Retour

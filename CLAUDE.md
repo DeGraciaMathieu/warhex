@@ -49,6 +49,15 @@ Chaque tour, un joueur active **deux unités** (`ACTIVATIONS_PER_TURN = 2`), une
 2. **Sauvegarde** : 3 dés, jet >= (save - coverBonus + |PA|), impossible si > 6
 3. **Dégâts** : touches non sauvées × damage
 
+## IA (joueur 2)
+
+Ordre de priorité dans `computeAIAction` :
+1. **Capturer une ville prioritaire** — si une ville atteignable est non possédée ou menacée par un ennemi, l'IA s'y déplace avant toute attaque
+2. **Attaquer** — cible les ennemis sur les villes en priorité, puis les plus faibles
+3. **Se déplacer** — vers la ville prioritaire la plus proche, ou à défaut vers l'ennemi
+
+Une ville possédée et non menacée est ignorée (l'IA ne gaspille pas de mouvement pour la défendre).
+
 ## Conventions de code
 
 - Toute logique métier (scoring, victoire, terrain) doit être dans des fonctions pures exportées (`hex.js`, `combat.js`, `units.js`), jamais directement dans `App.jsx`

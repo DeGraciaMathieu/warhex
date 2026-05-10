@@ -194,6 +194,16 @@ export function computeAIAction(state) {
 
         const sel = state.units.find(u => u.id === state.selectedUnit.id);
 
+        // Move first if a priority town is reachable (capture > opportunistic attack)
+        if (!sel.hasMoved) {
+            const moveHex = pickMoveTarget(sel, state);
+            if (moveHex) {
+                const { townKeys, priorityTowns } = townContext(state);
+                const movesToTown = townKeys.has(hexKey(moveHex)) && priorityTowns.some(t => hexKey(t) === hexKey(moveHex));
+                if (movesToTown) return { type: "click", hex: moveHex };
+            }
+        }
+
         if (!sel.hasAttacked) {
             const target = pickTarget(sel, state);
             if (target) return { type: "click", hex: target.hex };
