@@ -281,6 +281,21 @@ export default function HexWarhammer() {
                                     </div>
                                 ))}
                             </div>
+                            <div style={{ borderTop: "1px solid #d5cbb8", paddingTop: 10, marginTop: 6 }}>
+                                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 6 }}>ARMES</div>
+                                {sel.weapons.map(w => (
+                                    <div key={w.id} style={{ fontSize: 13, color: "#3a3020", marginBottom: 8, padding: "6px 8px", background: "#ece6da", borderRadius: 4 }}>
+                                        <div style={{ fontWeight: 600, marginBottom: 3 }}>{w.name} <span style={{ color: "#8a7a60", fontWeight: 400 }}>({w.type === "ranged" ? "tir" : "mêlée"})</span></div>
+                                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 12px", fontSize: 12, color: "#5a5040" }}>
+                                            <span>Portée : {w.range}</span>
+                                            <span>ATQ : {w.attacks}</span>
+                                            <span>F : {w.strength}</span>
+                                            <span>PA : {w.ap}</span>
+                                            <span>DGT : {w.damage}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </>
                     ) : (
                         <div style={{ color: "#a09080", fontSize: 14, fontStyle: "italic" }}>Cliquez sur une de vos unités pour la sélectionner.</div>
