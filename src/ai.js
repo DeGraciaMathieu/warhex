@@ -26,7 +26,28 @@ function townContext(state) {
     }
     const emptyTowns = (state.towns || []).filter(t => !unitOnTown.has(hexKey(t)));
     const enemyOnTown = [...unitOnTown.values()].filter(u => u.player === 1);
-    return { townKeys, unitOnTown, emptyTowns, enemyOnTown };
+
+    const ownership = state.townOwnership || {};
+    const { obsKeys, stopKeys, forestKeys } = buildTerrainKeys(state);
+    const enemies = aliveUnits.filter(u => u.player === 1);
+    const occupied = new Set(aliveUnits.map(u => hexKey(u.hex)));
+
+    const threatenedKeys = new Set();
+    for (const enemy of enemies) {
+        const reachable = reachableHexes(enemy.hex, enemy.movement, occupied, obsKeys, stopKeys, forestKeys);
+        for (const h of reachable) {
+            const k = hexKey(h);
+            if (townKeys.has(k)) threatenedKeys.add(k);
+        }
+    }
+
+    const priorityTowns = emptyTowns.filter(t => {
+        const k = hexKey(t);
+        if (ownership[k] !== 2) return true;
+        return threatenedKeys.has(k);
+    });
+
+    return { townKeys, unitOnTown, emptyTowns, enemyOnTown, priorityTowns };
 }
 
 export function pickBestUnit(state) {
@@ -36,7 +57,7 @@ export function pickBestUnit(state) {
     const losKeys = buildLosKeys(state);
     const enemies = state.units.filter(u => u.player === 1 && u.currentWounds > 0);
     const hillKeys = new Set((state.hills || []).map(hexKey));
-    const { enemyOnTown, emptyTowns } = townContext(state);
+    const { enemyOnTown, priorityTowns } = townContext(state);
     const enemyOnTownKeys = new Set(enemyOnTown.map(u => hexKey(u.hex)));
 
     let best = null;
@@ -52,9 +73,9 @@ export function pickBestUnit(state) {
         if (canHitTownEnemy) score += 100;
         else if (targets.length > 0) score += 10;
 
-        // Close to an empty town — good candidate to capture
-        if (emptyTowns.length > 0) {
-            const distToTown = Math.min(...emptyTowns.map(t => hexDistance(unit.hex, t)));
+        // Close to a priority town (not owned or owned but threatened)
+        if (priorityTowns.length > 0) {
+            const distToTown = Math.min(...priorityTowns.map(t => hexDistance(unit.hex, t)));
             score += 20 / (1 + distToTown);
         }
 
@@ -73,7 +94,7 @@ export function pickMoveTarget(unit, state) {
     const reachable = reachableHexes(unit.hex, unit.movement, occupied, obsKeys, stopKeys, forestKeys);
     if (reachable.length === 0) return null;
 
-    const { townKeys, emptyTowns, enemyOnTown } = townContext(state);
+    const { townKeys, priorityTowns, enemyOnTown } = townContext(state);
 
     // Stay on town unless first activation and an ally can replace us
     if (townKeys.has(hexKey(unit.hex))) {
@@ -87,19 +108,19 @@ export function pickMoveTarget(unit, state) {
         if (!canReplace) return null;
     }
 
-    // 1. Can reach an empty town directly — take it
-    const reachableTown = reachable.find(h => townKeys.has(hexKey(h)) && emptyTowns.some(t => hexKey(t) === hexKey(h)));
+    // 1. Can reach a priority town directly — take it
+    const reachableTown = reachable.find(h => townKeys.has(hexKey(h)) && priorityTowns.some(t => hexKey(t) === hexKey(h)));
     if (reachableTown) return reachableTown;
 
-    // 2. Move toward closest empty town
-    if (emptyTowns.length > 0) {
+    // 2. Move toward closest priority town
+    if (priorityTowns.length > 0) {
         reachable.sort((a, b) => {
-            const da = Math.min(...emptyTowns.map(t => hexDistance(a, t)));
-            const db = Math.min(...emptyTowns.map(t => hexDistance(b, t)));
+            const da = Math.min(...priorityTowns.map(t => hexDistance(a, t)));
+            const db = Math.min(...priorityTowns.map(t => hexDistance(b, t)));
             return da - db;
         });
-        const bestDist = Math.min(...emptyTowns.map(t => hexDistance(reachable[0], t)));
-        const currentDist = Math.min(...emptyTowns.map(t => hexDistance(unit.hex, t)));
+        const bestDist = Math.min(...priorityTowns.map(t => hexDistance(reachable[0], t)));
+        const currentDist = Math.min(...priorityTowns.map(t => hexDistance(unit.hex, t)));
         if (bestDist < currentDist) return reachable[0];
     }
 

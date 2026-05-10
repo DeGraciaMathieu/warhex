@@ -251,3 +251,55 @@ describe("IA — contrôle des villes", () => {
         expect(distAfter).toBeLessThan(distBefore);
     });
 });
+
+describe("IA — villes possédées vs menacées", () => {
+    it("ignore une ville possédée non menacée", () => {
+        const u1 = createUnit("warrior", 1, { q: -6, r: 0, s: 6 });
+        const u2 = createUnit("warrior", 2, { q: 2, r: 0, s: -2 });
+        const town = { q: 0, r: 0, s: 0 };
+        const state = makeState({
+            units: [u1, u2],
+            towns: [town],
+            townOwnership: { [hexKey(town)]: 2 },
+        });
+        const dest = pickMoveTarget(u2, state);
+        // L'ennemi est trop loin pour menacer la ville, l'IA ne devrait pas s'y diriger
+        if (dest) {
+            const distToTown = Math.max(Math.abs(dest.q - town.q), Math.abs(dest.r - town.r), Math.abs(dest.s - town.s));
+            const distToEnemy = Math.max(Math.abs(dest.q - u1.hex.q), Math.abs(dest.r - u1.hex.r), Math.abs(dest.s - u1.hex.s));
+            // Devrait se diriger vers l'ennemi, pas vers la ville
+            const origDistToEnemy = Math.max(Math.abs(u2.hex.q - u1.hex.q), Math.abs(u2.hex.r - u1.hex.r), Math.abs(u2.hex.s - u1.hex.s));
+            expect(distToEnemy).toBeLessThan(origDistToEnemy);
+        }
+    });
+
+    it("se dirige vers une ville possédée menacée par un ennemi", () => {
+        const town = { q: 0, r: 0, s: 0 };
+        const u1 = createUnit("warrior", 1, { q: -1, r: 0, s: 1 });
+        const u2 = createUnit("warrior", 2, { q: 3, r: 0, s: -3 });
+        const state = makeState({
+            units: [u1, u2],
+            towns: [town],
+            townOwnership: { [hexKey(town)]: 2 },
+        });
+        const dest = pickMoveTarget(u2, state);
+        expect(dest).toBeDefined();
+        const distBefore = Math.max(Math.abs(u2.hex.q - town.q), Math.abs(u2.hex.r - town.r), Math.abs(u2.hex.s - town.s));
+        const distAfter = Math.max(Math.abs(dest.q - town.q), Math.abs(dest.r - town.r), Math.abs(dest.s - town.s));
+        expect(distAfter).toBeLessThan(distBefore);
+    });
+
+    it("priorise une ville non possédée sur une ville possédée non menacée", () => {
+        const ownedTown = { q: -1, r: 0, s: 1 };
+        const freeTown = { q: 1, r: 0, s: -1 };
+        const u1 = createUnit("warrior", 1, { q: -6, r: 0, s: 6 });
+        const u2 = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        const state = makeState({
+            units: [u1, u2],
+            towns: [ownedTown, freeTown],
+            townOwnership: { [hexKey(ownedTown)]: 2 },
+        });
+        const dest = pickMoveTarget(u2, state);
+        expect(hexKey(dest)).toBe(hexKey(freeTown));
+    });
+});
