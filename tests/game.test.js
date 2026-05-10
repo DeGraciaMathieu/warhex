@@ -29,6 +29,7 @@ function makeState(overrides = {}) {
         activeUnitId: null,
         activationsUsed: 0,
         activatedUnitIds: [],
+        townOwnership: {},
         autoEndTurn: false,
         ...overrides,
     };
@@ -153,7 +154,7 @@ describe("fin de tour", () => {
     it("computeEndTurn marque les points des villes en fin de round", () => {
         const town = { q: 0, r: 0, s: 0 };
         const u1 = createUnit("warrior", 1, town);
-        const s = makeState({ units: [u1], towns: [town], currentPlayer: 2 });
+        const s = makeState({ units: [u1], towns: [town], currentPlayer: 2, townOwnership: { [hexKey(town)]: 1 } });
         const result = computeEndTurn(s);
         expect(result.scores[1]).toBe(1);
     });
@@ -547,6 +548,7 @@ describe("fin de partie", () => {
         const s = makeState({
             units: [u1, enemy], towns: [town], currentPlayer: 2,
             round: 5, scores: { 1: 3, 2: 1 },
+            townOwnership: { [hexKey(town)]: 1 },
         });
         const result = computeEndTurn(s);
         expect(result.winner).not.toBeNull();
@@ -559,6 +561,7 @@ describe("fin de partie", () => {
         const s = makeState({
             units: [u1, enemy], towns: [town], currentPlayer: 2,
             round: 4, scores: { 1: 10, 2: 0 },
+            townOwnership: { [hexKey(town)]: 1 },
         });
         const result = computeEndTurn(s);
         expect(result.winner).toBeNull();
@@ -702,5 +705,54 @@ describe("déplacement", () => {
         const origin = { q: 0, r: 0, s: 0 };
         const reachable = reachableHexes(origin, 0, new Set());
         expect(reachable).toHaveLength(0);
+    });
+});
+
+describe("capture de villes", () => {
+    it("se déplacer sur une ville la capture pour le joueur", () => {
+        const town = { q: 0, r: 0, s: 0 };
+        const u1 = createUnit("warrior", 1, { q: -1, r: 0, s: 1 });
+        const enemy = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
+        const s = makeState({ units: [u1, enemy], towns: [town] });
+        const selected = handleClick(s, u1.hex);
+        const moved = handleClick(selected, town);
+        expect(moved.townOwnership[hexKey(town)]).toBe(1);
+    });
+
+    it("un adversaire peut reprendre une ville capturée", () => {
+        const town = { q: 0, r: 0, s: 0 };
+        const u2 = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const enemy = createUnit("warrior", 1, { q: -3, r: 3, s: 0 });
+        const s = makeState({
+            units: [u2, enemy],
+            towns: [town],
+            currentPlayer: 2,
+            townOwnership: { [hexKey(town)]: 1 },
+        });
+        const selected = handleClick(s, u2.hex);
+        const moved = handleClick(selected, town);
+        expect(moved.townOwnership[hexKey(town)]).toBe(2);
+    });
+
+    it("se déplacer sur un hex sans ville ne change pas townOwnership", () => {
+        const town = { q: 2, r: -2, s: 0 };
+        const u1 = createUnit("warrior", 1, { q: -1, r: 0, s: 1 });
+        const enemy = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
+        const s = makeState({ units: [u1, enemy], towns: [town] });
+        const selected = handleClick(s, u1.hex);
+        const moved = handleClick(selected, { q: 0, r: 0, s: 0 });
+        expect(moved.townOwnership).toEqual({});
+    });
+
+    it("une ville capturée reste au joueur même sans unité dessus", () => {
+        const town = { q: 0, r: 0, s: 0 };
+        const ownership = { [hexKey(town)]: 1 };
+        const u1 = createUnit("warrior", 1, { q: -2, r: 0, s: 2 });
+        const enemy = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
+        const s = makeState({ units: [u1, enemy], towns: [town], townOwnership: ownership });
+        // Le joueur se déplace ailleurs, la ville reste à lui
+        const selected = handleClick(s, u1.hex);
+        const moved = handleClick(selected, { q: -1, r: 0, s: 1 });
+        expect(moved.townOwnership[hexKey(town)]).toBe(1);
     });
 });

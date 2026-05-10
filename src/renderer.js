@@ -29,6 +29,7 @@ export function drawScene(canvas, state, hoveredHex) {
     const forestKeys = new Set((state.forests || []).map(hexKey));
     const hillKeys = new Set((state.hills || []).map(hexKey));
     const swampKeys = new Set((state.swamps || []).map(hexKey));
+    const townOwnership = state.townOwnership || {};
 
     hexes.forEach(hex => {
         const { x, y } = hexToPixel(hex.q, hex.r);
@@ -54,13 +55,17 @@ export function drawScene(canvas, state, hoveredHex) {
         if (isSwamp) fill = "#8aaa78";
         if (isForest) fill = "#b8d4a0";
         if (isRiver) fill = "#a0c8e8";
-        if (isTown) fill = "#e8d8b0";
+        if (isTown) {
+            const owner = townOwnership[k];
+            fill = owner === 1 ? "rgba(42,111,168,0.25)" : owner === 2 ? "rgba(160,48,48,0.25)" : "#e8d8b0";
+        }
         if (isObstacle) fill = "#8a7a60";
         if (isMove) fill = isHover ? "rgba(58,128,196,0.35)" : "rgba(58,128,196,0.15)";
         if (isTarget) fill = isHover ? "rgba(200,50,50,0.35)" : "rgba(200,50,50,0.15)";
         ctx.fillStyle = fill;
         ctx.fill();
-        ctx.strokeStyle = isTarget ? "#cc3333" : isMove ? "#3a7abf" : isObstacle ? "#6a5a40" : isRiver ? "#5a9abf" : isTown ? "#8a7040" : isForest ? "#5a8a40" : isHill ? "#8a7a40" : isSwamp ? "#5a7a40" : "#c8b898";
+        const townStroke = isTown ? (townOwnership[k] === 1 ? "#2a6fa8" : townOwnership[k] === 2 ? "#a03030" : "#8a7040") : null;
+        ctx.strokeStyle = isTarget ? "#cc3333" : isMove ? "#3a7abf" : isObstacle ? "#6a5a40" : isRiver ? "#5a9abf" : isTown ? townStroke : isForest ? "#5a8a40" : isHill ? "#8a7a40" : isSwamp ? "#5a7a40" : "#c8b898";
         ctx.lineWidth = isTarget || isMove ? 1.5 : 0.8;
         ctx.stroke();
 

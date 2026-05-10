@@ -62,21 +62,25 @@ export function handleClick(s, hex) {
         const movedUnit = { ...s.selectedUnit, hex, hasMoved: true };
         const swampKeys = new Set((s.swamps || []).map(hexKey));
         const hillKeys = new Set((s.hills || []).map(hexKey));
+        const townKeys = new Set((s.towns || []).map(hexKey));
         const poisoned = swampKeys.has(k)
             ? { ...movedUnit, currentWounds: Math.max(0, movedUnit.currentWounds - 1) }
             : movedUnit;
         const units = s.units.map(u => u.id === poisoned.id ? poisoned : u);
+        const townOwnership = townKeys.has(k)
+            ? { ...s.townOwnership, [k]: s.currentPlayer }
+            : s.townOwnership;
         if (poisoned.currentWounds <= 0) {
-            return { ...s, units, ...finishActivation(s, poisoned.id, units) };
+            return { ...s, units, townOwnership, ...finishActivation(s, poisoned.id, units) };
         }
         const losKeys = buildLosKeys(s);
         const enemies = units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
         const rangeBonus = hillKeys.has(hexKey(poisoned.hex)) ? 1 : 0;
         const validTargets = poisoned.hasAttacked ? [] : findValidTargets(poisoned, enemies, losKeys, rangeBonus);
         if (validTargets.length === 0) {
-            return { ...s, units, ...finishActivation(s, poisoned.id, units) };
+            return { ...s, units, townOwnership, ...finishActivation(s, poisoned.id, units) };
         }
-        return { ...s, units, selectedUnit: poisoned, activeUnitId: poisoned.id, phase: "select", validMoves: [], validTargets, autoEndTurn: false };
+        return { ...s, units, townOwnership, selectedUnit: poisoned, activeUnitId: poisoned.id, phase: "select", validMoves: [], validTargets, autoEndTurn: false };
     }
 
     if (unitOnHex && unitOnHex.player === s.currentPlayer) {
@@ -157,7 +161,7 @@ export function computeEndTurn(s) {
     const endOfRound = nextPlayer === 1;
     const scores = { ...s.scores };
     if (endOfRound) {
-        const control = computeTownControl(s.units, s.towns);
+        const control = computeTownControl(s.townOwnership || {});
         scores[1] += control[1];
         scores[2] += control[2];
     }

@@ -138,13 +138,13 @@ function generateForests(count, reservedKeys) {
     return forests;
 }
 
-export function computeTownControl(units, towns) {
-    const townKeys = new Set(towns.map(hexKey));
-    const alive = units.filter(u => u.currentWounds > 0);
-    return {
-        1: alive.filter(u => u.player === 1 && townKeys.has(hexKey(u.hex))).length,
-        2: alive.filter(u => u.player === 2 && townKeys.has(hexKey(u.hex))).length,
-    };
+export function computeTownControl(townOwnership) {
+    let p1 = 0, p2 = 0;
+    for (const player of Object.values(townOwnership)) {
+        if (player === 1) p1++;
+        else if (player === 2) p2++;
+    }
+    return { 1: p1, 2: p2 };
 }
 
 export function checkWinner(scores, round) {
@@ -260,6 +260,7 @@ export function initState(armies, options = {}) {
         activeUnitId: null,
         activationsUsed: 0,
         activatedUnitIds: [],
+        townOwnership: {},
         autoEndTurn: false,
     };
 }
