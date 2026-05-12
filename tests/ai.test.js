@@ -398,6 +398,19 @@ describe("IA — annulation d'arme", () => {
     });
 });
 
+describe("IA — repli vers l'ennemi", () => {
+    it("sans ville ni cible attaquable, se rapproche de l'ennemi le plus proche", () => {
+        const u1 = createUnit("warrior", 1, { q: -4, r: 0, s: 4 });
+        const u2 = createUnit("warrior", 2, { q: 4, r: 0, s: -4 });
+        const state = makeState({ units: [u1, u2] });
+        const dest = pickMoveTarget(u2, state);
+        expect(dest).not.toBeNull();
+        const distBefore = Math.max(Math.abs(u2.hex.q - u1.hex.q), Math.abs(u2.hex.r - u1.hex.r), Math.abs(u2.hex.s - u1.hex.s));
+        const distAfter = Math.max(Math.abs(dest.q - u1.hex.q), Math.abs(dest.r - u1.hex.r), Math.abs(dest.s - u1.hex.s));
+        expect(distAfter).toBeLessThan(distBefore);
+    });
+});
+
 describe("IA et marais", () => {
     it("une unité à 1 PV n'entre pas dans un marais", () => {
         const swamp = { q: 1, r: 0, s: -1 };

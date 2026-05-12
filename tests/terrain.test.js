@@ -213,6 +213,27 @@ describe("interactions terrain combinées", () => {
     });
 });
 
+describe("colline intermédiaire et LOS", () => {
+    it("une colline intermédiaire bloque la LOS même si le tireur est sur une colline", () => {
+        const a = { q: -3, r: 0, s: 3 };
+        const b = { q: 3, r: 0, s: -3 };
+        const hillBetween = { q: 0, r: 0, s: 0 };
+        const losKeys = new Set([hexKey(a), hexKey(hillBetween), hexKey(b)]);
+        expect(hasLineOfSight(a, b, losKeys)).toBe(false);
+    });
+});
+
+describe("marais et ligne de vue", () => {
+    it("un marais ne bloque pas la ligne de vue", () => {
+        const a = { q: -2, r: 0, s: 2 };
+        const b = { q: 2, r: 0, s: -2 };
+        const swamp = { q: 0, r: 0, s: 0 };
+        // Les marais ne font pas partie des losKeys (obstacles, villes, forêts)
+        const losKeys = new Set();
+        expect(hasLineOfSight(a, b, losKeys)).toBe(true);
+    });
+});
+
 describe("marais", () => {
     it("un marais stoppe le mouvement", () => {
         const swamp = { q: 0, r: 0, s: 0 };
