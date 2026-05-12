@@ -691,20 +691,20 @@ describe("indicateurs de terrain", () => {
 });
 
 describe("fin de partie", () => {
-    it("computeEndTurn déclare un gagnant au round 5", () => {
+    it("computeEndTurn déclare un gagnant au round 7", () => {
         const town = { q: 0, r: 0, s: 0 };
         const u1 = createUnit("warrior", 1, town);
         const enemy = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
         const s = makeState({
             units: [u1, enemy], towns: [town], currentPlayer: 2,
-            round: 5, scores: { 1: 3, 2: 1 },
+            round: 7, scores: { 1: 3, 2: 1 },
             townOwnership: { [hexKey(town)]: 1 },
         });
         const result = computeEndTurn(s);
         expect(result.winner).not.toBeNull();
     });
 
-    it("computeEndTurn ne déclare pas de gagnant avant le round 5", () => {
+    it("computeEndTurn ne déclare pas de gagnant avant le round 7", () => {
         const town = { q: 0, r: 0, s: 0 };
         const u1 = createUnit("warrior", 1, town);
         const enemy = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
