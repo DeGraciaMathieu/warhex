@@ -148,7 +148,7 @@ export function computeTownControl(townOwnership) {
 }
 
 export function checkWinner(scores, round) {
-    if (round < 5) return null;
+    if (round < 7) return null;
     if (scores[1] > scores[2]) return 1;
     if (scores[2] > scores[1]) return 2;
     return "draw";

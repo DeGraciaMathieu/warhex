@@ -265,7 +265,7 @@ export default function HexWarhammer() {
                     </div>
                     <div style={{ background: "#ece5d8", border: "1px solid #c8b898", padding: "6px 12px", fontFamily: "'Cinzel', serif", fontSize: 12, color: "#8a7a60", display: "flex", gap: 12, alignItems: "center", borderRadius: 3 }}>
                         <span style={{ color: "#2a6fa8" }}>{state.scores[1]} pts</span>
-                        <span>TOUR {state.round}/5</span>
+                        <span>TOUR {state.round}/7</span>
                         <span style={{ color: "#a03030" }}>{state.scores[2]} pts</span>
                     </div>
                 </div>
