@@ -3,7 +3,7 @@ import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.j
 import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION } from "./renderer.js";
 import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect } from "./game.js";
-import { computeAIAction } from "./ai.js";
+import { computeAIAction, buildAIPreview } from "./ai.js";
 import Guide from "./Guide.jsx";
 import "./styles.css";
 
@@ -45,21 +45,25 @@ export default function HexWarhammer() {
     }, [diceAnim]);
 
     useEffect(() => {
-        if (!state || !state.dyingUnits?.length) return;
+        const hasDying = state?.dyingUnits?.length > 0;
+        const hasPreview = !!state?.aiPreview;
+        if (!state || (!hasDying && !hasPreview)) return;
         let frameId;
         const animate = () => {
             drawScene(canvasRef.current, state, hoveredHex);
-            const now = Date.now();
-            const stillAnimating = state.dyingUnits.some(d => now - d.deathTime < DEATH_ANIM_DURATION);
-            if (stillAnimating) {
-                frameId = requestAnimationFrame(animate);
-            } else {
-                setState(s => ({ ...s, dyingUnits: [] }));
+            if (hasDying) {
+                const now = Date.now();
+                const stillAnimating = state.dyingUnits.some(d => now - d.deathTime < DEATH_ANIM_DURATION);
+                if (!stillAnimating) {
+                    setState(s => ({ ...s, dyingUnits: [] }));
+                    return;
+                }
             }
+            frameId = requestAnimationFrame(animate);
         };
         frameId = requestAnimationFrame(animate);
         return () => cancelAnimationFrame(frameId);
-    }, [state?.dyingUnits]);
+    }, [state?.dyingUnits, state?.aiPreview]);
 
     useEffect(() => {
         if (state && state.autoEndTurn) {
@@ -74,17 +78,19 @@ export default function HexWarhammer() {
         if (diceAnim && !diceAnim.done) return;
         const action = computeAIAction(state);
         if (!action) return;
-        const isNewActivation = !state.selectedUnit;
-        const delay = isNewActivation ? 1000 : action.type === "weapon" ? 800 : 700;
+
+        const preview = !state.aiPreview ? buildAIPreview(state, action) : null;
+        if (preview) {
+            setState(s => ({ ...s, aiPreview: preview }));
+            return;
+        }
+
         const timer = setTimeout(() => {
-            if (action.type === "click") {
-                setState(prev => handleClick(prev, action.hex));
-            } else if (action.type === "weapon") {
-                selectWeapon(action.weapon);
-            } else if (action.type === "endTurn") {
-                endTurn();
-            }
-        }, delay);
+            if (state.aiPreview) setState(s => ({ ...s, aiPreview: null }));
+            if (action.type === "click") setState(prev => handleClick(prev, action.hex));
+            else if (action.type === "weapon") selectWeapon(action.weapon);
+            else if (action.type === "endTurn") endTurn();
+        }, state.aiPreview ? 800 : 1000);
         return () => clearTimeout(timer);
     }, [state, vsAI, diceAnim]);
 
@@ -333,7 +339,7 @@ export default function HexWarhammer() {
                                 const attacker = state.pendingAttack.attacker;
                                 const skill = w.type === "ranged" ? attacker.ballisticSkill : attacker.weaponSkill;
                                 return (
-                                    <button key={w.id} className={`weapon-card${ok ? "" : " disabled"}`} onClick={() => ok && selectWeapon(w)}>
+                                    <button key={w.id} className={`weapon-card${ok ? "" : " disabled"}${state.aiPreview?.type === "weapon" && state.aiPreview.weapon.id === w.id ? " ai-highlight" : ""}`} onClick={() => ok && selectWeapon(w)}>
                                         <div style={{ fontWeight: 600, fontSize: 14 }}>{w.name} {w.type === "ranged" ? "🏹" : "🗡"}</div>
                                         {!ok ? (
                                             <div style={{ fontSize: 12, color: "#b0a090", marginTop: 4 }}>

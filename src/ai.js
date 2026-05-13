@@ -206,6 +206,18 @@ function pickWeapon(attacker, target, state) {
     return usable[0];
 }
 
+export function buildAIPreview(state, action) {
+    if (!action || action.type === "endTurn" || action.type === "cancel") return null;
+    if (action.type === "weapon") return { type: "weapon", weapon: action.weapon };
+    if (action.type === "click") {
+        if (!state.selectedUnit) return { type: "select", hex: action.hex };
+        const sel = state.units.find(u => u.id === state.selectedUnit.id);
+        if (sel && !sel.hasMoved && state.phase === "move") return { type: "move", hex: action.hex };
+        return { type: "attack", hex: action.hex };
+    }
+    return null;
+}
+
 export function computeAIAction(state) {
     if (state.phase === "weapon_select" && state.pendingAttack) {
         const weapon = pickWeapon(state.pendingAttack.attacker, state.pendingAttack.target, state);
