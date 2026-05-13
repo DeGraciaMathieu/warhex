@@ -18,6 +18,7 @@ export function drawScene(canvas, state, hoveredHex) {
 
     const validMoveKeys = new Set(state.validMoves.map(hexKey));
     const validTargetKeys = new Set((state.validTargets || []).map(u => hexKey(u.hex)));
+    const attackRangeKeys = new Set((state.attackRangeHexes || []).map(hexKey));
 
     const hexes = [];
     for (let q = -6; q <= 6; q++)
@@ -46,6 +47,7 @@ export function drawScene(canvas, state, hoveredHex) {
         const isSwamp = swampKeys.has(k);
         const isMove = validMoveKeys.has(k);
         const isTarget = validTargetKeys.has(k);
+        const isAttackRange = !isMove && !isTarget && attackRangeKeys.has(k);
         const isHover = hoveredHex && hexKey(hoveredHex) === k;
         const corners = hexCorners(px, py, HEX_SIZE);
 
@@ -63,13 +65,14 @@ export function drawScene(canvas, state, hoveredHex) {
             fill = owner === 1 ? "rgba(42,111,168,0.25)" : owner === 2 ? "rgba(160,48,48,0.25)" : "#e8d8b0";
         }
         if (isObstacle) fill = "#8a7a60";
+        if (isAttackRange) fill = isHover ? "rgba(200,100,50,0.25)" : "rgba(200,100,50,0.08)";
         if (isMove) fill = isHover ? "rgba(58,128,196,0.35)" : "rgba(58,128,196,0.15)";
         if (isTarget) fill = isHover ? "rgba(200,50,50,0.35)" : "rgba(200,50,50,0.15)";
         ctx.fillStyle = fill;
         ctx.fill();
         const townStroke = isTown ? (townOwnership[k] === 1 ? "#2a6fa8" : townOwnership[k] === 2 ? "#a03030" : "#8a7040") : null;
-        ctx.strokeStyle = isTarget ? "#cc3333" : isMove ? "#3a7abf" : isObstacle ? "#6a5a40" : isRiver ? "#5a9abf" : isTown ? townStroke : isForest ? "#5a8a40" : isHill ? "#8a7a40" : isSwamp ? "#5a7a40" : "#c8b898";
-        ctx.lineWidth = isTarget || isMove ? 1.5 : 0.8;
+        ctx.strokeStyle = isTarget ? "#cc3333" : isMove ? "#3a7abf" : isAttackRange ? "#c87030" : isObstacle ? "#6a5a40" : isRiver ? "#5a9abf" : isTown ? townStroke : isForest ? "#5a8a40" : isHill ? "#8a7a40" : isSwamp ? "#5a7a40" : "#c8b898";
+        ctx.lineWidth = isTarget || isMove ? 1.5 : isAttackRange ? 1.2 : 0.8;
         ctx.stroke();
 
         if (isObstacle) {

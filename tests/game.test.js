@@ -21,6 +21,7 @@ function makeState(overrides = {}) {
         selectedUnit: null,
         validMoves: [],
         validTargets: [],
+        attackRangeHexes: [],
         pendingAttack: null,
         roundLog: null,
         winner: null,
@@ -904,5 +905,49 @@ describe("capture de villes", () => {
         const selected = handleClick(s, u1.hex);
         const moved = handleClick(selected, { q: -1, r: 0, s: 1 });
         expect(moved.townOwnership[hexKey(town)]).toBe(1);
+    });
+});
+
+describe("portée d'attaque à la sélection", () => {
+    it("sélectionner une unité remplit attackRangeHexes", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const enemy = createUnit("warrior", 2, { q: 4, r: -4, s: 0 });
+        const s = makeState({ units: [u1, enemy] });
+        const selected = handleClick(s, u1.hex);
+        expect(selected.attackRangeHexes.length).toBeGreaterThan(0);
+    });
+
+    it("attackRangeHexes inclut des hexes accessibles depuis les cases de déplacement", () => {
+        const u1 = createUnit("warrior", 1, { q: -3, r: 0, s: 3 });
+        const enemy = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
+        const s = makeState({ units: [u1, enemy] });
+        const selected = handleClick(s, u1.hex);
+        // L'ennemi est à distance 6, hors portée depuis la position actuelle
+        // mais certains hexes proches de l'ennemi doivent être dans attackRangeHexes
+        // car l'unité peut se déplacer puis attaquer
+        const rangeKeys = new Set(selected.attackRangeHexes.map(hexKey));
+        const moveKeys = new Set(selected.validMoves.map(hexKey));
+        // Il doit y avoir des hexes dans attackRangeHexes qui ne sont pas des cases de déplacement
+        const rangeOnly = selected.attackRangeHexes.filter(h => !moveKeys.has(hexKey(h)));
+        expect(rangeOnly.length).toBeGreaterThan(0);
+    });
+
+    it("attackRangeHexes est vide si l'unité a déjà attaqué", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        u1.hasAttacked = true;
+        const enemy = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [u1, enemy] });
+        const selected = handleClick(s, u1.hex);
+        expect(selected.attackRangeHexes).toHaveLength(0);
+    });
+
+    it("attackRangeHexes est vidé à la désélection", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const enemy = createUnit("warrior", 2, { q: 2, r: -2, s: 0 });
+        const s = makeState({ units: [u1, enemy] });
+        const selected = handleClick(s, u1.hex);
+        expect(selected.attackRangeHexes.length).toBeGreaterThan(0);
+        const deselected = computeDeselect(selected);
+        expect(deselected.attackRangeHexes).toHaveLength(0);
     });
 });
