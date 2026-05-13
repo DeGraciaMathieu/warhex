@@ -204,13 +204,14 @@ describe("génération de la carte", () => {
         }
     });
 
-    it("la carte contient exactement 4 villes sur des hexes distincts", () => {
+    it("la carte contient exactement 5 villes (4 symétriques + 1 centrale) sur des hexes distincts", () => {
         for (let i = 0; i < 20; i++) {
             resetUID();
             const state = initState();
-            expect(state.towns).toHaveLength(4);
+            expect(state.towns).toHaveLength(5);
             const keys = new Set(state.towns.map(hexKey));
-            expect(keys.size).toBe(4);
+            expect(keys.size).toBe(5);
+            expect(keys.has(hexKey({ q: 0, r: 0, s: 0 }))).toBe(true);
         }
     });
 
@@ -374,11 +375,11 @@ describe("sélection d'armée", () => {
         expect(p1.filter(u => u.name === "Warrior")).toHaveLength(2);
     });
 
-    it("fairTowns place les villes en miroir symétrique", () => {
+    it("fairTowns place les villes en miroir symétrique + ville centrale", () => {
         for (let i = 0; i < 20; i++) {
             resetUID();
             const state = initState(null, { fairTowns: true });
-            expect(state.towns).toHaveLength(4);
+            expect(state.towns).toHaveLength(5);
             const keys = new Set(state.towns.map(hexKey));
             for (const t of state.towns) {
                 const mirror = { q: -t.q, r: -t.r, s: -t.s };
@@ -400,7 +401,7 @@ describe("sélection d'armée", () => {
     it("fairTowns false utilise le placement aléatoire sans contrainte d'équidistance", () => {
         resetUID();
         const state = initState(null, { fairTowns: false });
-        expect(state.towns).toHaveLength(4);
+        expect(state.towns).toHaveLength(5);
     });
 
     it("initState avec armées custom initialise autoEndTurn à false", () => {

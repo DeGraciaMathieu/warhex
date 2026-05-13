@@ -222,7 +222,8 @@ export function initState(armies, options = {}) {
         ...picks[1].map((type, i) => createUnit(type, 1, SPAWN_POSITIONS[1][i])),
         ...picks[2].map((type, i) => createUnit(type, 2, SPAWN_POSITIONS[2][i])),
     ];
-    const reservedKeys = new Set(units.map(u => `${u.hex.q},${u.hex.r},${u.hex.s}`));
+    const centerHex = { q: 0, r: 0, s: 0 };
+    const reservedKeys = new Set([...units.map(u => `${u.hex.q},${u.hex.r},${u.hex.s}`), `0,0,0`]);
     const obstacles = randomAvailableHexes(9, reservedKeys);
     const obstacleKeys = new Set(obstacles.map(o => `${o.q},${o.r},${o.s}`));
     const allReserved = new Set([...reservedKeys, ...obstacleKeys]);
@@ -230,6 +231,7 @@ export function initState(armies, options = {}) {
     const riverKeys = new Set(rivers.map(r => `${r.q},${r.r},${r.s}`));
     const allReserved2 = new Set([...allReserved, ...riverKeys]);
     const towns = fairTowns ? fairTownHexes(4, allReserved2) : randomAvailableHexes(4, allReserved2);
+    towns.push(centerHex);
     const townKeys = new Set(towns.map(t => `${t.q},${t.r},${t.s}`));
     const allReserved3 = new Set([...allReserved2, ...townKeys]);
     const forests = generateForests(3, allReserved3);
