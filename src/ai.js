@@ -60,6 +60,11 @@ export function pickBestUnit(state) {
     const { enemyOnTown, priorityTowns } = townContext(state);
     const enemyOnTownKeys = new Set(enemyOnTown.map(u => hexKey(u.hex)));
 
+    const { obsKeys, stopKeys, costKeys } = buildTerrainKeys(state);
+    const aliveUnits = state.units.filter(u => u.currentWounds > 0);
+    const occupied = new Set(aliveUnits.map(u => hexKey(u.hex)));
+    const priorityTownKeys = new Set(priorityTowns.map(t => hexKey(t)));
+
     let best = null;
     let bestScore = -Infinity;
 
@@ -73,10 +78,16 @@ export function pickBestUnit(state) {
         if (canHitTownEnemy) score += 100;
         else if (targets.length > 0) score += 10;
 
-        // Close to a priority town (not owned or owned but threatened)
+        // Can actually reach a priority town this turn — strong bonus
         if (priorityTowns.length > 0) {
-            const distToTown = Math.min(...priorityTowns.map(t => hexDistance(unit.hex, t)));
-            score += 20 / (1 + distToTown);
+            const reachable = reachableHexes(unit.hex, unit.movement, occupied, obsKeys, stopKeys, costKeys);
+            const canCapture = reachable.some(h => priorityTownKeys.has(hexKey(h)));
+            if (canCapture) {
+                score += 50;
+            } else {
+                const distToTown = Math.min(...priorityTowns.map(t => hexDistance(unit.hex, t)));
+                score += 20 / (1 + distToTown);
+            }
         } else if (enemies.length > 0) {
             // No priority towns — prefer units close to enemies
             const distToEnemy = Math.min(...enemies.map(e => hexDistance(unit.hex, e.hex)));
