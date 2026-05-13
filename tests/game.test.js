@@ -994,6 +994,45 @@ describe("capture de villes", () => {
     });
 });
 
+describe("pas de cibles valides", () => {
+    it("computeAttack retourne des validTargets vides quand tous les ennemis sont hors portée", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const farEnemy = createUnit("warrior", 2, { q: 6, r: -6, s: 0 });
+        const s = makeState({ units: [attacker, farEnemy], selectedUnit: attacker, activeUnitId: attacker.id });
+        const result = computeAttack(s);
+        expect(result.validTargets).toHaveLength(0);
+    });
+
+    it("computeAttack retourne des validTargets vides quand la LOS est bloquée", () => {
+        const obstacle = { q: 1, r: -1, s: 0 };
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const enemy = createUnit("warrior", 2, { q: 2, r: -2, s: 0 });
+        const s = makeState({ units: [attacker, enemy], obstacles: [obstacle], selectedUnit: attacker, activeUnitId: attacker.id });
+        const result = computeAttack(s);
+        expect(result.validTargets).toHaveLength(0);
+    });
+});
+
+describe("attaque sur cible en rivière", () => {
+    it("le workflow complet (weapon select) inflige plus de dégâts sur une cible en rivière", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const river = { q: 1, r: -1, s: 0 };
+        const weapon = attacker.weapons.find(w => w.id === "sword");
+
+        let totalWithRiver = 0, totalNoRiver = 0;
+        for (let i = 0; i < 500; i++) {
+            const sRiver = makeState({ units: [attacker, target], rivers: [river], pendingAttack: { attacker, target } });
+            const sNoRiver = makeState({ units: [attacker, target], pendingAttack: { attacker, target } });
+            const rRiver = computeWeaponSelect(sRiver, weapon);
+            const rNoRiver = computeWeaponSelect(sNoRiver, weapon);
+            if (rRiver.anim) totalWithRiver += rRiver.anim.damage;
+            if (rNoRiver.anim) totalNoRiver += rNoRiver.anim.damage;
+        }
+        expect(totalWithRiver).toBeGreaterThan(totalNoRiver);
+    });
+});
+
 describe("portée d'attaque à la sélection", () => {
     it("sélectionner une unité remplit attackRangeHexes", () => {
         const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });

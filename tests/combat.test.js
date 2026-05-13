@@ -124,6 +124,21 @@ describe("combat", () => {
     });
 });
 
+describe("penalty rivière", () => {
+    it("le penalty rivière rend la sauvegarde plus difficile et augmente les dégâts", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const weapon = { id: "test", name: "Test", type: "melee", range: 1, attacks: 4, strength: 4, ap: 0, damage: 1 };
+
+        let totalNoPenalty = 0, totalPenalty = 0;
+        for (let i = 0; i < 1000; i++) {
+            totalNoPenalty += resolveAttack(attacker, weapon, target).damage;
+            totalPenalty += resolveAttack(attacker, weapon, target, { penalty: 1 }).damage;
+        }
+        expect(totalPenalty).toBeGreaterThan(totalNoPenalty);
+    });
+});
+
 describe("compétences de combat", () => {
     it("une arme de mêlée utilise weaponSkill, une arme à distance utilise ballisticSkill", () => {
         const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });

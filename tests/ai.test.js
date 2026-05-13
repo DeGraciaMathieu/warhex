@@ -490,6 +490,36 @@ describe("IA — repli vers l'ennemi", () => {
     });
 });
 
+describe("IA — sélection d'arme avec plusieurs armes valides", () => {
+    it("l'IA choisit une arme à portée quand plusieurs sont disponibles", () => {
+        const u1 = createUnit("warrior", 1, { q: 1, r: -1, s: 0 });
+        const u2 = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        const state = makeState({
+            units: [u1, u2],
+            phase: "weapon_select",
+            selectedUnit: u2,
+            pendingAttack: { attacker: u2, target: u1 },
+        });
+        const action = computeAIAction(state);
+        expect(action.type).toBe("weapon");
+        // Les deux armes (sword portée 1, rifle portée 2) sont valides à distance 1
+        expect(["sword", "rifle"]).toContain(action.weapon.id);
+    });
+});
+
+describe("IA — gestion d'unité morte", () => {
+    it("l'IA sélectionne l'unité survivante quand une autre est morte", () => {
+        const u1 = createUnit("warrior", 1, { q: -4, r: 0, s: 4 });
+        const u2a = createUnit("warrior", 2, { q: 2, r: 0, s: -2 });
+        const u2b = createUnit("warrior", 2, { q: 3, r: 0, s: -3 });
+        u2a.currentWounds = 0; // morte
+        const state = makeState({ units: [u1, u2a, u2b] });
+        const action = computeAIAction(state);
+        expect(action.type).toBe("click");
+        expect(hexKey(action.hex)).toBe(hexKey(u2b.hex));
+    });
+});
+
 describe("IA et marais", () => {
     it("une unité à 1 PV n'entre pas dans un marais", () => {
         const swamp = { q: 1, r: 0, s: -1 };
