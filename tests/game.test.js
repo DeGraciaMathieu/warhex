@@ -36,6 +36,7 @@ function makeState(overrides = {}) {
         aiPreview: null,
         kills: { 1: 0, 2: 0 },
         scoreHistory: [],
+        hitEffects: [],
         ...overrides,
     };
 }
@@ -241,6 +242,28 @@ describe("tracking des kills", () => {
         const anim = { attacker, target, damage: 1, weaponName: "Épée", log: [], isDead: false };
         const result = applyDamage(s, anim);
         expect(result.kills[1]).toBe(0);
+    });
+});
+
+describe("effets visuels de combat", () => {
+    it("applyDamage crée un hitEffect quand il y a des dégâts", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: 0, s: -1 });
+        const s = makeState({ units: [attacker, target], selectedUnit: attacker, activeUnitId: attacker.id });
+        const anim = { attacker, target, damage: 2, weaponName: "Épée", log: [], isDead: false };
+        const result = applyDamage(s, anim);
+        expect(result.hitEffects).toHaveLength(1);
+        expect(result.hitEffects[0].hex).toEqual(target.hex);
+        expect(result.hitEffects[0].damage).toBe(2);
+    });
+
+    it("applyDamage ne crée pas de hitEffect si dégâts à 0", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: 0, s: -1 });
+        const s = makeState({ units: [attacker, target], selectedUnit: attacker, activeUnitId: attacker.id });
+        const anim = { attacker, target, damage: 0, weaponName: "Épée", log: [], isDead: false };
+        const result = applyDamage(s, anim);
+        expect(result.hitEffects).toHaveLength(0);
     });
 });
 

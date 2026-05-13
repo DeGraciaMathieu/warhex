@@ -33,6 +33,7 @@ function makeState(overrides = {}) {
         autoEndTurn: false,
         kills: { 1: 0, 2: 0 },
         scoreHistory: [],
+        hitEffects: [],
         ...overrides,
     };
 }

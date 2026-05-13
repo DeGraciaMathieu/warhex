@@ -176,6 +176,11 @@ describe("état initial du jeu", () => {
         const state = initState();
         expect(state.scoreHistory).toEqual([]);
     });
+
+    it("hitEffects est vide au début", () => {
+        const state = initState();
+        expect(state.hitEffects).toEqual([]);
+    });
 });
 
 describe("génération de la carte", () => {
