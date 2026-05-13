@@ -8,6 +8,48 @@ import Guide from "./Guide.jsx";
 import "./styles.css";
 
 const UNIT_TYPES = Object.keys(UNIT_TEMPLATES);
+
+const W = 260, H = 140, PAD_X = 30, PAD_Y = 20;
+const CHART_W = W - PAD_X * 2, CHART_H = H - PAD_Y * 2;
+
+function ScoreChart({ scoreHistory }) {
+    const maxScore = Math.max(...scoreHistory.map(h => Math.max(h.scores[1], h.scores[2])), 1);
+    const pts = (player) => scoreHistory.map((h, i) => {
+        const x = PAD_X + (i / (scoreHistory.length - 1 || 1)) * CHART_W;
+        const y = PAD_Y + CHART_H - (h.scores[player] / maxScore) * CHART_H;
+        return `${x},${y}`;
+    }).join(" ");
+    return (
+        <div>
+            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 6 }}>ÉVOLUTION DES POINTS</div>
+            <svg width={W} height={H} style={{ background: "#f5f0e8", borderRadius: 4, border: "1px solid #d5cbb8" }}>
+                {[...Array(Math.min(5, maxScore + 1))].map((_, i) => {
+                    const y = PAD_Y + CHART_H - (i / Math.min(4, maxScore)) * CHART_H;
+                    const val = Math.round(i * maxScore / Math.min(4, maxScore));
+                    return <g key={i}>
+                        <line x1={PAD_X} y1={y} x2={PAD_X + CHART_W} y2={y} stroke="#d5cbb8" strokeWidth="0.5" />
+                        <text x={PAD_X - 4} y={y + 3} textAnchor="end" fontSize="9" fill="#8a7a60">{val}</text>
+                    </g>;
+                })}
+                {scoreHistory.map((h, i) => {
+                    const x = PAD_X + (i / (scoreHistory.length - 1 || 1)) * CHART_W;
+                    return <text key={i} x={x} y={H - 4} textAnchor="middle" fontSize="9" fill="#8a7a60">T{h.round}</text>;
+                })}
+                <polyline points={pts(1)} fill="none" stroke="#2a6fa8" strokeWidth="2" />
+                <polyline points={pts(2)} fill="none" stroke="#a03030" strokeWidth="2" />
+                {scoreHistory.map((h, i) => {
+                    const x = PAD_X + (i / (scoreHistory.length - 1 || 1)) * CHART_W;
+                    const y1 = PAD_Y + CHART_H - (h.scores[1] / maxScore) * CHART_H;
+                    const y2 = PAD_Y + CHART_H - (h.scores[2] / maxScore) * CHART_H;
+                    return <g key={i}>
+                        <circle cx={x} cy={y1} r="3" fill="#2a6fa8" />
+                        <circle cx={x} cy={y2} r="3" fill="#a03030" />
+                    </g>;
+                })}
+            </svg>
+        </div>
+    );
+}
 const ARMY_SIZE = 5;
 
 export default function HexWarhammer() {
@@ -300,46 +342,7 @@ export default function HexWarhammer() {
                             </div>
                         </div>
 
-                        {state.scoreHistory.length > 0 && (() => {
-                            const maxScore = Math.max(...state.scoreHistory.map(h => Math.max(h.scores[1], h.scores[2])), 1);
-                            const W = 260, H = 140, padX = 30, padY = 20;
-                            const chartW = W - padX * 2, chartH = H - padY * 2;
-                            const pts = (player) => state.scoreHistory.map((h, i) => {
-                                const x = padX + (i / (state.scoreHistory.length - 1 || 1)) * chartW;
-                                const y = padY + chartH - (h.scores[player] / maxScore) * chartH;
-                                return `${x},${y}`;
-                            }).join(" ");
-                            return (
-                                <div>
-                                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 6 }}>ÉVOLUTION DES POINTS</div>
-                                    <svg width={W} height={H} style={{ background: "#f5f0e8", borderRadius: 4, border: "1px solid #d5cbb8" }}>
-                                        {[...Array(Math.min(5, maxScore + 1))].map((_, i) => {
-                                            const y = padY + chartH - (i / Math.min(4, maxScore)) * chartH;
-                                            const val = Math.round(i * maxScore / Math.min(4, maxScore));
-                                            return <g key={i}>
-                                                <line x1={padX} y1={y} x2={padX + chartW} y2={y} stroke="#d5cbb8" strokeWidth="0.5" />
-                                                <text x={padX - 4} y={y + 3} textAnchor="end" fontSize="9" fill="#8a7a60">{val}</text>
-                                            </g>;
-                                        })}
-                                        {state.scoreHistory.map((h, i) => {
-                                            const x = padX + (i / (state.scoreHistory.length - 1 || 1)) * chartW;
-                                            return <text key={i} x={x} y={H - 4} textAnchor="middle" fontSize="9" fill="#8a7a60">T{h.round}</text>;
-                                        })}
-                                        <polyline points={pts(1)} fill="none" stroke="#2a6fa8" strokeWidth="2" />
-                                        <polyline points={pts(2)} fill="none" stroke="#a03030" strokeWidth="2" />
-                                        {state.scoreHistory.map((h, i) => {
-                                            const x = padX + (i / (state.scoreHistory.length - 1 || 1)) * chartW;
-                                            const y1 = padY + chartH - (h.scores[1] / maxScore) * chartH;
-                                            const y2 = padY + chartH - (h.scores[2] / maxScore) * chartH;
-                                            return <g key={i}>
-                                                <circle cx={x} cy={y1} r="3" fill="#2a6fa8" />
-                                                <circle cx={x} cy={y2} r="3" fill="#a03030" />
-                                            </g>;
-                                        })}
-                                    </svg>
-                                </div>
-                            );
-                        })()}
+                        {state.scoreHistory.length > 0 && <ScoreChart scoreHistory={state.scoreHistory} />}
 
                         <button className="btn btn-grey" onClick={restart}>↺ Nouvelle partie</button>
                     </div>
