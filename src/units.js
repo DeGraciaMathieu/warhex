@@ -265,5 +265,7 @@ export function initState(armies, options = {}) {
         autoEndTurn: false,
         dyingUnits: [],
         aiPreview: null,
+        kills: { 1: 0, 2: 0 },
+        scoreHistory: [],
     };
 }

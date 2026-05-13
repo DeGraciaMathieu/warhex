@@ -196,8 +196,9 @@ export function applyDamage(s, anim) {
     const dyingUnits = isDead
         ? [...(s.dyingUnits || []), { hex: target.hex, symbol: target.symbol, player: target.player, deathTime: Date.now() }]
         : (s.dyingUnits || []);
+    const kills = isDead ? { ...s.kills, [attacker.player]: (s.kills?.[attacker.player] || 0) + 1 } : s.kills;
     return {
-        ...s, units, dyingUnits, ...finishActivation(s, attacker.id, units),
+        ...s, units, dyingUnits, kills, ...finishActivation(s, attacker.id, units),
         roundLog: { weapon: anim.weaponName, attacker: attacker.name, target: target.name, log: anim.log, isDead: anim.isDead, damage },
     };
 }
@@ -212,10 +213,11 @@ export function computeEndTurn(s) {
         scores[1] += control[1];
         scores[2] += control[2];
     }
+    const scoreHistory = endOfRound ? [...s.scoreHistory, { round: s.round, scores: { 1: scores[1], 2: scores[2] } }] : s.scoreHistory;
     const winner = endOfRound ? checkWinner(scores, s.round) : null;
     const newRound = endOfRound && !winner ? s.round + 1 : s.round;
     return {
-        ...s, scores,
+        ...s, scores, scoreHistory,
         units: s.units.map(u => ({ ...u, hasMoved: false, hasAttacked: false })),
         currentPlayer: nextPlayer, activeUnitId: null, activationsUsed: 0, activatedUnitIds: [],
         phase: "select", selectedUnit: null, validMoves: [], validTargets: [], attackRangeHexes: [], pendingAttack: null,
