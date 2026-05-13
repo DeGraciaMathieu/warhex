@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { hexDistance, hexKey, hexToPixel, pixelToHex, isValidHex, hexNeighbors, hasLineOfSight } from "../src/hex.js";
+import { hexDistance, hexKey, hexToPixel, pixelToHex, isValidHex, hexNeighbors, hasLineOfSight, hexesInRange } from "../src/hex.js";
 
 describe("distance hexagonale", () => {
     it("la distance entre un hex et lui-même est 0", () => {
@@ -55,6 +55,25 @@ describe("conversions hex ↔ pixel", () => {
     it("un hex a exactement 6 voisins", () => {
         const hex = { q: 0, r: 0, s: 0 };
         expect(hexNeighbors(hex)).toHaveLength(6);
+    });
+
+    it("hexesInRange retourne tous les hexes dans le rayon donné sauf le centre", () => {
+        const center = { q: 0, r: 0, s: 0 };
+        const range1 = hexesInRange(center, 1);
+        expect(range1).toHaveLength(6);
+        for (const h of range1) {
+            expect(hexDistance(center, h)).toBe(1);
+        }
+        expect(range1.every(h => hexKey(h) !== hexKey(center))).toBe(true);
+    });
+
+    it("hexesInRange exclut les hexes hors grille", () => {
+        const edge = { q: 5, r: -5, s: 0 };
+        const result = hexesInRange(edge, 2);
+        for (const h of result) {
+            expect(isValidHex(h)).toBe(true);
+        }
+        expect(result.length).toBeLessThan(18);
     });
 
     it("deux hexes adjacents sont toujours en ligne de vue", () => {

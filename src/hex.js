@@ -90,6 +90,18 @@ function cubeLineDraw(a, b) {
     return results;
 }
 
+export function hexesInRange(center, range) {
+    const results = [];
+    for (let q = -range; q <= range; q++) {
+        for (let r = Math.max(-range, -q - range); r <= Math.min(range, -q + range); r++) {
+            const s = -q - r;
+            const hex = { q: center.q + q, r: center.r + r, s: center.s + s };
+            if (isValidHex(hex) && (q !== 0 || r !== 0)) results.push(hex);
+        }
+    }
+    return results;
+}
+
 export function hasLineOfSight(a, b, obstacleKeys) {
     const line = cubeLineDraw(a, b);
     for (let i = 1; i < line.length - 1; i++) {
