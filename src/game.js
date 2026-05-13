@@ -133,6 +133,10 @@ export function handleClick(s, hex) {
         return { ...s, selectedUnit: cur, phase: "select", validMoves, validTargets, attackRangeHexes };
     }
 
+    if (s.selectedUnit) {
+        return computeDeselect(s);
+    }
+
     return s;
 }
 
