@@ -179,7 +179,7 @@ export function computeWeaponSelect(s, weapon) {
     const isDead = Math.max(0, target.currentWounds - damage) <= 0;
 
     return {
-        state: { ...s, phase: "resolving", activeUnitId: attacker.id, roundLog: null },
+        state: { ...s, phase: "resolving", activeUnitId: attacker.id },
         anim: { log, phase: 0, dice: 0, done: false, attacker, target, weaponName: weapon.name, damage, isDead },
     };
 }
@@ -202,7 +202,6 @@ export function applyDamage(s, anim) {
         : (s.hitEffects || []);
     return {
         ...s, units, dyingUnits, kills, hitEffects, ...finishActivation(s, attacker.id, units),
-        roundLog: { weapon: anim.weaponName, attacker: attacker.name, target: target.name, log: anim.log, isDead: anim.isDead, damage },
     };
 }
 

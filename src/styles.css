@@ -55,3 +55,62 @@ canvas { cursor: crosshair; display: block; }
     0%, 100% { opacity: .4; }
     50% { opacity: 1; }
 }
+
+.combat-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0, 0, 0, .5);
+    display: flex; align-items: center; justify-content: center;
+    animation: overlayIn .25s ease-out;
+}
+
+.combat-modal {
+    background: #ece5d8; border: 2px solid #8a6a08; border-radius: 8px;
+    width: 500px; max-width: 90vw; max-height: 85vh; overflow-y: auto;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, .4);
+    animation: modalIn .3s ease-out;
+}
+
+.combat-modal-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid #d5cbb8;
+    text-align: center;
+}
+
+.combat-modal-header h2 {
+    font-family: 'Cinzel', serif; font-size: 18px; font-weight: 700;
+    letter-spacing: .2em; color: #8a6a08; margin: 0 0 10px;
+}
+
+.combat-modal-matchup {
+    font-size: 15px; color: #2a2015;
+}
+
+.combat-modal-body {
+    padding: 16px 24px 20px;
+}
+
+.combat-modal-result {
+    text-align: center; padding: 12px 0; margin-top: 10px;
+    font-size: 18px; font-weight: 700;
+    animation: resultIn .4s ease-out;
+}
+
+.combat-modal-footer {
+    padding: 12px 24px 20px;
+    display: flex; justify-content: center;
+}
+
+@keyframes overlayIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes modalIn {
+    from { opacity: 0; transform: scale(.9) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes resultIn {
+    from { opacity: 0; transform: scale(.8); }
+    to { opacity: 1; transform: scale(1); }
+}

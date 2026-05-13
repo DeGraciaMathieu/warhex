@@ -50,6 +50,41 @@ function ScoreChart({ scoreHistory }) {
         </div>
     );
 }
+
+function WeaponCard({ weapon, attacker, target, hills, towns, aiPreview, onSelect }) {
+    const dist = hexDistance(attacker.hex, target.hex);
+    const hillKeys = new Set((hills || []).map(hexKey));
+    const rangeBonus = (weapon.type === "ranged" && hillKeys.has(hexKey(attacker.hex))) ? 1 : 0;
+    const ok = dist <= weapon.range + rangeBonus;
+    const townKeys = new Set((towns || []).map(hexKey));
+    const inTown = townKeys.has(hexKey(target.hex));
+    const effectiveSave = target.save - (inTown ? 1 : 0) + Math.abs(weapon.ap);
+    const cantSave = effectiveSave > 6;
+    const saveColor = cantSave ? "#2e7d32" : effectiveSave >= 6 ? "#558b2f" : effectiveSave >= 4 ? "#8a7a60" : effectiveSave >= 3 ? "#e65100" : "#c62828";
+    const skill = weapon.type === "ranged" ? attacker.ballisticSkill : attacker.weaponSkill;
+    const isAIHighlight = aiPreview?.type === "weapon" && aiPreview.weapon.id === weapon.id;
+
+    return (
+        <button className={`weapon-card${ok ? "" : " disabled"}${isAIHighlight ? " ai-highlight" : ""}`} onClick={() => ok && onSelect(weapon)}>
+            <div style={{ fontWeight: 600, fontSize: 15 }}>{weapon.name} {weapon.type === "ranged" ? "🏹" : "🗡"}</div>
+            {!ok ? (
+                <div style={{ fontSize: 12, color: "#b0a090", marginTop: 4 }}>
+                    {weapon.type === "ranged" ? `Portée ${weapon.range + rangeBonus}` : "Mêlée (adjacent)"} · Trop loin ({dist} hex)
+                </div>
+            ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 6, fontSize: 13, color: "#6a5a40" }}>
+                    <div>{weapon.type === "ranged" ? `Portée ${weapon.range + rangeBonus} hex${rangeBonus ? " ⛰" : ""}` : "Mêlée (adjacent)"} · Distance : {dist}</div>
+                    <div>Touche sur {skill}+ · {weapon.attacks} {weapon.attacks > 1 ? "attaques" : "attaque"}</div>
+                    <div>{weapon.damage} {weapon.damage > 1 ? "dégâts" : "dégât"} par touche · Pénétration {Math.abs(weapon.ap)}</div>
+                    <div style={{ color: saveColor, fontWeight: 600, marginTop: 2 }}>
+                        {cantSave ? "Sauvegarde impossible" : `Sauvegarde ennemie sur ${effectiveSave}+`}{inTown ? " 🏰 (couvert)" : ""}
+                    </div>
+                </div>
+            )}
+        </button>
+    );
+}
+
 const ARMY_SIZE = 5;
 
 export default function HexWarhammer() {
@@ -106,6 +141,12 @@ export default function HexWarhammer() {
         frameId = requestAnimationFrame(animate);
         return () => cancelAnimationFrame(frameId);
     }, [state?.dyingUnits, state?.aiPreview, state?.hitEffects]);
+
+    useEffect(() => {
+        if (!diceAnim?.done) return;
+        const timer = setTimeout(() => setDiceAnim(null), 2000);
+        return () => clearTimeout(timer);
+    }, [diceAnim?.done]);
 
     useEffect(() => {
         if (state && state.autoEndTurn) {
@@ -389,112 +430,112 @@ export default function HexWarhammer() {
                 <div style={{ padding: "16px 20px", borderBottom: "1px solid #d5cbb8" }}>
                     <div style={{ fontFamily: "'Cinzel', serif", fontSize: 12, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 12 }}>ACTIONS</div>
 
-                    {state.phase === "weapon_select" && state.pendingAttack ? (
-                        <>
-                            <div style={{ fontSize: 14, color: "#8a6a08", marginBottom: 10 }}>
-                                Attaquer <strong>{state.pendingAttack.target.name}</strong> avec :
-                            </div>
-                            {state.pendingAttack.attacker.weapons.map(w => {
-                                const dist = hexDistance(state.pendingAttack.attacker.hex, state.pendingAttack.target.hex);
-                                const hillKeys = new Set((state.hills || []).map(hexKey));
-                                const rangeBonus = (w.type === "ranged" && hillKeys.has(hexKey(state.pendingAttack.attacker.hex))) ? 1 : 0;
-                                const ok = dist <= w.range + rangeBonus;
-                                const target = state.pendingAttack.target;
-                                const townKeys = new Set((state.towns || []).map(hexKey));
-                                const inTown = townKeys.has(hexKey(target.hex));
-                                const effectiveSave = target.save - (inTown ? 1 : 0) + Math.abs(w.ap);
-                                const cantSave = effectiveSave > 6;
-                                const saveColor = cantSave ? "#2e7d32" : effectiveSave >= 6 ? "#558b2f" : effectiveSave >= 4 ? "#8a7a60" : effectiveSave >= 3 ? "#e65100" : "#c62828";
-                                const attacker = state.pendingAttack.attacker;
-                                const skill = w.type === "ranged" ? attacker.ballisticSkill : attacker.weaponSkill;
-                                return (
-                                    <button key={w.id} className={`weapon-card${ok ? "" : " disabled"}${state.aiPreview?.type === "weapon" && state.aiPreview.weapon.id === w.id ? " ai-highlight" : ""}`} onClick={() => ok && selectWeapon(w)}>
-                                        <div style={{ fontWeight: 600, fontSize: 14 }}>{w.name} {w.type === "ranged" ? "🏹" : "🗡"}</div>
-                                        {!ok ? (
-                                            <div style={{ fontSize: 12, color: "#b0a090", marginTop: 4 }}>
-                                                {w.type === "ranged" ? `Portée ${w.range + rangeBonus}` : "Mêlée (adjacent)"} · Trop loin ({dist} hex)
-                                            </div>
-                                        ) : (
-                                            <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 6, fontSize: 12, color: "#6a5a40" }}>
-                                                <div>{w.type === "ranged" ? `Portée ${w.range + rangeBonus} hex${rangeBonus ? " ⛰" : ""}` : "Mêlée (adjacent)"} · Distance : {dist}</div>
-                                                <div>Touche sur {skill}+ · {w.attacks} {w.attacks > 1 ? "attaques" : "attaque"}</div>
-                                                <div>{w.damage} {w.damage > 1 ? "dégâts" : "dégât"} par touche · Pénétration {Math.abs(w.ap)}</div>
-                                                <div style={{ color: saveColor, fontWeight: 600, marginTop: 2 }}>
-                                                    {cantSave ? "Sauvegarde impossible" : `Sauvegarde ennemie sur ${effectiveSave}+`}{inTown ? " 🏰 (couvert)" : ""}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </button>
-                                );
-                            })}
-                            <button className="btn btn-grey" onClick={() => setState(s => ({ ...s, phase: "select", pendingAttack: null, validTargets: [], validMoves: [] }))}>✕ Annuler</button>
-                        </>
-                    ) : (
-                        <>
-                            <button className="btn btn-blue" disabled={!sel || sel.hasMoved || state.phase === "attack" || (vsAI && state.currentPlayer === 2)} onClick={startMove}>⟶ Déplacer</button>
-                            <button className="btn btn-red" disabled={!sel || sel.hasAttacked || (vsAI && state.currentPlayer === 2)} onClick={startAttack}>⚔ Attaquer</button>
-                            {sel && <button className="btn btn-grey" onClick={() => setState(computeDeselect)}>✕ Désélectionner</button>}
-                            <div style={{ borderTop: "1px solid #d5cbb8", marginTop: 6, paddingTop: 8 }}>
-                                <button className="btn btn-gold" disabled={!!state.winner || (vsAI && state.currentPlayer === 2)} onClick={endTurn}>⏭ Fin de tour</button>
-                            </div>
-                        </>
-                    )}
+                    <button className="btn btn-blue" disabled={!sel || sel.hasMoved || state.phase === "attack" || (vsAI && state.currentPlayer === 2)} onClick={startMove}>⟶ Déplacer</button>
+                    <button className="btn btn-red" disabled={!sel || sel.hasAttacked || (vsAI && state.currentPlayer === 2)} onClick={startAttack}>⚔ Attaquer</button>
+                    {sel && <button className="btn btn-grey" onClick={() => setState(computeDeselect)}>✕ Désélectionner</button>}
+                    <div style={{ borderTop: "1px solid #d5cbb8", marginTop: 6, paddingTop: 8 }}>
+                        <button className="btn btn-gold" disabled={!!state.winner || (vsAI && state.currentPlayer === 2)} onClick={endTurn}>⏭ Fin de tour</button>
+                    </div>
                 </div>
-
-                {(diceAnim || state.roundLog) && (() => {
-                    const src = diceAnim && !diceAnim.done ? diceAnim : state.roundLog;
-                    if (!src) return null;
-                    const animating = diceAnim && !diceAnim.done;
-                    const visibleLog = animating
-                        ? src.log.slice(0, src.phase + 1)
-                        : src.log;
-                    const atkName = animating ? src.attacker.name : src.attacker;
-                    const tgtName = animating ? src.target.name : src.target;
-                    const wpnName = animating ? src.weaponName : src.weapon;
-                    return (
-                        <div style={{ padding: "16px 20px", borderBottom: "1px solid #d5cbb8", background: "#e5ddd0" }}>
-                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 12, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 10 }}>RÉSOLUTION DE COMBAT</div>
-                            <div style={{ fontSize: 14, color: "#8a6a08", marginBottom: 8 }}>
-                                {atkName} → {tgtName} [{wpnName}]
-                            </div>
-                            {visibleLog.map((entry, i) => {
-                                const isCurrentPhase = animating && i === src.phase;
-                                const visibleDice = isCurrentPhase ? (entry.rolls || []).slice(0, src.dice) : (entry.rolls || []);
-                                return (
-                                    <div key={i} style={{ marginBottom: entry.isSummary ? 0 : 6 }}>
-                                        <div style={{ fontSize: 13, color: "#6a5a40", marginBottom: visibleDice.length ? 3 : 0 }}>{entry.label}</div>
-                                        {visibleDice.length > 0 && (
-                                            <div style={{ display: "flex", flexWrap: "wrap", gap: 0 }}>
-                                                {visibleDice.map((r, j) => {
-                                                    const needed = entry.isSave
-                                                        ? parseInt((entry.label.match(/(\d+)\+/) || [0, 7])[1])
-                                                        : parseInt((entry.label.match(/(\d+)\+/) || [0, 0])[1]);
-                                                    const hit = r >= needed;
-                                                    const cls = entry.isSave ? (hit ? "roll-save" : "roll-save-fail") : (hit ? "roll-hit" : "roll-miss");
-                                                    const isNew = isCurrentPhase && j === src.dice - 1;
-                                                    return <span key={j} className={`roll-chip ${cls}${isNew ? " roll-new" : ""}`}>{r}</span>;
-                                                })}
-                                            </div>
-                                        )}
-                                        {entry.isSummary && !animating && (
-                                            <div style={{ fontSize: 14, fontWeight: 600, color: src.damage > 0 ? "#e53935" : "#4caf50", marginTop: 6 }}>
-                                                {src.isDead ? `💀 ${tgtName} éliminé !` : `${src.damage} dégât(s) infligé(s)`}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                            {animating && (
-                                <div style={{ fontSize: 13, color: "#8a7a60", marginTop: 8, fontStyle: "italic", animation: "pulse 1s infinite" }}>
-                                    Lancement des dés...
-                                </div>
-                            )}
-                        </div>
-                    );
-                })()}
 
             </>}
             </div>
+
+            {state && !state.winner && (state.phase === "weapon_select" && state.pendingAttack || diceAnim) && (() => {
+                const showWeapons = state.phase === "weapon_select" && state.pendingAttack && (!diceAnim || diceAnim.done);
+                const showDice = diceAnim && !diceAnim.done;
+                const showResult = diceAnim?.done;
+
+                const src = diceAnim;
+
+                return (
+                    <div className="combat-overlay" onClick={showResult ? () => setDiceAnim(null) : undefined}>
+                        <div className="combat-modal" onClick={e => e.stopPropagation()}>
+                            <div className="combat-modal-header">
+                                <h2>COMBAT</h2>
+                                {showWeapons && (
+                                    <div className="combat-modal-matchup">
+                                        <span style={{ color: P[state.pendingAttack.attacker.player], fontWeight: 600 }}>{state.pendingAttack.attacker.symbol} {state.pendingAttack.attacker.name}</span>
+                                        {" ⚔ "}
+                                        <span style={{ color: P[state.pendingAttack.target.player], fontWeight: 600 }}>{state.pendingAttack.target.symbol} {state.pendingAttack.target.name}</span>
+                                    </div>
+                                )}
+                                {src && (
+                                    <div className="combat-modal-matchup">
+                                        <span style={{ fontWeight: 600 }}>{src.attacker.name}</span>
+                                        {" ⚔ "}
+                                        <span style={{ fontWeight: 600 }}>{src.target.name}</span>
+                                        <div style={{ fontSize: 13, color: "#8a7a60", marginTop: 4 }}>{src.weaponName}</div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="combat-modal-body">
+                                {showWeapons && (
+                                    <>
+                                        <div style={{ fontSize: 14, color: "#8a6a08", marginBottom: 12, textAlign: "center" }}>
+                                            Choisissez une arme :
+                                        </div>
+                                        {state.pendingAttack.attacker.weapons.map(w => (
+                                            <WeaponCard key={w.id} weapon={w} attacker={state.pendingAttack.attacker} target={state.pendingAttack.target} hills={state.hills} towns={state.towns} aiPreview={state.aiPreview} onSelect={selectWeapon} />
+                                        ))}
+                                    </>
+                                )}
+
+                                {(showDice || showResult) && src && (() => {
+                                    const animating = showDice;
+                                    const visibleLog = animating ? src.log.slice(0, src.phase + 1) : src.log;
+                                    return (
+                                        <>
+                                            {visibleLog.map((entry, i) => {
+                                                const isCurrentPhase = animating && i === src.phase;
+                                                const visibleDice = isCurrentPhase ? (entry.rolls || []).slice(0, src.dice) : (entry.rolls || []);
+                                                return (
+                                                    <div key={i} style={{ marginBottom: entry.isSummary ? 0 : 8 }}>
+                                                        <div style={{ fontSize: 14, color: "#6a5a40", marginBottom: visibleDice.length ? 4 : 0 }}>{entry.label}</div>
+                                                        {visibleDice.length > 0 && (
+                                                            <div style={{ display: "flex", flexWrap: "wrap", gap: 0 }}>
+                                                                {visibleDice.map((r, j) => {
+                                                                    const needed = entry.isSave
+                                                                        ? parseInt((entry.label.match(/(\d+)\+/) || [0, 7])[1])
+                                                                        : parseInt((entry.label.match(/(\d+)\+/) || [0, 0])[1]);
+                                                                    const hit = r >= needed;
+                                                                    const cls = entry.isSave ? (hit ? "roll-save" : "roll-save-fail") : (hit ? "roll-hit" : "roll-miss");
+                                                                    const isNew = isCurrentPhase && j === src.dice - 1;
+                                                                    return <span key={j} className={`roll-chip ${cls}${isNew ? " roll-new" : ""}`}>{r}</span>;
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                            {animating && (
+                                                <div style={{ fontSize: 14, color: "#8a7a60", marginTop: 10, fontStyle: "italic", textAlign: "center", animation: "pulse 1s infinite" }}>
+                                                    Lancement des dés...
+                                                </div>
+                                            )}
+                                            {showResult && (
+                                                <div className="combat-modal-result" style={{ color: src.damage > 0 ? "#e53935" : "#4caf50" }}>
+                                                    {src.isDead ? `💀 ${src.target.name} éliminé !` : src.damage > 0 ? `${src.damage} dégât(s) infligé(s)` : "Aucun dégât !"}
+                                                </div>
+                                            )}
+                                        </>
+                                    );
+                                })()}
+                            </div>
+
+                            <div className="combat-modal-footer">
+                                {showWeapons && (
+                                    <button className="btn btn-grey" style={{ width: "auto", padding: "8px 24px" }} onClick={() => setState(s => ({ ...s, phase: "select", pendingAttack: null, validTargets: [], validMoves: [] }))}>✕ Annuler</button>
+                                )}
+                                {showResult && (
+                                    <button className="btn btn-gold" style={{ width: "auto", padding: "8px 24px" }} onClick={() => setDiceAnim(null)}>Fermer</button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }

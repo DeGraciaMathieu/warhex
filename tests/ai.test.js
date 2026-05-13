@@ -23,7 +23,6 @@ function makeState(overrides = {}) {
         validMoves: [],
         validTargets: [],
         pendingAttack: null,
-        roundLog: null,
         winner: null,
         round: 1,
         scores: { 1: 0, 2: 0 },
