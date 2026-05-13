@@ -252,6 +252,7 @@ export function initState(armies, options = {}) {
         selectedUnit: null,
         validMoves: [],
         validTargets: [],
+        attackRangeHexes: [],
         pendingAttack: null,
         roundLog: null,
         winner: null,

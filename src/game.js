@@ -1,4 +1,4 @@
-import { hexDistance, hexKey, reachableHexes, hasLineOfSight } from "./hex.js";
+import { hexDistance, hexKey, reachableHexes, hasLineOfSight, hexesInRange } from "./hex.js";
 import { resolveAttack } from "./combat.js";
 import { computeTownControl, checkWinner, ACTIVATIONS_PER_TURN } from "./units.js";
 
@@ -31,6 +31,24 @@ function findValidTargets(unit, enemies, losKeys, rangeBonus = 0) {
     return enemies.filter(e => hexDistance(unit.hex, e.hex) <= maxRange && hasLineOfSight(unit.hex, e.hex, losKeys));
 }
 
+function computeAttackRange(unit, sources, losKeys, hillKeys) {
+    const maxRange = Math.max(...unit.weapons.map(w => w.range));
+    const seen = new Set();
+    const result = [];
+    for (const src of sources) {
+        const rangeBonus = hillKeys.has(hexKey(src)) ? 1 : 0;
+        const effectiveRange = maxRange + rangeBonus;
+        for (const hex of hexesInRange(src, effectiveRange)) {
+            const k = hexKey(hex);
+            if (!seen.has(k) && hasLineOfSight(src, hex, losKeys)) {
+                seen.add(k);
+                result.push(hex);
+            }
+        }
+    }
+    return result;
+}
+
 function finishActivation(s, unitId, units) {
     const used = s.activationsUsed + 1;
     const activated = [...s.activatedUnitIds, unitId];
@@ -45,6 +63,7 @@ function finishActivation(s, unitId, units) {
         phase: "select",
         validMoves: [],
         validTargets: [],
+        attackRangeHexes: [],
         pendingAttack: null,
         autoEndTurn: used >= ACTIVATIONS_PER_TURN || remaining.length === 0,
     };
@@ -56,7 +75,7 @@ export function computeDeselect(s) {
     if (hasActed) {
         return { ...s, ...finishActivation(s, sel.id, s.units) };
     }
-    return { ...s, selectedUnit: null, activeUnitId: null, phase: "select", validMoves: [], validTargets: [] };
+    return { ...s, selectedUnit: null, activeUnitId: null, phase: "select", validMoves: [], validTargets: [], attackRangeHexes: [] };
 }
 
 export function handleClick(s, hex) {
@@ -94,7 +113,7 @@ export function handleClick(s, hex) {
         if (validTargets.length === 0) {
             return { ...s, units, townOwnership, ...finishActivation(s, poisoned.id, units) };
         }
-        return { ...s, units, townOwnership, selectedUnit: poisoned, activeUnitId: poisoned.id, phase: "select", validMoves: [], validTargets, autoEndTurn: false };
+        return { ...s, units, townOwnership, selectedUnit: poisoned, activeUnitId: poisoned.id, phase: "select", validMoves: [], validTargets, attackRangeHexes: [], autoEndTurn: false };
     }
 
     if (unitOnHex && unitOnHex.player === s.currentPlayer) {
@@ -109,7 +128,9 @@ export function handleClick(s, hex) {
         const hillKeys = new Set((s.hills || []).map(hexKey));
         const rangeBonus = hillKeys.has(hexKey(cur.hex)) ? 1 : 0;
         const validTargets = cur.hasAttacked ? [] : findValidTargets(cur, enemies, losKeys, rangeBonus);
-        return { ...s, selectedUnit: cur, phase: "select", validMoves, validTargets };
+        const attackRangeSources = [cur.hex, ...validMoves];
+        const attackRangeHexes = cur.hasAttacked ? [] : computeAttackRange(cur, attackRangeSources, losKeys, hillKeys);
+        return { ...s, selectedUnit: cur, phase: "select", validMoves, validTargets, attackRangeHexes };
     }
 
     return s;
@@ -131,7 +152,7 @@ export function computeAttack(s) {
     const hillKeys = new Set((s.hills || []).map(hexKey));
     const rangeBonus = hillKeys.has(hexKey(cur.hex)) ? 1 : 0;
     const validTargets = findValidTargets(cur, enemies, losKeys, rangeBonus);
-    return { ...s, phase: "attack", validTargets, validMoves: [], selectedUnit: cur };
+    return { ...s, phase: "attack", validTargets, validMoves: [], attackRangeHexes: [], selectedUnit: cur };
 }
 
 export function computeWeaponSelect(s, weapon) {
@@ -141,7 +162,7 @@ export function computeWeaponSelect(s, weapon) {
     const hillKeys = new Set((s.hills || []).map(hexKey));
     const rangeBonus = (weapon.type === "ranged" && hillKeys.has(hexKey(attacker.hex))) ? 1 : 0;
     if (dist > weapon.range + rangeBonus) {
-        return { state: { ...s, phase: "select", pendingAttack: null, validTargets: [], validMoves: [] }, anim: null };
+        return { state: { ...s, phase: "select", pendingAttack: null, validTargets: [], validMoves: [], attackRangeHexes: [] }, anim: null };
     }
 
     const townKeys = new Set((s.towns || []).map(hexKey));
@@ -193,7 +214,7 @@ export function computeEndTurn(s) {
         ...s, scores,
         units: s.units.map(u => ({ ...u, hasMoved: false, hasAttacked: false })),
         currentPlayer: nextPlayer, activeUnitId: null, activationsUsed: 0, activatedUnitIds: [],
-        phase: "select", selectedUnit: null, validMoves: [], validTargets: [], pendingAttack: null,
+        phase: "select", selectedUnit: null, validMoves: [], validTargets: [], attackRangeHexes: [], pendingAttack: null,
         round: newRound, winner,
         autoEndTurn: false,
     };
