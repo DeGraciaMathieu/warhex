@@ -562,6 +562,30 @@ describe("phases bloquantes", () => {
     });
 });
 
+describe("désélection par clic sur hex vide", () => {
+    it("cliquer sur un hex vide avec une unité sélectionnée la désélectionne", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const enemy = createUnit("warrior", 2, { q: 4, r: -4, s: 0 });
+        const s = makeState({ units: [u1, enemy] });
+        const selected = handleClick(s, u1.hex);
+        expect(selected.selectedUnit).not.toBeNull();
+        const deselected = handleClick(selected, { q: -4, r: 4, s: 0 });
+        expect(deselected.selectedUnit).toBeNull();
+        expect(deselected.phase).toBe("select");
+    });
+
+    it("cliquer sur un hex vide après avoir agi consomme l'activation", () => {
+        const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const u2 = createUnit("warrior", 1, { q: -3, r: 0, s: 3 });
+        const enemy = createUnit("warrior", 2, { q: 4, r: -4, s: 0 });
+        const s = makeState({ units: [u1, u2, enemy] });
+        const selected = handleClick(s, u1.hex);
+        const moved = handleClick(selected, { q: -1, r: 0, s: 1 });
+        // L'unité a bougé loin de l'ennemi → activation auto-consommée
+        expect(moved.activationsUsed).toBe(1);
+    });
+});
+
 describe("flux déplacement puis attaque", () => {
     it("après un déplacement à portée d'un ennemi, les cibles sont affichées", () => {
         const u1 = createUnit("warrior", 1, { q: -2, r: 0, s: 2 });

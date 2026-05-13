@@ -161,6 +161,11 @@ describe("état initial du jeu", () => {
         expect(state.activeUnitId).toBeNull();
         expect(state.autoEndTurn).toBe(false);
     });
+
+    it("aiPreview est null au début", () => {
+        const state = initState();
+        expect(state.aiPreview).toBeNull();
+    });
 });
 
 describe("génération de la carte", () => {
