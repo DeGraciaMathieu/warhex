@@ -207,6 +207,80 @@ export function drawScene(canvas, state, hoveredHex) {
         });
     });
 
+    // AI preview indicators
+    const aiPreview = state.aiPreview;
+    if (aiPreview) {
+        const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 150);
+
+        if (aiPreview.type === "select") {
+            // Golden pulsing ring around the unit the AI will select
+            const unit = state.units.find(u => u.hex.q === aiPreview.hex.q && u.hex.r === aiPreview.hex.r);
+            if (unit) {
+                const { x, y } = hexToPixel(unit.hex.q, unit.hex.r);
+                const px = x + OX, py = y + OY;
+                const r = HEX_SIZE * 0.52 + 4;
+                ctx.beginPath();
+                ctx.arc(px, py, r, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(180, 150, 30, ${0.5 + pulse * 0.5})`;
+                ctx.lineWidth = 3;
+                ctx.setLineDash([6, 4]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+
+        if (aiPreview.type === "move") {
+            // Destination hex: red translucent halo with dashed border
+            const { x, y } = hexToPixel(aiPreview.hex.q, aiPreview.hex.r);
+            const px = x + OX, py = y + OY;
+            const corners = hexCorners(px, py, HEX_SIZE);
+            ctx.beginPath();
+            corners.forEach((c, i) => (i === 0 ? ctx.moveTo(c.x, c.y) : ctx.lineTo(c.x, c.y)));
+            ctx.closePath();
+            ctx.fillStyle = `rgba(160, 48, 48, ${0.12 + pulse * 0.12})`;
+            ctx.fill();
+            ctx.strokeStyle = `rgba(160, 48, 48, ${0.5 + pulse * 0.4})`;
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash([5, 3]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Circle marker in center
+            ctx.beginPath();
+            ctx.arc(px, py, HEX_SIZE * 0.15, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(160, 48, 48, ${0.6 + pulse * 0.3})`;
+            ctx.fill();
+        }
+
+        if (aiPreview.type === "attack") {
+            // Crosshair on target hex
+            const { x, y } = hexToPixel(aiPreview.hex.q, aiPreview.hex.r);
+            const px = x + OX, py = y + OY;
+            const r = HEX_SIZE * 0.52 + 5;
+
+            // Pulsing red circle
+            ctx.beginPath();
+            ctx.arc(px, py, r, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(220, 40, 40, ${0.5 + pulse * 0.5})`;
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash([4, 3]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Crosshair lines
+            const len = HEX_SIZE * 0.3;
+            ctx.strokeStyle = `rgba(220, 40, 40, ${0.4 + pulse * 0.4})`;
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.moveTo(px - r - len, py); ctx.lineTo(px - r + 4, py);
+            ctx.moveTo(px + r + len, py); ctx.lineTo(px + r - 4, py);
+            ctx.moveTo(px, py - r - len); ctx.lineTo(px, py - r + 4);
+            ctx.moveTo(px, py + r + len); ctx.lineTo(px, py + r - 4);
+            ctx.stroke();
+        }
+    }
+
     // Dying units animation
     const now = Date.now();
     (state.dyingUnits || []).forEach(dying => {

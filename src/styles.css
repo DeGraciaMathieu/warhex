@@ -24,6 +24,7 @@
 }
 .weapon-card:hover { border-color: #8a6a08; background: #e0d8c8; }
 .weapon-card.disabled { opacity: .35; cursor: not-allowed; }
+.weapon-card.ai-highlight { border-color: #a03030; background: #f0d8d0; box-shadow: 0 0 8px rgba(160, 48, 48, 0.4); }
 
 .sr { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; }
 .sl { color: #8a7a60; font-size: 13px; }
