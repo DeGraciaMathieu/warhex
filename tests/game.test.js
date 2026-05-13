@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { hexKey, reachableHexes, isValidHex } from "../src/hex.js";
 import { createUnit, resetUID } from "../src/units.js";
-import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, getUnitTerrainEffects } from "../src/game.js";
+import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, getUnitTerrainEffects, getCombatModifiers } from "../src/game.js";
 
 beforeEach(() => resetUID());
 
@@ -1074,5 +1074,77 @@ describe("portée d'attaque à la sélection", () => {
         expect(selected.attackRangeHexes.length).toBeGreaterThan(0);
         const deselected = computeDeselect(selected);
         expect(deselected.attackRangeHexes).toHaveLength(0);
+    });
+});
+
+describe("modificateurs de combat", () => {
+    it("attaquant sur colline retourne un bonus colline côté attaquant", () => {
+        const hill = { q: 0, r: 0, s: 0 };
+        const attacker = createUnit("warrior", 1, hill);
+        const target = createUnit("warrior", 2, { q: 2, r: -2, s: 0 });
+        const s = makeState({ units: [attacker, target], hills: [hill] });
+        const mods = getCombatModifiers(attacker, target, s);
+        expect(mods.attacker).toHaveLength(1);
+        expect(mods.attacker[0].type).toBe("bonus");
+        expect(mods.attacker[0].icon).toBe("⛰");
+        expect(mods.target).toHaveLength(0);
+    });
+
+    it("cible dans une ville retourne un malus côté défenseur", () => {
+        const town = { q: 1, r: -1, s: 0 };
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, town);
+        const s = makeState({ units: [attacker, target], towns: [town] });
+        const mods = getCombatModifiers(attacker, target, s);
+        expect(mods.target).toHaveLength(1);
+        expect(mods.target[0].type).toBe("malus");
+        expect(mods.target[0].icon).toBe("🏰");
+        expect(mods.attacker).toHaveLength(0);
+    });
+
+    it("cible dans une forêt retourne un malus côté défenseur", () => {
+        const forest = { q: 1, r: -1, s: 0 };
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, forest);
+        const s = makeState({ units: [attacker, target], forests: [forest] });
+        const mods = getCombatModifiers(attacker, target, s);
+        expect(mods.target).toHaveLength(1);
+        expect(mods.target[0].type).toBe("malus");
+        expect(mods.target[0].icon).toBe("🌲");
+        expect(mods.attacker).toHaveLength(0);
+    });
+
+    it("cible sur une rivière retourne un bonus côté défenseur", () => {
+        const river = { q: 1, r: -1, s: 0 };
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, river);
+        const s = makeState({ units: [attacker, target], rivers: [river] });
+        const mods = getCombatModifiers(attacker, target, s);
+        expect(mods.target).toHaveLength(1);
+        expect(mods.target[0].type).toBe("bonus");
+        expect(mods.target[0].icon).toBe("🏞");
+        expect(mods.attacker).toHaveLength(0);
+    });
+
+    it("aucun terrain spécial retourne des listes vides", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [attacker, target] });
+        const mods = getCombatModifiers(attacker, target, s);
+        expect(mods.attacker).toHaveLength(0);
+        expect(mods.target).toHaveLength(0);
+    });
+
+    it("modificateurs séparés par combattant (colline attaquant + couvert ville défenseur)", () => {
+        const hill = { q: 0, r: 0, s: 0 };
+        const town = { q: 1, r: -1, s: 0 };
+        const attacker = createUnit("warrior", 1, hill);
+        const target = createUnit("warrior", 2, town);
+        const s = makeState({ units: [attacker, target], hills: [hill], towns: [town] });
+        const mods = getCombatModifiers(attacker, target, s);
+        expect(mods.attacker).toHaveLength(1);
+        expect(mods.attacker[0].icon).toBe("⛰");
+        expect(mods.target).toHaveLength(1);
+        expect(mods.target[0].icon).toBe("🏰");
     });
 });

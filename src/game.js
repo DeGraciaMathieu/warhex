@@ -15,6 +15,23 @@ export function getUnitTerrainEffects(unit, state) {
     return effects;
 }
 
+export function getCombatModifiers(attacker, target, state) {
+    const k = hexKey;
+    const townKeys = new Set((state.towns || []).map(k));
+    const forestKeys = new Set((state.forests || []).map(k));
+    const riverKeys = new Set((state.rivers || []).map(k));
+    const hillKeys = new Set((state.hills || []).map(k));
+    const ak = k(attacker.hex);
+    const tk = k(target.hex);
+    const attackerMods = [];
+    const targetMods = [];
+    if (hillKeys.has(ak)) attackerMods.push({ type: "bonus", label: "Colline (portée +1)", icon: "⛰" });
+    if (townKeys.has(tk)) targetMods.push({ type: "malus", label: "Couvert de ville (svg -1)", icon: "🏰" });
+    if (forestKeys.has(tk)) targetMods.push({ type: "malus", label: "Couvert de forêt (svg -1)", icon: "🌲" });
+    if (riverKeys.has(tk)) targetMods.push({ type: "bonus", label: "Rivière (svg +1)", icon: "🏞" });
+    return { attacker: attackerMods, target: targetMods };
+}
+
 function buildLosKeys(state) {
     return new Set([...state.obstacles, ...(state.towns || []), ...(state.forests || []), ...(state.hills || [])].map(hexKey));
 }
