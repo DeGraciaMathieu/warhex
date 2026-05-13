@@ -197,8 +197,11 @@ export function applyDamage(s, anim) {
         ? [...(s.dyingUnits || []), { hex: target.hex, symbol: target.symbol, player: target.player, deathTime: Date.now() }]
         : (s.dyingUnits || []);
     const kills = isDead ? { ...s.kills, [attacker.player]: (s.kills?.[attacker.player] || 0) + 1 } : s.kills;
+    const hitEffects = damage > 0
+        ? [...(s.hitEffects || []), { hex: target.hex, damage, time: Date.now() }]
+        : (s.hitEffects || []);
     return {
-        ...s, units, dyingUnits, kills, ...finishActivation(s, attacker.id, units),
+        ...s, units, dyingUnits, kills, hitEffects, ...finishActivation(s, attacker.id, units),
         roundLog: { weapon: anim.weaponName, attacker: attacker.name, target: target.name, log: anim.log, isDead: anim.isDead, damage },
     };
 }

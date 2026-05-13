@@ -269,5 +269,6 @@ export function initState(armies, options = {}) {
         aiPreview: null,
         kills: { 1: 0, 2: 0 },
         scoreHistory: [],
+        hitEffects: [],
     };
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.js";
 import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN } from "./units.js";
-import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION } from "./renderer.js";
+import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION } from "./renderer.js";
 import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect } from "./game.js";
 import { computeAIAction, buildAIPreview } from "./ai.js";
 import Guide from "./Guide.jsx";
@@ -89,23 +89,23 @@ export default function HexWarhammer() {
     useEffect(() => {
         const hasDying = state?.dyingUnits?.length > 0;
         const hasPreview = !!state?.aiPreview;
-        if (!state || (!hasDying && !hasPreview)) return;
+        const hasHitEffects = state?.hitEffects?.length > 0;
+        if (!state || (!hasDying && !hasPreview && !hasHitEffects)) return;
         let frameId;
         const animate = () => {
             drawScene(canvasRef.current, state, hoveredHex);
-            if (hasDying) {
-                const now = Date.now();
-                const stillAnimating = state.dyingUnits.some(d => now - d.deathTime < DEATH_ANIM_DURATION);
-                if (!stillAnimating) {
-                    setState(s => ({ ...s, dyingUnits: [] }));
-                    return;
-                }
+            const now = Date.now();
+            const dyingDone = !hasDying || !state.dyingUnits.some(d => now - d.deathTime < DEATH_ANIM_DURATION);
+            const hitDone = !hasHitEffects || !state.hitEffects.some(e => now - e.time < HIT_EFFECT_DURATION);
+            if (dyingDone && hitDone && !hasPreview) {
+                setState(s => ({ ...s, dyingUnits: [], hitEffects: [] }));
+                return;
             }
             frameId = requestAnimationFrame(animate);
         };
         frameId = requestAnimationFrame(animate);
         return () => cancelAnimationFrame(frameId);
-    }, [state?.dyingUnits, state?.aiPreview]);
+    }, [state?.dyingUnits, state?.aiPreview, state?.hitEffects]);
 
     useEffect(() => {
         if (state && state.autoEndTurn) {

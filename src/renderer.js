@@ -7,6 +7,7 @@ export const OX = CANVAS_W / 2;
 export const OY = CANVAS_H / 2;
 
 export const DEATH_ANIM_DURATION = 600;
+export const HIT_EFFECT_DURATION = 500;
 
 export function drawScene(canvas, state, hoveredHex) {
     if (!canvas) return;
@@ -124,10 +125,20 @@ export function drawScene(canvas, state, hoveredHex) {
         }
     });
 
+    const now = Date.now();
+    const activeShakes = new Map();
+    (state.hitEffects || []).forEach(e => {
+        const elapsed = now - e.time;
+        if (elapsed < HIT_EFFECT_DURATION) activeShakes.set(hexKey(e.hex), elapsed);
+    });
+
     state.units.forEach(unit => {
         if (unit.currentWounds <= 0) return;
         const { x, y } = hexToPixel(unit.hex.q, unit.hex.r);
-        const px = x + OX, py = y + OY;
+        const uk = hexKey(unit.hex);
+        const shakeElapsed = activeShakes.get(uk);
+        const shakeOx = shakeElapsed !== undefined ? Math.sin(shakeElapsed / 20) * 4 * (1 - shakeElapsed / HIT_EFFECT_DURATION) : 0;
+        const px = x + OX + shakeOx, py = y + OY;
         const r = HEX_SIZE * 0.52;
         const isSelected = state.selectedUnit?.id === unit.id;
         const isDimmed = unit.hasMoved && unit.hasAttacked;
@@ -282,7 +293,6 @@ export function drawScene(canvas, state, hoveredHex) {
     }
 
     // Dying units animation
-    const now = Date.now();
     (state.dyingUnits || []).forEach(dying => {
         const elapsed = now - dying.deathTime;
         if (elapsed >= DEATH_ANIM_DURATION) return;
@@ -316,6 +326,27 @@ export function drawScene(canvas, state, hoveredHex) {
         ctx.fillStyle = "#2a2015";
         ctx.fillText(dying.symbol, 0, 0);
 
+        ctx.restore();
+    });
+
+    // Hit effects: floating damage text
+    (state.hitEffects || []).forEach(effect => {
+        const elapsed = now - effect.time;
+        if (elapsed >= HIT_EFFECT_DURATION) return;
+        const progress = elapsed / HIT_EFFECT_DURATION;
+        const { x, y } = hexToPixel(effect.hex.q, effect.hex.r);
+        const px = x + OX, py = y + OY - progress * 30;
+
+        ctx.save();
+        ctx.globalAlpha = 1 - progress;
+        ctx.font = `bold ${14 + (1 - progress) * 4}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.strokeStyle = "#2a2015";
+        ctx.lineWidth = 2.5;
+        ctx.strokeText(`-${effect.damage}`, px, py);
+        ctx.fillStyle = "#e53935";
+        ctx.fillText(`-${effect.damage}`, px, py);
         ctx.restore();
     });
 }
