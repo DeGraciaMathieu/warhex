@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.js";
 import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION } from "./renderer.js";
-import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect } from "./game.js";
+import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, getCombatModifiers } from "./game.js";
 import { computeAIAction, buildAIPreview } from "./ai.js";
 import Guide from "./Guide.jsx";
 import "./styles.css";
@@ -108,7 +108,6 @@ export default function HexWarhammer() {
         const entry = log[phase];
         if (!entry) {
             setDiceAnim(a => ({ ...a, done: true }));
-            setState(s => applyDamage(s, diceAnim));
             return;
         }
         const rolls = entry.rolls || [];
@@ -142,9 +141,16 @@ export default function HexWarhammer() {
         return () => cancelAnimationFrame(frameId);
     }, [state?.dyingUnits, state?.aiPreview, state?.hitEffects]);
 
+    function closeCombatModal() {
+        if (diceAnim) {
+            setState(s => applyDamage(s, diceAnim));
+            setDiceAnim(null);
+        }
+    }
+
     useEffect(() => {
         if (!diceAnim?.done) return;
-        const timer = setTimeout(() => setDiceAnim(null), 2000);
+        const timer = setTimeout(() => closeCombatModal(), 2000);
         return () => clearTimeout(timer);
     }, [diceAnim?.done]);
 
@@ -180,7 +186,7 @@ export default function HexWarhammer() {
     function onCanvasClick(e) {
         if (vsAI && state?.currentPlayer === 2) return;
         if (diceAnim && !diceAnim.done) return;
-        if (diceAnim?.done) setDiceAnim(null);
+        if (diceAnim?.done) closeCombatModal();
         const rect = canvasRef.current.getBoundingClientRect();
         const sx = CANVAS_W / rect.width, sy = CANVAS_H / rect.height;
         const x = (e.clientX - rect.left) * sx - OX;
@@ -447,81 +453,88 @@ export default function HexWarhammer() {
                 const showResult = diceAnim?.done;
 
                 const src = diceAnim;
+                const combatAttacker = showWeapons ? state.pendingAttack.attacker : src?.attacker;
+                const combatTarget = showWeapons ? state.pendingAttack.target : src?.target;
+                const modifiers = combatAttacker && combatTarget ? getCombatModifiers(combatAttacker, combatTarget, state) : { attacker: [], target: [] };
+
+                const animating = showDice;
+                const visibleLog = src ? (animating ? src.log.slice(0, src.phase + 1) : src.log) : [];
+                const hitEntry = visibleLog.find(e => !e.isSave && !e.isSummary);
+                const saveEntry = visibleLog.find(e => e.isSave);
+                const hitPhaseIdx = src ? src.log.findIndex(e => !e.isSave && !e.isSummary) : -1;
+                const savePhaseIdx = src ? src.log.findIndex(e => e.isSave) : -1;
+
+                function renderDiceBlock(entry, phaseIdx) {
+                    if (!entry) return null;
+                    const isCurrentPhase = animating && phaseIdx === src.phase;
+                    const visibleDice = isCurrentPhase ? (entry.rolls || []).slice(0, src.dice) : (entry.rolls || []);
+                    return (
+                        <div style={{ marginTop: 8 }}>
+                            <div style={{ fontSize: 13, color: "#6a5a40", marginBottom: visibleDice.length ? 4 : 0 }}>{entry.label}</div>
+                            {visibleDice.length > 0 && (
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 0, justifyContent: "center" }}>
+                                    {visibleDice.map((r, j) => {
+                                        const needed = entry.isSave
+                                            ? parseInt((entry.label.match(/(\d+)\+/) || [0, 7])[1])
+                                            : parseInt((entry.label.match(/(\d+)\+/) || [0, 0])[1]);
+                                        const hit = r >= needed;
+                                        const cls = entry.isSave ? (hit ? "roll-save" : "roll-save-fail") : (hit ? "roll-hit" : "roll-miss");
+                                        const isNew = isCurrentPhase && j === src.dice - 1;
+                                        return <span key={j} className={`roll-chip ${cls}${isNew ? " roll-new" : ""}`}>{r}</span>;
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    );
+                }
 
                 return (
-                    <div className="combat-overlay" onClick={showResult ? () => setDiceAnim(null) : undefined}>
+                    <div className="combat-overlay" onClick={showResult ? closeCombatModal : undefined}>
                         <div className="combat-modal" onClick={e => e.stopPropagation()}>
                             <div className="combat-modal-header">
                                 <h2>COMBAT</h2>
-                                {showWeapons && (
-                                    <div className="combat-modal-matchup">
-                                        <span style={{ color: P[state.pendingAttack.attacker.player], fontWeight: 600 }}>{state.pendingAttack.attacker.symbol} {state.pendingAttack.attacker.name}</span>
-                                        {" ⚔ "}
-                                        <span style={{ color: P[state.pendingAttack.target.player], fontWeight: 600 }}>{state.pendingAttack.target.symbol} {state.pendingAttack.target.name}</span>
-                                    </div>
-                                )}
-                                {src && (
-                                    <div className="combat-modal-matchup">
-                                        <span style={{ fontWeight: 600 }}>{src.attacker.name}</span>
-                                        {" ⚔ "}
-                                        <span style={{ fontWeight: 600 }}>{src.target.name}</span>
-                                        <div style={{ fontSize: 13, color: "#8a7a60", marginTop: 4 }}>{src.weaponName}</div>
-                                    </div>
+                                {(showDice || showResult) && src && (
+                                    <div style={{ fontSize: 13, color: "#8a7a60", marginTop: 2 }}>{src.weaponName}</div>
                                 )}
                             </div>
 
                             <div className="combat-modal-body">
-                                {showWeapons && (
-                                    <>
-                                        <div style={{ fontSize: 14, color: "#8a6a08", marginBottom: 12, textAlign: "center" }}>
-                                            Choisissez une arme :
-                                        </div>
-                                        {state.pendingAttack.attacker.weapons.map(w => (
-                                            <WeaponCard key={w.id} weapon={w} attacker={state.pendingAttack.attacker} target={state.pendingAttack.target} hills={state.hills} towns={state.towns} aiPreview={state.aiPreview} onSelect={selectWeapon} />
+                                <div className="combat-columns">
+                                    <div className="combat-col">
+                                        <div className="combat-col-role">ATTAQUANT</div>
+                                        <div className="combat-col-name" style={{ color: P[combatAttacker?.player] }}>{combatAttacker?.symbol} {combatAttacker?.name}</div>
+                                        {modifiers.attacker.map((m, i) => (
+                                            <span key={i} className={`combat-modifier ${m.type}`}>{m.icon} {m.label}</span>
                                         ))}
-                                    </>
+                                        {showWeapons && (
+                                            <div className="combat-col-weapons">
+                                                {state.pendingAttack.attacker.weapons.map(w => (
+                                                    <WeaponCard key={w.id} weapon={w} attacker={state.pendingAttack.attacker} target={state.pendingAttack.target} hills={state.hills} towns={state.towns} aiPreview={state.aiPreview} onSelect={selectWeapon} />
+                                                ))}
+                                            </div>
+                                        )}
+                                        {(showDice || showResult) && renderDiceBlock(hitEntry, hitPhaseIdx)}
+                                    </div>
+                                    <div className="combat-col-separator" />
+                                    <div className="combat-col">
+                                        <div className="combat-col-role">DÉFENSEUR</div>
+                                        <div className="combat-col-name" style={{ color: P[combatTarget?.player] }}>{combatTarget?.symbol} {combatTarget?.name}</div>
+                                        {modifiers.target.map((m, i) => (
+                                            <span key={i} className={`combat-modifier ${m.type}`}>{m.icon} {m.label}</span>
+                                        ))}
+                                        {(showDice || showResult) && renderDiceBlock(saveEntry, savePhaseIdx)}
+                                    </div>
+                                </div>
+                                {animating && (
+                                    <div style={{ fontSize: 14, color: "#8a7a60", marginTop: 12, fontStyle: "italic", textAlign: "center", animation: "pulse 1s infinite" }}>
+                                        Lancement des dés...
+                                    </div>
                                 )}
-
-                                {(showDice || showResult) && src && (() => {
-                                    const animating = showDice;
-                                    const visibleLog = animating ? src.log.slice(0, src.phase + 1) : src.log;
-                                    return (
-                                        <>
-                                            {visibleLog.map((entry, i) => {
-                                                const isCurrentPhase = animating && i === src.phase;
-                                                const visibleDice = isCurrentPhase ? (entry.rolls || []).slice(0, src.dice) : (entry.rolls || []);
-                                                return (
-                                                    <div key={i} style={{ marginBottom: entry.isSummary ? 0 : 8 }}>
-                                                        <div style={{ fontSize: 14, color: "#6a5a40", marginBottom: visibleDice.length ? 4 : 0 }}>{entry.label}</div>
-                                                        {visibleDice.length > 0 && (
-                                                            <div style={{ display: "flex", flexWrap: "wrap", gap: 0 }}>
-                                                                {visibleDice.map((r, j) => {
-                                                                    const needed = entry.isSave
-                                                                        ? parseInt((entry.label.match(/(\d+)\+/) || [0, 7])[1])
-                                                                        : parseInt((entry.label.match(/(\d+)\+/) || [0, 0])[1]);
-                                                                    const hit = r >= needed;
-                                                                    const cls = entry.isSave ? (hit ? "roll-save" : "roll-save-fail") : (hit ? "roll-hit" : "roll-miss");
-                                                                    const isNew = isCurrentPhase && j === src.dice - 1;
-                                                                    return <span key={j} className={`roll-chip ${cls}${isNew ? " roll-new" : ""}`}>{r}</span>;
-                                                                })}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                            {animating && (
-                                                <div style={{ fontSize: 14, color: "#8a7a60", marginTop: 10, fontStyle: "italic", textAlign: "center", animation: "pulse 1s infinite" }}>
-                                                    Lancement des dés...
-                                                </div>
-                                            )}
-                                            {showResult && (
-                                                <div className="combat-modal-result" style={{ color: src.damage > 0 ? "#e53935" : "#4caf50" }}>
-                                                    {src.isDead ? `💀 ${src.target.name} éliminé !` : src.damage > 0 ? `${src.damage} dégât(s) infligé(s)` : "Aucun dégât !"}
-                                                </div>
-                                            )}
-                                        </>
-                                    );
-                                })()}
+                                {showResult && (
+                                    <div className="combat-modal-result" style={{ color: src.damage > 0 ? "#e53935" : "#4caf50" }}>
+                                        {src.isDead ? `💀 ${src.target.name} éliminé !` : src.damage > 0 ? `${src.damage} dégât(s) infligé(s)` : "Aucun dégât !"}
+                                    </div>
+                                )}
                             </div>
 
                             <div className="combat-modal-footer">
@@ -529,7 +542,7 @@ export default function HexWarhammer() {
                                     <button className="btn btn-grey" style={{ width: "auto", padding: "8px 24px" }} onClick={() => setState(s => ({ ...s, phase: "select", pendingAttack: null, validTargets: [], validMoves: [] }))}>✕ Annuler</button>
                                 )}
                                 {showResult && (
-                                    <button className="btn btn-gold" style={{ width: "auto", padding: "8px 24px" }} onClick={() => setDiceAnim(null)}>Fermer</button>
+                                    <button className="btn btn-gold" style={{ width: "auto", padding: "8px 24px" }} onClick={closeCombatModal}>Fermer</button>
                                 )}
                             </div>
                         </div>

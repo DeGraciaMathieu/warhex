@@ -81,10 +81,6 @@ canvas { cursor: crosshair; display: block; }
     letter-spacing: .2em; color: #8a6a08; margin: 0 0 10px;
 }
 
-.combat-modal-matchup {
-    font-size: 15px; color: #2a2015;
-}
-
 .combat-modal-body {
     padding: 16px 24px 20px;
 }
@@ -98,6 +94,47 @@ canvas { cursor: crosshair; display: block; }
 .combat-modal-footer {
     padding: 12px 24px 20px;
     display: flex; justify-content: center;
+}
+
+.combat-columns {
+    display: flex; gap: 0; align-items: flex-start;
+}
+
+.combat-col {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 0 12px;
+}
+
+.combat-col-role {
+    font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: .15em;
+    color: #8a7a60;
+}
+
+.combat-col-name {
+    font-family: 'Cinzel', serif; font-size: 14px; font-weight: 700;
+    letter-spacing: .08em; margin-bottom: 4px;
+}
+
+.combat-col-weapons {
+    width: 100%; margin-top: 8px;
+}
+
+.combat-col-separator {
+    width: 1px; background: #d5cbb8; align-self: stretch; flex-shrink: 0;
+}
+
+.combat-modifier {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; border-radius: 4px;
+    font-size: 12px; font-weight: 600; letter-spacing: .03em;
+}
+
+.combat-modifier.bonus {
+    background: rgba(76, 175, 80, .12); border: 1px solid #4caf50; color: #2e7d32;
+}
+
+.combat-modifier.malus {
+    background: rgba(244, 67, 54, .1); border: 1px solid #e53935; color: #c62828;
 }
 
 @keyframes overlayIn {
