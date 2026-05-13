@@ -33,6 +33,9 @@ function makeState(overrides = {}) {
         townOwnership: {},
         autoEndTurn: false,
         dyingUnits: [],
+        aiPreview: null,
+        kills: { 1: 0, 2: 0 },
+        scoreHistory: [],
         ...overrides,
     };
 }
@@ -201,6 +204,43 @@ describe("fin de tour", () => {
         const result = computeEndTurn(s);
         expect(result.round).toBe(3);
         expect(result.currentPlayer).toBe(2);
+    });
+
+    it("computeEndTurn alimente scoreHistory en fin de round", () => {
+        const town = { q: 0, r: 0, s: 0 };
+        const u1 = createUnit("warrior", 1, town);
+        const s = makeState({ units: [u1], towns: [town], currentPlayer: 2, round: 2, townOwnership: { [hexKey(town)]: 1 } });
+        const result = computeEndTurn(s);
+        expect(result.scoreHistory).toHaveLength(1);
+        expect(result.scoreHistory[0]).toEqual({ round: 2, scores: { 1: 1, 2: 0 } });
+    });
+
+    it("computeEndTurn ne modifie pas scoreHistory en milieu de round", () => {
+        const s = makeState({ currentPlayer: 1, round: 2 });
+        const result = computeEndTurn(s);
+        expect(result.scoreHistory).toEqual([]);
+    });
+});
+
+describe("tracking des kills", () => {
+    it("applyDamage incrémente les kills quand une unité est éliminée", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: 0, s: -1 });
+        target.currentWounds = 1;
+        const s = makeState({ units: [attacker, target], selectedUnit: attacker, activeUnitId: attacker.id });
+        const anim = { attacker, target, damage: 1, weaponName: "Épée", log: [], isDead: true };
+        const result = applyDamage(s, anim);
+        expect(result.kills[1]).toBe(1);
+        expect(result.kills[2]).toBe(0);
+    });
+
+    it("applyDamage ne modifie pas les kills sans élimination", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: 0, s: -1 });
+        const s = makeState({ units: [attacker, target], selectedUnit: attacker, activeUnitId: attacker.id });
+        const anim = { attacker, target, damage: 1, weaponName: "Épée", log: [], isDead: false };
+        const result = applyDamage(s, anim);
+        expect(result.kills[1]).toBe(0);
     });
 });
 

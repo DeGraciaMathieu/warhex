@@ -166,6 +166,16 @@ describe("état initial du jeu", () => {
         const state = initState();
         expect(state.aiPreview).toBeNull();
     });
+
+    it("kills sont à zéro au début", () => {
+        const state = initState();
+        expect(state.kills).toEqual({ 1: 0, 2: 0 });
+    });
+
+    it("scoreHistory est vide au début", () => {
+        const state = initState();
+        expect(state.scoreHistory).toEqual([]);
+    });
 });
 
 describe("génération de la carte", () => {

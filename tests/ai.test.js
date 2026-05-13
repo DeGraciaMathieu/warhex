@@ -31,6 +31,8 @@ function makeState(overrides = {}) {
         activationsUsed: 0,
         activatedUnitIds: [],
         autoEndTurn: false,
+        kills: { 1: 0, 2: 0 },
+        scoreHistory: [],
         ...overrides,
     };
 }
