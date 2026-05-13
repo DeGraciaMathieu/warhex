@@ -65,7 +65,7 @@ export function drawScene(canvas, state, hoveredHex) {
             fill = owner === 1 ? "rgba(42,111,168,0.25)" : owner === 2 ? "rgba(160,48,48,0.25)" : "#e8d8b0";
         }
         if (isObstacle) fill = "#8a7a60";
-        if (isAttackRange) fill = isHover ? "rgba(200,100,50,0.25)" : "rgba(200,100,50,0.08)";
+        if (isAttackRange) fill = "rgba(200,100,50,0.08)";
         if (isMove) fill = isHover ? "rgba(58,128,196,0.35)" : "rgba(58,128,196,0.15)";
         if (isTarget) fill = isHover ? "rgba(200,50,50,0.35)" : "rgba(200,50,50,0.15)";
         ctx.fillStyle = fill;
