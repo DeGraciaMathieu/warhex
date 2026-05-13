@@ -278,6 +278,72 @@ export default function HexWarhammer() {
             </div>
 
             <div style={{ width: 320, borderLeft: "1px solid #d5cbb8", background: "#ece5d8", display: "flex", flexDirection: "column", flexShrink: 0 }}>
+                {state.winner ? (
+                    <div style={{ padding: "20px", flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
+                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 16, letterSpacing: ".1em", color: "#2a2015", textAlign: "center" }}>
+                            {state.winner === "draw" ? "ÉGALITÉ" : `JOUEUR ${state.winner} VICTORIEUX`}
+                        </div>
+
+                        <div style={{ display: "flex", justifyContent: "space-around", padding: "12px 0", borderTop: "1px solid #d5cbb8", borderBottom: "1px solid #d5cbb8" }}>
+                            <div style={{ textAlign: "center" }}>
+                                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 4 }}>JOUEUR 1</div>
+                                <div style={{ fontSize: 24, fontWeight: 700, color: "#2a6fa8" }}>{state.kills[1]}</div>
+                                <div style={{ fontSize: 11, color: "#8a7a60" }}>kills</div>
+                                <div style={{ fontSize: 16, fontWeight: 600, color: "#2a6fa8", marginTop: 4 }}>{state.scores[1]} pts</div>
+                            </div>
+                            <div style={{ width: 1, background: "#d5cbb8" }} />
+                            <div style={{ textAlign: "center" }}>
+                                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 4 }}>JOUEUR 2</div>
+                                <div style={{ fontSize: 24, fontWeight: 700, color: "#a03030" }}>{state.kills[2]}</div>
+                                <div style={{ fontSize: 11, color: "#8a7a60" }}>kills</div>
+                                <div style={{ fontSize: 16, fontWeight: 600, color: "#a03030", marginTop: 4 }}>{state.scores[2]} pts</div>
+                            </div>
+                        </div>
+
+                        {state.scoreHistory.length > 0 && (() => {
+                            const maxScore = Math.max(...state.scoreHistory.map(h => Math.max(h.scores[1], h.scores[2])), 1);
+                            const W = 260, H = 140, padX = 30, padY = 20;
+                            const chartW = W - padX * 2, chartH = H - padY * 2;
+                            const pts = (player) => state.scoreHistory.map((h, i) => {
+                                const x = padX + (i / (state.scoreHistory.length - 1 || 1)) * chartW;
+                                const y = padY + chartH - (h.scores[player] / maxScore) * chartH;
+                                return `${x},${y}`;
+                            }).join(" ");
+                            return (
+                                <div>
+                                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 6 }}>ÉVOLUTION DES POINTS</div>
+                                    <svg width={W} height={H} style={{ background: "#f5f0e8", borderRadius: 4, border: "1px solid #d5cbb8" }}>
+                                        {[...Array(Math.min(5, maxScore + 1))].map((_, i) => {
+                                            const y = padY + chartH - (i / Math.min(4, maxScore)) * chartH;
+                                            const val = Math.round(i * maxScore / Math.min(4, maxScore));
+                                            return <g key={i}>
+                                                <line x1={padX} y1={y} x2={padX + chartW} y2={y} stroke="#d5cbb8" strokeWidth="0.5" />
+                                                <text x={padX - 4} y={y + 3} textAnchor="end" fontSize="9" fill="#8a7a60">{val}</text>
+                                            </g>;
+                                        })}
+                                        {state.scoreHistory.map((h, i) => {
+                                            const x = padX + (i / (state.scoreHistory.length - 1 || 1)) * chartW;
+                                            return <text key={i} x={x} y={H - 4} textAnchor="middle" fontSize="9" fill="#8a7a60">T{h.round}</text>;
+                                        })}
+                                        <polyline points={pts(1)} fill="none" stroke="#2a6fa8" strokeWidth="2" />
+                                        <polyline points={pts(2)} fill="none" stroke="#a03030" strokeWidth="2" />
+                                        {state.scoreHistory.map((h, i) => {
+                                            const x = padX + (i / (state.scoreHistory.length - 1 || 1)) * chartW;
+                                            const y1 = padY + chartH - (h.scores[1] / maxScore) * chartH;
+                                            const y2 = padY + chartH - (h.scores[2] / maxScore) * chartH;
+                                            return <g key={i}>
+                                                <circle cx={x} cy={y1} r="3" fill="#2a6fa8" />
+                                                <circle cx={x} cy={y2} r="3" fill="#a03030" />
+                                            </g>;
+                                        })}
+                                    </svg>
+                                </div>
+                            );
+                        })()}
+
+                        <button className="btn btn-grey" onClick={restart}>↺ Nouvelle partie</button>
+                    </div>
+                ) : <>
                 <div style={{ padding: "16px 20px", borderBottom: "1px solid #d5cbb8", minHeight: 210 }}>
                     <div style={{ fontFamily: "'Cinzel', serif", fontSize: 12, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 12 }}>UNITÉ SÉLECTIONNÉE</div>
                     {sel ? (
@@ -367,7 +433,6 @@ export default function HexWarhammer() {
                             {sel && <button className="btn btn-grey" onClick={() => setState(computeDeselect)}>✕ Désélectionner</button>}
                             <div style={{ borderTop: "1px solid #d5cbb8", marginTop: 6, paddingTop: 8 }}>
                                 <button className="btn btn-gold" disabled={!!state.winner || (vsAI && state.currentPlayer === 2)} onClick={endTurn}>⏭ Fin de tour</button>
-                                {state.winner && <button className="btn btn-grey" onClick={restart}>↺ Nouvelle partie</button>}
                             </div>
                         </>
                     )}
@@ -425,6 +490,7 @@ export default function HexWarhammer() {
                     );
                 })()}
 
+            </>}
             </div>
         </div>
     );
