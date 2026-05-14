@@ -26,6 +26,11 @@ Jeu tactique tour par tour sur grille hexagonale, inspiré des mécaniques Warha
 - Thème clair (fond beige `#f5f0e8`, texte foncé `#2a2015`)
 - Couleurs joueurs : bleu `#2a6fa8` (J1), rouge `#a03030` (J2)
 
+## Comportement
+
+- Si une approche échoue après 2 tentatives, prendre du recul et repenser le plan avant de continuer
+- Ne jamais déclarer une tâche terminée sans avoir lancé les tests et vérifié que tout passe
+
 ## Skills disponibles
 
 - `terrains` — types de terrain, mouvement, LOS, ajout de terrain
