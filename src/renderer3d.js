@@ -835,4 +835,10 @@ export function disposeScene(ctx) {
     if (ctx.renderer.domElement.parentNode) {
         ctx.renderer.domElement.parentNode.removeChild(ctx.renderer.domElement);
     }
+    _spriteTexCache.forEach(tex => tex.dispose());
+    _spriteTexCache.clear();
+    for (const key in _sharedMats) {
+        _sharedMats[key].dispose();
+        delete _sharedMats[key];
+    }
 }
