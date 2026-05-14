@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.js";
-import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, TERRAIN_DENSITY_LABELS, DEFAULT_TERRAIN_DENSITY } from "./units.js";
+import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, TERRAIN_DENSITY_LABELS, DEFAULT_TERRAIN_DENSITY, TERRAIN_PRESETS } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION } from "./renderer.js";
 import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, getCombatModifiers } from "./game.js";
 import { computeAIAction, buildAIPreview } from "./ai.js";
@@ -289,88 +289,109 @@ export default function HexWarhammer() {
     }
 
     if (armyPhase) {
-        return (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif", gap: 32 }}>
-                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 28, fontWeight: 700, letterSpacing: ".2em", color: "#8a6a08" }}>
-                    ⚔ SÉLECTION D'ARMÉE ⚔
-                </div>
-                <div style={{ display: "flex", gap: 10 }}>
-                    <button className={`btn ${!vsAI ? "btn-gold" : "btn-grey"}`} onClick={() => { setVsAI(false); setSelections(prev => ({ ...prev, 2: [] })); }} style={{ width: "auto", padding: "8px 20px" }}>
-                        2 Joueurs
-                    </button>
-                    <button className={`btn ${vsAI ? "btn-gold" : "btn-grey"}`} onClick={() => { setVsAI(true); randomArmy(2); }} style={{ width: "auto", padding: "8px 20px" }}>
-                        vs IA
-                    </button>
-                </div>
-                <div style={{ display: "flex", gap: 10 }}>
-                    <button className={`btn ${fairTowns ? "btn-gold" : "btn-grey"}`} onClick={() => setFairTowns(true)} style={{ width: "auto", padding: "8px 20px" }}>
-                        Villes équitables
-                    </button>
-                    <button className={`btn ${!fairTowns ? "btn-gold" : "btn-grey"}`} onClick={() => setFairTowns(false)} style={{ width: "auto", padding: "8px 20px" }}>
-                        Villes aléatoires
-                    </button>
-                </div>
-                <div style={{ background: "#ece5d8", border: "1px solid #d5cbb8", borderRadius: 6, padding: "14px 24px" }}>
-                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 12, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 10, textAlign: "center" }}>TERRAINS</div>
-                    <div className="density-grid">
-                        {[
-                            { key: "obstacles", label: "🪨 Obstacles" },
-                            { key: "rivers", label: "💧 Rivières" },
-                            { key: "towns", label: "🏰 Villes" },
-                            { key: "forests", label: "🌲 Forêts" },
-                            { key: "hills", label: "⛰ Collines" },
-                            { key: "swamps", label: "🟤 Marais" },
-                        ].map(({ key, label }) => (
-                            <div key={key} className="density-row">
-                                <span className="density-label">{label}</span>
-                                <input type="range" min={0} max={3} step={1} className="density-slider" value={terrainDensity[key]} onChange={e => setDensity(key, Number(e.target.value))} />
-                                <span className="density-value">{TERRAIN_DENSITY_LABELS[terrainDensity[key]]}</span>
-                            </div>
-                        ))}
+        const renderArmyPanel = (player) => {
+            const isAIPlayer = vsAI && player === 2;
+            return (
+                <div style={{ width: 240, border: `2px solid ${P[player]}`, borderRadius: 6, padding: 16, background: "#ece5d8", opacity: isAIPlayer ? 0.5 : 1, pointerEvents: isAIPlayer ? "none" : "auto" }}>
+                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 14, fontWeight: 700, color: P[player], marginBottom: 12, textAlign: "center" }}>
+                        {isAIPlayer ? "IA" : `JOUEUR ${player}`} ({selections[player].length}/{ARMY_SIZE})
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 12 }}>
+                        {UNIT_TYPES.map(type => {
+                            const t = UNIT_TEMPLATES[type];
+                            const full = selections[player].length >= ARMY_SIZE;
+                            return (
+                                <button key={type} className={`btn ${full ? "btn-grey" : player === 1 ? "btn-blue" : "btn-red"}`} disabled={full} onClick={() => addUnit(player, type)} style={{ textAlign: "left", padding: "7px 12px" }}>
+                                    {t.symbol} {t.name}
+                                </button>
+                            );
+                        })}
+                        <button className="btn btn-gold" onClick={() => randomArmy(player)} style={{ marginTop: 4, width: "100%", padding: "7px 12px" }}>
+                            🎲 Aléatoire
+                        </button>
+                    </div>
+                    <div style={{ borderTop: "1px solid #d5cbb8", paddingTop: 8 }}>
+                        {selections[player].length === 0 ? (
+                            <div style={{ color: "#a09080", fontSize: 13, fontStyle: "italic" }}>Aucune unité sélectionnée</div>
+                        ) : (
+                            selections[player].map((type, i) => {
+                                const t = UNIT_TEMPLATES[type];
+                                return (
+                                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 14, padding: "2px 0" }}>
+                                        <span>{t.symbol} {t.name}</span>
+                                        <button onClick={() => removeUnit(player, i)} style={{ background: "none", border: "none", color: "#a03030", cursor: "pointer", fontSize: 16 }}>✕</button>
+                                    </div>
+                                );
+                            })
+                        )}
                     </div>
                 </div>
+            );
+        };
 
-                <div style={{ display: "flex", gap: 48 }}>
-                    {[1, 2].map(player => {
-                        const isAIPlayer = vsAI && player === 2;
-                        return (
-                        <div key={player} style={{ width: 320, border: `2px solid ${P[player]}`, borderRadius: 6, padding: 20, background: "#ece5d8", opacity: isAIPlayer ? 0.5 : 1, pointerEvents: isAIPlayer ? "none" : "auto" }}>
-                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: 16, fontWeight: 700, color: P[player], marginBottom: 14, textAlign: "center" }}>
-                                {isAIPlayer ? "IA" : `JOUEUR ${player}`} ({selections[player].length}/{ARMY_SIZE})
-                            </div>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
-                                {UNIT_TYPES.map(type => {
-                                    const t = UNIT_TEMPLATES[type];
-                                    const full = selections[player].length >= ARMY_SIZE;
-                                    return (
-                                        <button key={type} className={`btn ${full ? "btn-grey" : "btn-blue"}`} disabled={full} onClick={() => addUnit(player, type)} style={{ textAlign: "left" }}>
-                                            {t.symbol} {t.name}
-                                        </button>
-                                    );
-                                })}
-                                <button className="btn btn-gold" onClick={() => randomArmy(player)} style={{ marginTop: 6, width: "100%" }}>
-                                    🎲 Aléatoire
-                                </button>
-                            </div>
-                            <div style={{ borderTop: "1px solid #d5cbb8", paddingTop: 10 }}>
-                                {selections[player].length === 0 ? (
-                                    <div style={{ color: "#a09080", fontSize: 13, fontStyle: "italic" }}>Aucune unité sélectionnée</div>
-                                ) : (
-                                    selections[player].map((type, i) => {
-                                        const t = UNIT_TEMPLATES[type];
-                                        return (
-                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 14, padding: "3px 0" }}>
-                                                <span>{t.symbol} {t.name}</span>
-                                                <button onClick={() => removeUnit(player, i)} style={{ background: "none", border: "none", color: "#a03030", cursor: "pointer", fontSize: 16 }}>✕</button>
-                                            </div>
-                                        );
-                                    })
-                                )}
+        return (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif", gap: 24 }}>
+                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 28, fontWeight: 700, letterSpacing: ".2em", color: "#8a6a08" }}>
+                    ⚔ WARHEX ⚔
+                </div>
+
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 24 }}>
+                    {renderArmyPanel(1)}
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: 16, width: 420 }}>
+                        <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+                            <button className={`btn ${!vsAI ? "btn-gold" : "btn-grey"}`} onClick={() => { setVsAI(false); setSelections(prev => ({ ...prev, 2: [] })); }} style={{ width: "auto", padding: "7px 18px", marginBottom: 0 }}>
+                                2 Joueurs
+                            </button>
+                            <button className={`btn ${vsAI ? "btn-gold" : "btn-grey"}`} onClick={() => { setVsAI(true); randomArmy(2); }} style={{ width: "auto", padding: "7px 18px", marginBottom: 0 }}>
+                                vs IA
+                            </button>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+                            <button className={`btn ${fairTowns ? "btn-gold" : "btn-grey"}`} onClick={() => setFairTowns(true)} style={{ width: "auto", padding: "7px 18px", marginBottom: 0 }}>
+                                Villes équitables
+                            </button>
+                            <button className={`btn ${!fairTowns ? "btn-gold" : "btn-grey"}`} onClick={() => setFairTowns(false)} style={{ width: "auto", padding: "7px 18px", marginBottom: 0 }}>
+                                Villes aléatoires
+                            </button>
+                        </div>
+
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                            {TERRAIN_PRESETS.map(p => {
+                                const active = Object.keys(p.density).every(k => terrainDensity[k] === p.density[k]);
+                                return (
+                                    <button key={p.id} className={`preset-card${active ? " preset-active" : ""}`} onClick={() => setTerrainDensity(p.density)}>
+                                        <span className="preset-icon">{p.icon}</span>
+                                        <span className="preset-label">{p.label}</span>
+                                        <span className="preset-desc">{p.desc}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <div style={{ background: "#ece5d8", border: "1px solid #d5cbb8", borderRadius: 6, padding: "12px 18px" }}>
+                            <div className="density-grid">
+                                {[
+                                    { key: "obstacles", label: "🪨 Obstacles" },
+                                    { key: "rivers", label: "💧 Rivières" },
+                                    { key: "towns", label: "🏰 Villes" },
+                                    { key: "forests", label: "🌲 Forêts" },
+                                    { key: "hills", label: "⛰ Collines" },
+                                    { key: "swamps", label: "🟤 Marais" },
+                                ].map(({ key, label }) => (
+                                    <div key={key} className="density-row">
+                                        <span className="density-label">{label}</span>
+                                        <input type="range" min={0} max={3} step={1} className="density-slider" value={terrainDensity[key]} onChange={e => setDensity(key, Number(e.target.value))} />
+                                        <span className="density-value">{TERRAIN_DENSITY_LABELS[terrainDensity[key]]}</span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
-                        );
-                    })}
+                    </div>
+
+                    {renderArmyPanel(2)}
                 </div>
+
                 <div style={{ display: "flex", gap: 12 }}>
                     <button className="btn btn-gold" disabled={!canStart} onClick={startGame} style={{ fontSize: 17, padding: "12px 36px" }}>
                         ⚔ Lancer la partie

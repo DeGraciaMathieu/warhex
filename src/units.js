@@ -230,6 +230,13 @@ export const DEFAULT_TERRAIN_DENSITY = {
     obstacles: 2, rivers: 2, towns: 2, forests: 2, hills: 2, swamps: 2,
 };
 
+export const TERRAIN_PRESETS = [
+    { id: "default", label: "Par défaut", icon: "⚖", desc: "Configuration standard, terrain équilibré", density: { obstacles: 2, rivers: 2, towns: 2, forests: 2, hills: 2, swamps: 2 } },
+    { id: "open", label: "Plaine ouverte", icon: "🌾", desc: "Peu de terrains, lignes de tir dégagées", density: { obstacles: 1, rivers: 1, towns: 1, forests: 0, hills: 1, swamps: 0 } },
+    { id: "forest", label: "Forêt dense", icon: "🌲", desc: "Beaucoup de forêts et collines, couvert abondant", density: { obstacles: 1, rivers: 1, towns: 1, forests: 3, hills: 2, swamps: 2 } },
+    { id: "siege", label: "Ville assiégée", icon: "🏰", desc: "Beaucoup de villes et obstacles, combat rapproché", density: { obstacles: 3, rivers: 0, towns: 3, forests: 0, hills: 1, swamps: 0 } },
+];
+
 export function initState(armies, options = {}) {
     const { fairTowns = true, terrainDensity = DEFAULT_TERRAIN_DENSITY } = options;
     const picks = armies || DEFAULT_ARMIES;
