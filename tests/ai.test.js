@@ -363,6 +363,31 @@ describe("IA — sélection d'unité sans ville prioritaire", () => {
 
 });
 
+describe("IA — ville bloquée par des obstacles", () => {
+    it("ne se dirige pas vers une ville inaccessible derrière des obstacles", () => {
+        // Ville au sud, mur d'obstacles entre l'unité et la ville
+        const town = { q: 0, r: 4, s: -4 };
+        const u1 = createUnit("warrior", 1, { q: -4, r: 0, s: 4 });
+        const u2 = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        // Mur d'obstacles bloquant tout accès au sud
+        const wall = [
+            { q: -2, r: 2, s: 0 }, { q: -1, r: 2, s: -1 }, { q: 0, r: 2, s: -2 },
+            { q: 1, r: 1, s: -2 }, { q: 2, r: 0, s: -2 }, { q: -3, r: 3, s: 0 },
+            { q: -4, r: 4, s: 0 }, { q: 3, r: -1, s: -2 }, { q: -5, r: 5, s: 0 },
+            { q: 4, r: -2, s: -2 }, { q: 5, r: -3, s: -2 },
+        ];
+        const state = makeState({ units: [u1, u2], towns: [town], obstacles: wall });
+        const dest = pickMoveTarget(u2, state);
+        // L'IA ne devrait pas se diriger vers la ville bloquée
+        // Elle devrait soit ne pas bouger, soit se diriger vers l'ennemi
+        if (dest) {
+            const distToEnemy = Math.max(Math.abs(dest.q - u1.hex.q), Math.abs(dest.r - u1.hex.r), Math.abs(dest.s - u1.hex.s));
+            const origDistToEnemy = Math.max(Math.abs(u2.hex.q - u1.hex.q), Math.abs(u2.hex.r - u1.hex.r), Math.abs(u2.hex.s - u1.hex.s));
+            expect(distToEnemy).toBeLessThan(origDistToEnemy);
+        }
+    });
+});
+
 describe("IA — sélection par atteignabilité réelle", () => {
     it("préfère une unité qui peut atteindre une ville prioritaire sur une unité juste plus proche", () => {
         const town = { q: 2, r: -2, s: 0 };

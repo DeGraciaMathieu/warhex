@@ -1,4 +1,4 @@
-import { hexDistance, hexKey, reachableHexes, hasLineOfSight } from "./hex.js";
+import { hexDistance, hexKey, reachableHexes, hasLineOfSight, pathDistance } from "./hex.js";
 import { findValidTargets } from "./combat.js";
 
 function buildLosKeys(state) {
@@ -81,8 +81,8 @@ export function pickBestUnit(state) {
             if (canCapture) {
                 score += 50;
             } else {
-                const distToTown = Math.min(...priorityTowns.map(t => hexDistance(unit.hex, t)));
-                score += 20 / (1 + distToTown);
+                const distToTown = Math.min(...priorityTowns.map(t => pathDistance(unit.hex, t, obsKeys, costKeys)));
+                if (distToTown < Infinity) score += 20 / (1 + distToTown);
             }
         } else if (enemies.length > 0) {
             // No priority towns — prefer units close to enemies
@@ -136,16 +136,13 @@ export function pickMoveTarget(unit, state) {
     const reachableTown = reachable.find(h => townKeys.has(hexKey(h)) && priorityTowns.some(t => hexKey(t) === hexKey(h)));
     if (reachableTown) return reachableTown;
 
-    // 2. Move toward closest priority town
+    // 2. Move toward closest priority town (using real path distance)
     if (priorityTowns.length > 0) {
-        reachable.sort((a, b) => {
-            const da = Math.min(...priorityTowns.map(t => hexDistance(a, t)));
-            const db = Math.min(...priorityTowns.map(t => hexDistance(b, t)));
-            return da - db;
-        });
-        const bestDist = Math.min(...priorityTowns.map(t => hexDistance(reachable[0], t)));
-        const currentDist = Math.min(...priorityTowns.map(t => hexDistance(unit.hex, t)));
-        if (bestDist < currentDist) return reachable[0];
+        const townPathDist = (hex) => Math.min(...priorityTowns.map(t => pathDistance(hex, t, obsKeys, costKeys)));
+        reachable.sort((a, b) => townPathDist(a) - townPathDist(b));
+        const bestDist = townPathDist(reachable[0]);
+        const currentDist = townPathDist(unit.hex);
+        if (bestDist < currentDist && bestDist < Infinity) return reachable[0];
     }
 
     // 3. Move toward enemy on town (to attack next turn)
