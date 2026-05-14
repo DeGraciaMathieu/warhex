@@ -1,5 +1,5 @@
 import { hexDistance, hexKey, reachableHexes, hasLineOfSight, hexesInRange } from "./hex.js";
-import { resolveAttack } from "./combat.js";
+import { resolveAttack, findValidTargets } from "./combat.js";
 import { computeTownControl, checkWinner, ACTIVATIONS_PER_TURN } from "./units.js";
 
 export function getUnitTerrainEffects(unit, state) {
@@ -41,17 +41,6 @@ function buildTerrainKeys(state) {
     const stopKeys = new Set([...(state.rivers || []), ...(state.towns || []), ...(state.swamps || [])].map(hexKey));
     const costKeys = new Set([...(state.forests || []), ...(state.hills || [])].map(hexKey));
     return { obsKeys, stopKeys, costKeys };
-}
-
-function findValidTargets(unit, enemies, losKeys, rangeBonus = 0) {
-    return enemies.filter(e => {
-        const dist = hexDistance(unit.hex, e.hex);
-        if (!hasLineOfSight(unit.hex, e.hex, losKeys)) return false;
-        return unit.weapons.some(w => {
-            const bonus = (w.type === "ranged" ? rangeBonus : 0);
-            return dist >= (w.minRange || 1) && dist <= w.range + bonus;
-        });
-    });
 }
 
 function computeAttackRange(unit, sources, losKeys, hillKeys) {

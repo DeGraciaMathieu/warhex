@@ -1,3 +1,5 @@
+import { hexDistance, hasLineOfSight } from "./hex.js";
+
 function rollD6() { return Math.floor(Math.random() * 6) + 1; }
 function rollDice(n) { return Array.from({ length: n }, rollD6); }
 
@@ -30,4 +32,15 @@ export function resolveAttack(attacker, weapon, target, { coverBonus = 0, penalt
 
     log.push({ label: `💥 Dégâts infligés : ${totalDamage}`, rolls: [], success: totalDamage, isSummary: true });
     return { damage: totalDamage, log };
+}
+
+export function findValidTargets(unit, enemies, losKeys, rangeBonus = 0) {
+    return enemies.filter(e => {
+        const dist = hexDistance(unit.hex, e.hex);
+        if (!hasLineOfSight(unit.hex, e.hex, losKeys)) return false;
+        return unit.weapons.some(w => {
+            const bonus = (w.type === "ranged" ? rangeBonus : 0);
+            return dist >= (w.minRange || 1) && dist <= w.range + bonus;
+        });
+    });
 }
