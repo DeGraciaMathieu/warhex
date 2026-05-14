@@ -81,7 +81,7 @@ export function drawScene(canvas, state, hoveredHex) {
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.fillStyle = "#4a3a20";
-            ctx.fillText("▲", px, py);
+            ctx.fillText("⛰️", px, py);
         }
 
         if (isRiver) {
