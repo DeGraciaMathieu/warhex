@@ -377,14 +377,13 @@ export default function HexWarhammer() {
                             </button>
                         </div>
 
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
                             {TERRAIN_PRESETS.map(p => {
                                 const active = Object.keys(p.density).every(k => terrainDensity[k] === p.density[k]);
                                 return (
                                     <button key={p.id} className={`preset-card${active ? " preset-active" : ""}`} onClick={() => setTerrainDensity(p.density)}>
                                         <span className="preset-icon">{p.icon}</span>
                                         <span className="preset-label">{p.label}</span>
-                                        <span className="preset-desc">{p.desc}</span>
                                     </button>
                                 );
                             })}
