@@ -70,12 +70,12 @@ const DIRECTIONS = [
     { q: -1, r: 1, s: 0 }, { q: -1, r: 0, s: 1 }, { q: 0, r: -1, s: 1 },
 ];
 
-function generateWaterBodies(reservedKeys) {
+function generateWaterBodies(reservedKeys, targetBodies = null) {
     const key = h => `${h.q},${h.r},${h.s}`;
     const isValid = h => Math.abs(h.q) <= 5 && Math.abs(h.r) <= 5 && Math.abs(h.s) <= 5;
     const allReserved = new Set(reservedKeys);
     const water = [];
-    const bodyCount = 3 + Math.floor(Math.random() * 3); // 3-5 plans d'eau
+    const bodyCount = targetBodies !== null ? targetBodies : 3 + Math.floor(Math.random() * 3);
 
     for (let i = 0; i < bodyCount; i++) {
         const start = randomAvailableHexes(1, allReserved);
@@ -215,8 +215,23 @@ function fairTownHexes(count, reservedKeys) {
     return result;
 }
 
+const TERRAIN_COUNTS = {
+    obstacles: [0, 5, 9, 15],
+    rivers:    [0, 2, 4, 7],
+    towns:     [0, 2, 4, 6],
+    forests:   [0, 2, 3, 5],
+    hills:     [0, 2, 4, 8],
+    swamps:    [0, 2, 4, 8],
+};
+
+export const TERRAIN_DENSITY_LABELS = ["Aucun", "Peu", "Normal", "Beaucoup"];
+
+export const DEFAULT_TERRAIN_DENSITY = {
+    obstacles: 2, rivers: 2, towns: 2, forests: 2, hills: 2, swamps: 2,
+};
+
 export function initState(armies, options = {}) {
-    const { fairTowns = true } = options;
+    const { fairTowns = true, terrainDensity = DEFAULT_TERRAIN_DENSITY } = options;
     const picks = armies || DEFAULT_ARMIES;
     const units = [
         ...picks[1].map((type, i) => createUnit(type, 1, SPAWN_POSITIONS[1][i])),
@@ -224,23 +239,29 @@ export function initState(armies, options = {}) {
     ];
     const centerHex = { q: 0, r: 0, s: 0 };
     const reservedKeys = new Set([...units.map(u => `${u.hex.q},${u.hex.r},${u.hex.s}`), `0,0,0`]);
-    const obstacles = randomAvailableHexes(9, reservedKeys);
+    const obstacleCount = TERRAIN_COUNTS.obstacles[terrainDensity.obstacles];
+    const obstacles = randomAvailableHexes(obstacleCount, reservedKeys);
     const obstacleKeys = new Set(obstacles.map(o => `${o.q},${o.r},${o.s}`));
     const allReserved = new Set([...reservedKeys, ...obstacleKeys]);
-    const rivers = generateWaterBodies(allReserved);
+    const riverBodyCount = TERRAIN_COUNTS.rivers[terrainDensity.rivers];
+    const rivers = riverBodyCount > 0 ? generateWaterBodies(allReserved, riverBodyCount) : [];
     const riverKeys = new Set(rivers.map(r => `${r.q},${r.r},${r.s}`));
     const allReserved2 = new Set([...allReserved, ...riverKeys]);
-    const towns = fairTowns ? fairTownHexes(4, allReserved2) : randomAvailableHexes(4, allReserved2);
-    towns.push(centerHex);
+    const townCount = TERRAIN_COUNTS.towns[terrainDensity.towns];
+    const towns = townCount > 0 ? (fairTowns ? fairTownHexes(townCount, allReserved2) : randomAvailableHexes(townCount, allReserved2)) : [];
+    if (townCount > 0) towns.push(centerHex);
     const townKeys = new Set(towns.map(t => `${t.q},${t.r},${t.s}`));
     const allReserved3 = new Set([...allReserved2, ...townKeys]);
-    const forests = generateForests(3, allReserved3);
+    const forestCount = TERRAIN_COUNTS.forests[terrainDensity.forests];
+    const forests = forestCount > 0 ? generateForests(forestCount, allReserved3) : [];
     const forestKeys = new Set(forests.map(f => `${f.q},${f.r},${f.s}`));
     const allReserved4 = new Set([...allReserved3, ...forestKeys]);
-    const hills = randomAvailableHexes(4, allReserved4);
+    const hillCount = TERRAIN_COUNTS.hills[terrainDensity.hills];
+    const hills = randomAvailableHexes(hillCount, allReserved4);
     const hillKeys = new Set(hills.map(h => `${h.q},${h.r},${h.s}`));
     const allReserved5 = new Set([...allReserved4, ...hillKeys]);
-    const swamps = randomAvailableHexes(4, allReserved5);
+    const swampCount = TERRAIN_COUNTS.swamps[terrainDensity.swamps];
+    const swamps = randomAvailableHexes(swampCount, allReserved5);
     return {
         units,
         obstacles,

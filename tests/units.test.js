@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { hexKey, isValidHex, hexNeighbors } from "../src/hex.js";
-import { createUnit, initState, resetUID, UNIT_TEMPLATES, SPAWN_POSITIONS } from "../src/units.js";
+import { createUnit, initState, resetUID, UNIT_TEMPLATES, SPAWN_POSITIONS, DEFAULT_TERRAIN_DENSITY } from "../src/units.js";
 
 beforeEach(() => resetUID());
 
@@ -416,5 +416,67 @@ describe("sélection d'armée", () => {
         };
         const state = initState(armies);
         expect(state.autoEndTurn).toBe(false);
+    });
+});
+
+describe("densité des terrains", () => {
+    it("densité 'aucun' ne génère aucun terrain", () => {
+        const density = { obstacles: 0, rivers: 0, towns: 0, forests: 0, hills: 0, swamps: 0 };
+        const state = initState(null, { terrainDensity: density });
+        expect(state.obstacles).toHaveLength(0);
+        expect(state.rivers).toHaveLength(0);
+        expect(state.towns).toHaveLength(0);
+        expect(state.forests).toHaveLength(0);
+        expect(state.hills).toHaveLength(0);
+        expect(state.swamps).toHaveLength(0);
+    });
+
+    it("densité 'beaucoup' génère plus de terrain que la densité normale", () => {
+        let normalObs = 0, highObs = 0;
+        let normalHills = 0, highHills = 0;
+        const runs = 10;
+        for (let i = 0; i < runs; i++) {
+            resetUID();
+            const normal = initState(null, { terrainDensity: DEFAULT_TERRAIN_DENSITY });
+            resetUID();
+            const high = initState(null, { terrainDensity: { obstacles: 3, rivers: 3, towns: 3, forests: 3, hills: 3, swamps: 3 } });
+            normalObs += normal.obstacles.length;
+            highObs += high.obstacles.length;
+            normalHills += normal.hills.length;
+            highHills += high.hills.length;
+        }
+        expect(highObs).toBeGreaterThan(normalObs);
+        expect(highHills).toBeGreaterThan(normalHills);
+    });
+
+    it("densité 'peu' génère moins de terrain que la densité normale", () => {
+        let normalObs = 0, lowObs = 0;
+        const runs = 10;
+        for (let i = 0; i < runs; i++) {
+            resetUID();
+            const normal = initState(null, { terrainDensity: DEFAULT_TERRAIN_DENSITY });
+            resetUID();
+            const low = initState(null, { terrainDensity: { obstacles: 1, rivers: 1, towns: 1, forests: 1, hills: 1, swamps: 1 } });
+            normalObs += normal.obstacles.length;
+            lowObs += low.obstacles.length;
+        }
+        expect(lowObs).toBeLessThan(normalObs);
+    });
+
+    it("les terrains ne se chevauchent pas même en densité maximale", () => {
+        for (let i = 0; i < 10; i++) {
+            resetUID();
+            const density = { obstacles: 3, rivers: 3, towns: 3, forests: 3, hills: 3, swamps: 3 };
+            const state = initState(null, { terrainDensity: density });
+            const allKeys = [
+                ...state.obstacles.map(hexKey),
+                ...state.rivers.map(hexKey),
+                ...state.towns.map(hexKey),
+                ...state.forests.map(hexKey),
+                ...state.hills.map(hexKey),
+                ...state.swamps.map(hexKey),
+            ];
+            expect(new Set(allKeys).size).toBe(allKeys.length);
+        }
     });
 });
