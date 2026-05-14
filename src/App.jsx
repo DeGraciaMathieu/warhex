@@ -143,6 +143,7 @@ export default function HexWarhammer() {
             (hex) => {
                 if (!hex) return;
                 if (vsAIRef.current && stateRef.current?.currentPlayer === 2) return;
+                if (diceAnimRef.current?.done) { closeCombatModal(); return; }
                 if (diceAnimRef.current && !diceAnimRef.current.done) return;
                 setState(prev => {
                     if (prev.winner) return prev;
