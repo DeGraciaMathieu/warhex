@@ -73,12 +73,27 @@ function WeaponCard({ weapon, attacker, target, hills, towns, aiPreview, onSelec
                     {weapon.type === "ranged" ? `Portée ${weapon.minRange ? `${weapon.minRange}-` : ""}${weapon.range + rangeBonus}` : "Mêlée (adjacent)"} · {tooClose ? "Trop proche" : "Trop loin"} ({dist} hex)
                 </div>
             ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 6, fontSize: 13, color: "#6a5a40" }}>
-                    <div>{weapon.type === "ranged" ? `Portée ${weapon.minRange ? `${weapon.minRange}-` : ""}${weapon.range + rangeBonus} hex${rangeBonus ? " ⛰" : ""}` : "Mêlée (adjacent)"}</div>
-                    <div>{weapon.attacks} {weapon.attacks > 1 ? "attaques" : "attaque"} · Touche sur {skill}+</div>
-                    <div>{weapon.damage} {weapon.damage > 1 ? "dégâts" : "dégât"} par touche · Pénétration {Math.abs(weapon.ap)}</div>
-                    <div style={{ color: saveColor, fontWeight: 600, marginTop: 2 }}>
-                        {cantSave ? "Sauvegarde impossible" : `Sauvegarde ennemie sur ${effectiveSave}+`}{inTown ? " 🏰 (couvert)" : ""}
+                <div style={{ marginTop: 6 }}>
+                    <div className="weapon-stats">
+                        <div className="weapon-stat">
+                            <div className="weapon-stat-label">ATQ</div>
+                            <div className="weapon-stat-value">{weapon.attacks}</div>
+                        </div>
+                        <div className="weapon-stat">
+                            <div className="weapon-stat-label">TC</div>
+                            <div className="weapon-stat-value">{skill}+</div>
+                        </div>
+                        <div className="weapon-stat">
+                            <div className="weapon-stat-label">DÉG</div>
+                            <div className="weapon-stat-value">{weapon.damage}</div>
+                        </div>
+                        <div className="weapon-stat">
+                            <div className="weapon-stat-label">PA</div>
+                            <div className="weapon-stat-value">-{Math.abs(weapon.ap)}</div>
+                        </div>
+                    </div>
+                    <div className="weapon-save" style={{ color: saveColor }}>
+                        {cantSave ? "Sauvegarde impossible" : `Sauvegarde ennemie : ${effectiveSave}+`}{inTown ? " 🏰" : ""}
                     </div>
                 </div>
             )}
@@ -479,12 +494,25 @@ export default function HexWarhammer() {
                 const hitPhaseIdx = src ? src.log.findIndex(e => !e.isSave && !e.isSummary) : -1;
                 const savePhaseIdx = src ? src.log.findIndex(e => e.isSave) : -1;
 
-                function renderDiceBlock(entry, phaseIdx) {
+                function countVisibleSaves() {
+                    if (!saveEntry) return 0;
+                    const isSavePhase = animating && savePhaseIdx === src.phase;
+                    const isSavePast = !animating || savePhaseIdx < src.phase;
+                    if (!isSavePhase && !isSavePast) return 0;
+                    const needed = parseInt((saveEntry.label.match(/(\d+)\+/) || [0, 7])[1]);
+                    const dice = isSavePhase ? (saveEntry.rolls || []).slice(0, src.dice) : (saveEntry.rolls || []);
+                    return dice.filter(r => r >= needed).length;
+                }
+
+                function renderDiceBlock(entry, phaseIdx, struckCount = 0) {
                     if (!entry) return null;
                     const isCurrentPhase = animating && phaseIdx === src.phase;
                     const isFuturePhase = animating && phaseIdx > src.phase;
                     const visibleDice = isFuturePhase ? [] : isCurrentPhase ? (entry.rolls || []).slice(0, src.dice) : (entry.rolls || []);
                     const showSpinning = isCurrentPhase && src.rolling;
+
+                    let struckRemaining = struckCount;
+
                     return (
                         <div style={{ marginTop: 8 }}>
                             <div style={{ fontSize: 13, color: "#6a5a40", marginBottom: (visibleDice.length || showSpinning) ? 4 : 0 }}>{entry.label}</div>
@@ -495,7 +523,9 @@ export default function HexWarhammer() {
                                             ? parseInt((entry.label.match(/(\d+)\+/) || [0, 7])[1])
                                             : parseInt((entry.label.match(/(\d+)\+/) || [0, 0])[1]);
                                         const hit = r >= needed;
-                                        const cls = entry.isSave ? (hit ? "roll-save" : "roll-save-fail") : (hit ? "roll-hit" : "roll-miss");
+                                        const struck = hit && struckRemaining > 0;
+                                        if (struck) struckRemaining--;
+                                        const cls = entry.isSave ? (hit ? "roll-save" : "roll-save-fail") : struck ? "roll-struck" : (hit ? "roll-hit" : "roll-miss");
                                         const isNew = isCurrentPhase && j === src.dice - 1 && !src.rolling;
                                         return <span key={j} className={`roll-chip ${cls}${isNew ? " roll-new" : ""}`}>{r}</span>;
                                     })}
@@ -521,6 +551,7 @@ export default function HexWarhammer() {
                                     <div className="combat-col">
                                         <div className="combat-col-role">ATTAQUANT</div>
                                         <div className="combat-col-name" style={{ color: P[combatAttacker?.player] }}>{combatAttacker?.symbol} {combatAttacker?.name}</div>
+                                        <div style={{ fontSize: 12, color: "#8a7a60" }}>{combatAttacker?.currentWounds} / {combatAttacker?.wounds} PV</div>
                                         {modifiers.attacker.map((m, i) => (
                                             <span key={i} className={`combat-modifier ${m.type}`}>{m.icon} {m.label}</span>
                                         ))}
@@ -531,12 +562,13 @@ export default function HexWarhammer() {
                                                 ))}
                                             </div>
                                         )}
-                                        {(showDice || showResult) && renderDiceBlock(hitEntry, hitPhaseIdx)}
+                                        {(showDice || showResult) && renderDiceBlock(hitEntry, hitPhaseIdx, countVisibleSaves())}
                                     </div>
                                     <div className="combat-col-separator" />
                                     <div className="combat-col">
                                         <div className="combat-col-role">DÉFENSEUR</div>
                                         <div className="combat-col-name" style={{ color: P[combatTarget?.player] }}>{combatTarget?.symbol} {combatTarget?.name}</div>
+                                        <div style={{ fontSize: 12, color: "#8a7a60" }}>{combatTarget?.currentWounds} / {combatTarget?.wounds} PV</div>
                                         {modifiers.target.map((m, i) => (
                                             <span key={i} className={`combat-modifier ${m.type}`}>{m.icon} {m.label}</span>
                                         ))}

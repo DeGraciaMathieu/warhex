@@ -23,6 +23,24 @@
     cursor: pointer; transition: border-color .15s, background .15s; border-radius: 4px;
 }
 .weapon-card:hover { border-color: #8a6a08; background: #e0d8c8; }
+.weapon-stats {
+    display: flex; justify-content: center; gap: 6px;
+}
+.weapon-stat {
+    display: flex; flex-direction: column; align-items: center;
+    min-width: 38px; padding: 4px 6px;
+    background: rgba(138,106,8,.06); border: 1px solid #d5cbb8; border-radius: 4px;
+}
+.weapon-stat-label {
+    font-size: 9px; font-weight: 700; letter-spacing: .1em;
+    color: #8a7a60; text-transform: uppercase;
+}
+.weapon-stat-value {
+    font-size: 16px; font-weight: 700; color: #2a2015; line-height: 1.2;
+}
+.weapon-save {
+    text-align: center; font-size: 12px; font-weight: 600; margin-top: 6px;
+}
 .weapon-card.disabled { opacity: .35; cursor: not-allowed; }
 .weapon-card.ai-highlight { border-color: #a03030; background: #f0d8d0; box-shadow: 0 0 8px rgba(160, 48, 48, 0.4); }
 
@@ -39,6 +57,16 @@
 .roll-miss { background: rgba(244,67,54,.1); border-color: #e53935; color: #c62828; }
 .roll-save { background: rgba(42,111,168,.15); border-color: #2a6fa8; color: #1a5a8a; }
 .roll-save-fail { background: rgba(138,122,96,.1); border-color: #c8b898; color: #8a7a60; }
+.roll-struck {
+    background: rgba(138,122,96,.08); border-color: #c8b898; color: #8a7a60;
+    opacity: 0.5; position: relative;
+    transition: all .3s ease-out;
+}
+.roll-struck::after {
+    content: ""; position: absolute;
+    inset: 2px;
+    background: linear-gradient(to top right, transparent calc(50% - 1px), #e53935 calc(50% - 1px), #e53935 calc(50% + 1px), transparent calc(50% + 1px));
+}
 
 canvas { cursor: crosshair; display: block; }
 
