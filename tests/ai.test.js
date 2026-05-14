@@ -449,6 +449,15 @@ describe("IA — sélection de cible", () => {
         expect(target.id).toBe(u1b.id);
     });
 
+    it("ne cible pas un ennemi dont la LOS est bloquée par une colline", () => {
+        const hill = { q: 1, r: 0, s: -1 };
+        const u1 = createUnit("warrior", 1, { q: 2, r: 0, s: -2 });
+        const u2 = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        const state = makeState({ units: [u1, u2], hills: [hill] });
+        const target = pickTarget(u2, state);
+        expect(target).toBeNull();
+    });
+
     it("entre deux ennemis sur des villes, cible celui avec le moins de PV", () => {
         const town1 = { q: 1, r: -1, s: 0 };
         const town2 = { q: -1, r: 1, s: 0 };

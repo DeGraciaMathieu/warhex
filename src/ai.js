@@ -1,7 +1,7 @@
 import { hexDistance, hexKey, reachableHexes, hasLineOfSight } from "./hex.js";
 
 function buildLosKeys(state) {
-    return new Set([...state.obstacles, ...(state.towns || []), ...(state.forests || [])].map(hexKey));
+    return new Set([...state.obstacles, ...(state.towns || []), ...(state.forests || []), ...(state.hills || [])].map(hexKey));
 }
 
 function buildTerrainKeys(state) {
