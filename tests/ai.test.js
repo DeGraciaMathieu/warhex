@@ -202,6 +202,20 @@ describe("IA — contrôle des villes", () => {
         expect(action.weapon.id).toBe("sword");
     });
 
+    it("l'IA choisit le pistol quand le sniper rifle est hors portée min", () => {
+        const u1 = createUnit("warrior", 1, { q: 1, r: 0, s: -1 });
+        const u2 = createUnit("sniper", 2, { q: 0, r: 0, s: 0 });
+        const state = makeState({
+            units: [u1, u2],
+            phase: "weapon_select",
+            selectedUnit: u2,
+            pendingAttack: { attacker: u2, target: u1 },
+        });
+        const action = computeAIAction(state);
+        expect(action.type).toBe("weapon");
+        expect(action.weapon.id).toBe("pistol");
+    });
+
     it("une unité sur une ville possédée reste si pas d'ennemi ni de ville à capturer", () => {
         const town = { q: 0, r: 0, s: 0 };
         const u2 = createUnit("warrior", 2, town);

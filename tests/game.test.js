@@ -109,6 +109,34 @@ describe("attaque et armes", () => {
         expect(result.state.phase).toBe("select");
     });
 
+    it("computeWeaponSelect annule si la cible est trop proche (minRange)", () => {
+        const attacker = createUnit("sniper", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const weapon = attacker.weapons.find(w => w.id === "sniper_rifle");
+        const s = makeState({ units: [attacker, target], pendingAttack: { attacker, target } });
+        const result = computeWeaponSelect(s, weapon);
+        expect(result.anim).toBeNull();
+        expect(result.state.phase).toBe("select");
+    });
+
+    it("un sniper adjacent ne voit pas l'ennemi comme cible valide pour le sniper rifle", () => {
+        const sniper = createUnit("sniper", 1, { q: 0, r: 0, s: 0 });
+        const enemy = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [sniper, enemy], selectedUnit: sniper, currentPlayer: 1 });
+        const result = computeAttack(s);
+        // Le pistol (range 1) couvre la distance → la cible reste valide
+        expect(result.validTargets.length).toBe(1);
+    });
+
+    it("un sniper sans pistol adjacent n'a aucune cible valide", () => {
+        const sniper = createUnit("sniper", 1, { q: 0, r: 0, s: 0 });
+        sniper.weapons = [sniper.weapons.find(w => w.id === "sniper_rifle")];
+        const enemy = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [sniper, enemy], selectedUnit: sniper, currentPlayer: 1 });
+        const result = computeAttack(s);
+        expect(result.validTargets.length).toBe(0);
+    });
+
     it("computeWeaponSelect résout l'attaque si la cible est à portée", () => {
         const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
         const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
