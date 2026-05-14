@@ -110,6 +110,8 @@ export default function HexWarhammer() {
     const [vsAI, setVsAI] = useState(false);
     const [fairTowns, setFairTowns] = useState(true);
     const [terrainDensity, setTerrainDensity] = useState(DEFAULT_TERRAIN_DENSITY);
+    const [previewState, setPreviewState] = useState(null);
+    const previewCanvasRef = useRef(null);
     const [selections, setSelections] = useState({ 1: [], 2: [] });
     const [state, setState] = useState(null);
     const [hoveredHex, setHoveredHex] = useState(null);
@@ -119,6 +121,20 @@ export default function HexWarhammer() {
     useEffect(() => {
         if (!armyPhase && state) drawScene(canvasRef.current, state, hoveredHex);
     }, [state, hoveredHex, armyPhase]);
+
+    function regeneratePreview() {
+        resetUID();
+        const s = initState(selections, { fairTowns, terrainDensity });
+        setPreviewState({ obstacles: s.obstacles, rivers: s.rivers, towns: s.towns, forests: s.forests, hills: s.hills, swamps: s.swamps, units: [], validMoves: [], validTargets: [], attackRangeHexes: [], townOwnership: {}, dyingUnits: [], hitEffects: [], aiPreview: null });
+    }
+
+    useEffect(() => {
+        if (armyPhase) regeneratePreview();
+    }, [terrainDensity, fairTowns]);
+
+    useEffect(() => {
+        if (armyPhase && previewState) drawScene(previewCanvasRef.current, previewState, null);
+    }, [previewState, armyPhase]);
 
     useEffect(() => {
         if (!diceAnim || diceAnim.done) return;
@@ -395,6 +411,15 @@ export default function HexWarhammer() {
                     </div>
 
                     {renderArmyPanel(2)}
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ position: "relative", border: "1px solid #d5cbb8", borderRadius: 6, overflow: "hidden" }}>
+                        <canvas ref={previewCanvasRef} width={CANVAS_W} height={CANVAS_H} style={{ display: "block", width: 350, height: 308 }} />
+                        <button className="btn btn-grey" onClick={regeneratePreview} style={{ position: "absolute", top: 8, right: 8, width: "auto", padding: "4px 10px", fontSize: 12, marginBottom: 0, background: "rgba(236,229,216,0.9)" }}>
+                            🔄
+                        </button>
+                    </div>
                 </div>
 
                 <div style={{ display: "flex", gap: 12 }}>
