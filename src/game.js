@@ -44,8 +44,14 @@ function buildTerrainKeys(state) {
 }
 
 function findValidTargets(unit, enemies, losKeys, rangeBonus = 0) {
-    const maxRange = Math.max(...unit.weapons.map(w => w.range + (w.type === "ranged" ? rangeBonus : 0)));
-    return enemies.filter(e => hexDistance(unit.hex, e.hex) <= maxRange && hasLineOfSight(unit.hex, e.hex, losKeys));
+    return enemies.filter(e => {
+        const dist = hexDistance(unit.hex, e.hex);
+        if (!hasLineOfSight(unit.hex, e.hex, losKeys)) return false;
+        return unit.weapons.some(w => {
+            const bonus = (w.type === "ranged" ? rangeBonus : 0);
+            return dist >= (w.minRange || 1) && dist <= w.range + bonus;
+        });
+    });
 }
 
 function computeAttackRange(unit, sources, losKeys, hillKeys) {
@@ -57,7 +63,13 @@ function computeAttackRange(unit, sources, losKeys, hillKeys) {
         const effectiveRange = maxRange + rangeBonus;
         for (const hex of hexesInRange(src, effectiveRange)) {
             const k = hexKey(hex);
-            if (!seen.has(k) && hasLineOfSight(src, hex, losKeys)) {
+            if (seen.has(k)) continue;
+            const dist = hexDistance(src, hex);
+            const inRange = unit.weapons.some(w => {
+                const bonus = (w.type === "ranged" && hillKeys.has(hexKey(src))) ? 1 : 0;
+                return dist >= (w.minRange || 1) && dist <= w.range + bonus;
+            });
+            if (inRange && hasLineOfSight(src, hex, losKeys)) {
                 seen.add(k);
                 result.push(hex);
             }
@@ -182,7 +194,7 @@ export function computeWeaponSelect(s, weapon) {
     const dist = hexDistance(attacker.hex, target.hex);
     const hillKeys = new Set((s.hills || []).map(hexKey));
     const rangeBonus = (weapon.type === "ranged" && hillKeys.has(hexKey(attacker.hex))) ? 1 : 0;
-    if (dist > weapon.range + rangeBonus) {
+    if (dist < (weapon.minRange || 1) || dist > weapon.range + rangeBonus) {
         return { state: { ...s, phase: "select", pendingAttack: null, validTargets: [], validMoves: [], attackRangeHexes: [] }, anim: null };
     }
 

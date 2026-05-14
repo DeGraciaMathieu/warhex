@@ -663,7 +663,7 @@ export default function Guide({ onBack }) {
                                 <div style={{ fontSize: 12, color: "#6a5a40" }}>
                                     {t.weapons.map(w => (
                                         <div key={w.id} style={{ marginBottom: 2 }}>
-                                            {w.type === "ranged" ? "🏹" : "🗡"} <strong>{w.name}</strong> — {w.type === "ranged" ? `Portée ${w.range}` : "Mêlée"} · {w.attacks} att. · {w.damage} dég. · PA {Math.abs(w.ap)}
+                                            {w.type === "ranged" ? "🏹" : "🗡"} <strong>{w.name}</strong> — {w.type === "ranged" ? `Portée ${w.minRange ? `${w.minRange}-` : ""}${w.range}` : "Mêlée"} · {w.attacks} att. · {w.damage} dég. · PA {Math.abs(w.ap)}
                                         </div>
                                     ))}
                                 </div>

@@ -12,8 +12,14 @@ function buildTerrainKeys(state) {
 }
 
 function findValidTargets(unit, enemies, losKeys, rangeBonus = 0) {
-    const maxRange = Math.max(...unit.weapons.map(w => w.range + (w.type === "ranged" ? rangeBonus : 0)));
-    return enemies.filter(e => hexDistance(unit.hex, e.hex) <= maxRange && hasLineOfSight(unit.hex, e.hex, losKeys));
+    return enemies.filter(e => {
+        const dist = hexDistance(unit.hex, e.hex);
+        if (!hasLineOfSight(unit.hex, e.hex, losKeys)) return false;
+        return unit.weapons.some(w => {
+            const bonus = (w.type === "ranged" ? rangeBonus : 0);
+            return dist >= (w.minRange || 1) && dist <= w.range + bonus;
+        });
+    });
 }
 
 function townContext(state) {
@@ -199,7 +205,7 @@ function pickWeapon(attacker, target, state) {
     const onHill = hillKeys.has(hexKey(attacker.hex));
     const usable = attacker.weapons.filter(w => {
         const bonus = (w.type === "ranged" && onHill) ? 1 : 0;
-        return dist <= w.range + bonus;
+        return dist >= (w.minRange || 1) && dist <= w.range + bonus;
     });
     if (usable.length === 0) return null;
     usable.sort((a, b) => (b.attacks * b.damage) - (a.attacks * a.damage));

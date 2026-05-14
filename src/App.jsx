@@ -55,7 +55,8 @@ function WeaponCard({ weapon, attacker, target, hills, towns, aiPreview, onSelec
     const dist = hexDistance(attacker.hex, target.hex);
     const hillKeys = new Set((hills || []).map(hexKey));
     const rangeBonus = (weapon.type === "ranged" && hillKeys.has(hexKey(attacker.hex))) ? 1 : 0;
-    const ok = dist <= weapon.range + rangeBonus;
+    const tooClose = dist < (weapon.minRange || 1);
+    const ok = !tooClose && dist <= weapon.range + rangeBonus;
     const townKeys = new Set((towns || []).map(hexKey));
     const inTown = townKeys.has(hexKey(target.hex));
     const effectiveSave = target.save - (inTown ? 1 : 0) + Math.abs(weapon.ap);
@@ -69,11 +70,11 @@ function WeaponCard({ weapon, attacker, target, hills, towns, aiPreview, onSelec
             <div style={{ fontWeight: 600, fontSize: 15 }}>{weapon.name} {weapon.type === "ranged" ? "🏹" : "🗡"}</div>
             {!ok ? (
                 <div style={{ fontSize: 12, color: "#b0a090", marginTop: 4 }}>
-                    {weapon.type === "ranged" ? `Portée ${weapon.range + rangeBonus}` : "Mêlée (adjacent)"} · Trop loin ({dist} hex)
+                    {weapon.type === "ranged" ? `Portée ${weapon.minRange ? `${weapon.minRange}-` : ""}${weapon.range + rangeBonus}` : "Mêlée (adjacent)"} · {tooClose ? "Trop proche" : "Trop loin"} ({dist} hex)
                 </div>
             ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 6, fontSize: 13, color: "#6a5a40" }}>
-                    <div>{weapon.type === "ranged" ? `Portée ${weapon.range + rangeBonus} hex${rangeBonus ? " ⛰" : ""}` : "Mêlée (adjacent)"} · Distance : {dist}</div>
+                    <div>{weapon.type === "ranged" ? `Portée ${weapon.minRange ? `${weapon.minRange}-` : ""}${weapon.range + rangeBonus} hex${rangeBonus ? " ⛰" : ""}` : "Mêlée (adjacent)"} · Distance : {dist}</div>
                     <div>Touche sur {skill}+ · {weapon.attacks} {weapon.attacks > 1 ? "attaques" : "attaque"}</div>
                     <div>{weapon.damage} {weapon.damage > 1 ? "dégâts" : "dégât"} par touche · Pénétration {Math.abs(weapon.ap)}</div>
                     <div style={{ color: saveColor, fontWeight: 600, marginTop: 2 }}>
@@ -419,7 +420,7 @@ export default function HexWarhammer() {
                                     <div key={w.id} style={{ fontSize: 13, color: "#3a3020", marginBottom: 8, padding: "6px 8px", background: "#ece6da", borderRadius: 4 }}>
                                         <div style={{ fontWeight: 600, marginBottom: 3 }}>{w.name} <span style={{ color: "#8a7a60", fontWeight: 400 }}>({w.type === "ranged" ? "tir" : "mêlée"})</span></div>
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 12px", fontSize: 12, color: "#5a5040" }}>
-                                            <span>Portée : {w.range}</span>
+                                            <span>Portée : {w.minRange ? `${w.minRange}-` : ""}{w.range}</span>
                                             <span>ATQ : {w.attacks}</span>
                                             <span>PA : {w.ap}</span>
                                             <span>DGT : {w.damage}</span>
