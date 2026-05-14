@@ -219,7 +219,7 @@ const TERRAIN_COUNTS = {
     obstacles: [0, 5, 9, 15],
     rivers:    [0, 2, 4, 7],
     towns:     [0, 2, 4, 6],
-    forests:   [0, 2, 3, 5],
+    forests:   [0, 2, 4, 8],
     hills:     [0, 2, 4, 8],
     swamps:    [0, 2, 4, 8],
 };

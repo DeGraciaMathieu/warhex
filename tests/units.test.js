@@ -233,12 +233,12 @@ describe("génération de la carte", () => {
         }
     });
 
-    it("la carte contient entre 6 et 15 cases de forêt réparties en zones", () => {
+    it("la carte contient entre 6 et 24 cases de forêt réparties en zones", () => {
         for (let i = 0; i < 20; i++) {
             resetUID();
             const state = initState();
             expect(state.forests.length).toBeGreaterThanOrEqual(3);
-            expect(state.forests.length).toBeLessThanOrEqual(15);
+            expect(state.forests.length).toBeLessThanOrEqual(24);
         }
     });
 
@@ -280,7 +280,7 @@ describe("génération de la carte", () => {
                 }
             }
         }
-        expect(zones).toBe(3);
+        expect(zones).toBe(4);
     });
 
     it("la carte contient exactement 4 collines", () => {
