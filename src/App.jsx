@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { hexDistance, hexKey } from "./hex.js";
 import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, TERRAIN_DENSITY_LABELS, DEFAULT_TERRAIN_DENSITY, TERRAIN_PRESETS } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION } from "./renderer.js";
-import { createScene, setupControls, handleResize, startRenderLoop, disposeScene } from "./renderer3d.js";
+import { createScene, setupControls, handleResize, startRenderLoop, requestRedraw, disposeScene } from "./renderer3d.js";
 import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, getCombatModifiers } from "./game.js";
 import { computeAIAction, buildAIPreview } from "./ai.js";
 import Guide from "./Guide.jsx";
@@ -166,6 +166,10 @@ export default function HexWarhammer() {
             sceneCtxRef.current = null;
         };
     }, [armyPhase]);
+
+    useEffect(() => {
+        if (sceneCtxRef.current) requestRedraw(sceneCtxRef.current);
+    }, [state, hoveredHex]);
 
     function regeneratePreview() {
         resetUID();

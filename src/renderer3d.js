@@ -253,6 +253,10 @@ export function createScene(container) {
         decorObjects: new Map(),
         selectionRings: new Map(),
         animationId: null,
+        frameScheduled: false,
+        disposed: false,
+        getState: null,
+        getHoveredHex: null,
         shadowBaked: false,
         isDragging: false,
         lastMouse: { x: 0, y: 0 },
@@ -268,6 +272,15 @@ export function createScene(container) {
         cachedState: null,
         cachedTerrainSets: null,
         cachedTerrainTypes: null,
+        // Cached tile overlay sets
+        _cachedMovesSrc: null, _cachedMoveKeys: new Set(),
+        _cachedTargetsSrc: null, _cachedTargetKeys: new Set(),
+        _cachedRangeSrc: null, _cachedRangeKeys: new Set(),
+        // Effect pools
+        spritePool: [],
+        meshPool: [],
+        activeSprites: [],
+        activeMeshes: [],
     };
 
     updateCameraPosition(ctx);
@@ -282,7 +295,7 @@ function updateCameraPosition(ctx) {
         cameraTarget.z + cameraDistance * Math.cos(cameraPitch) * Math.sin(cameraAngle)
     );
     camera.lookAt(cameraTarget);
-    ctx.dirty = true;
+    requestRedraw(ctx);
 }
 
 export function setupControls(ctx, onHover, onClick) {
@@ -322,12 +335,16 @@ export function setupControls(ctx, onHover, onClick) {
             return;
         }
         onHover(raycastHex(e));
+        scheduleFrame(ctx);
     });
 
     canvas.addEventListener("mouseup", (e) => {
         if (!ctx.isDragging) {
             const hex = raycastHex(e);
-            if (hex) onClick(hex);
+            if (hex) {
+                onClick(hex);
+                scheduleFrame(ctx);
+            }
         }
     });
 
@@ -341,7 +358,7 @@ export function setupControls(ctx, onHover, onClick) {
         ctx.camera.top = nf;
         ctx.camera.bottom = -nf;
         ctx.camera.updateProjectionMatrix();
-        ctx.dirty = true;
+        requestRedraw(ctx);
     }, { passive: false });
 }
 
@@ -352,7 +369,7 @@ export function handleResize(ctx) {
     ctx.camera.left = -f * a;
     ctx.camera.right = f * a;
     ctx.camera.updateProjectionMatrix();
-    ctx.dirty = true;
+    requestRedraw(ctx);
 }
 
 // Build and cache terrain sets — only when state object changes
@@ -401,9 +418,21 @@ function getTileColor(type, k, townOwnership) {
 }
 
 function updateTiles(ctx, state, hoveredHex, time) {
-    const moveKeys = new Set(state.validMoves.map(hexKey));
-    const targetKeys = new Set((state.validTargets || []).map(u => hexKey(u.hex)));
-    const rangeKeys = new Set((state.attackRangeHexes || []).map(hexKey));
+    if (state.validMoves !== ctx._cachedMovesSrc) {
+        ctx._cachedMovesSrc = state.validMoves;
+        ctx._cachedMoveKeys = new Set(state.validMoves.map(hexKey));
+    }
+    if (state.validTargets !== ctx._cachedTargetsSrc) {
+        ctx._cachedTargetsSrc = state.validTargets;
+        ctx._cachedTargetKeys = new Set((state.validTargets || []).map(u => hexKey(u.hex)));
+    }
+    if (state.attackRangeHexes !== ctx._cachedRangeSrc) {
+        ctx._cachedRangeSrc = state.attackRangeHexes;
+        ctx._cachedRangeKeys = new Set((state.attackRangeHexes || []).map(hexKey));
+    }
+    const moveKeys = ctx._cachedMoveKeys;
+    const targetKeys = ctx._cachedTargetKeys;
+    const rangeKeys = ctx._cachedRangeKeys;
     const townOwnership = state.townOwnership || {};
     const hovKey = hoveredHex ? hexKey(hoveredHex) : null;
 
@@ -684,16 +713,72 @@ function updateUnits(ctx, state, time) {
     }
 }
 
+// Pre-built shared geometries for effects (created once, reused)
+let _dyingBodyGeo = null;
+let _aiRingGeo = null;
+function getDyingBodyGeo() {
+    if (!_dyingBodyGeo) {
+        const ur = HEX_3D * 0.38;
+        const uh = HEX_3D * 0.8;
+        _dyingBodyGeo = new THREE.CylinderGeometry(ur * 0.85, ur, uh * 0.7, 16);
+    }
+    return _dyingBodyGeo;
+}
+function getAiRingGeo() {
+    if (!_aiRingGeo) {
+        _aiRingGeo = new THREE.TorusGeometry(HEX_3D * 0.55, 0.018, 8, 32);
+        _aiRingGeo.rotateX(Math.PI / 2);
+    }
+    return _aiRingGeo;
+}
+
+function acquireSprite(ctx) {
+    if (ctx.spritePool.length > 0) {
+        const s = ctx.spritePool.pop();
+        s.visible = true;
+        return s;
+    }
+    const tex = getCachedTexture("", 72, "#fff");
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+    const s = new THREE.Sprite(mat);
+    s.userData.isEffect = true;
+    ctx.effectGroup.add(s);
+    return s;
+}
+
+function acquireMesh(ctx, geometry, color) {
+    if (ctx.meshPool.length > 0) {
+        const m = ctx.meshPool.pop();
+        m.geometry = geometry;
+        m.material.color.setHex(color);
+        m.material.opacity = 1;
+        m.rotation.set(0, 0, 0);
+        m.scale.setScalar(1);
+        m.visible = true;
+        return m;
+    }
+    const mat = new THREE.MeshStandardMaterial({ color, transparent: true, opacity: 1, roughness: 0.4 });
+    const m = new THREE.Mesh(geometry, mat);
+    m.userData.isEffect = true;
+    ctx.effectGroup.add(m);
+    return m;
+}
+
+function releaseEffects(ctx) {
+    for (let i = 0; i < ctx.activeSprites.length; i++) {
+        ctx.activeSprites[i].visible = false;
+        ctx.spritePool.push(ctx.activeSprites[i]);
+    }
+    ctx.activeSprites.length = 0;
+    for (let i = 0; i < ctx.activeMeshes.length; i++) {
+        ctx.activeMeshes[i].visible = false;
+        ctx.meshPool.push(ctx.activeMeshes[i]);
+    }
+    ctx.activeMeshes.length = 0;
+}
+
 function updateEffects(ctx, state, time) {
-    // Clear previous frame effects
-    const rem = [];
-    ctx.effectGroup.children.forEach(c => { if (c.userData.isEffect) rem.push(c); });
-    rem.forEach(c => {
-        ctx.effectGroup.remove(c);
-        // Dispose only materials (sprites share cached textures)
-        if (c.material) c.material.dispose();
-        if (c.geometry) c.geometry.dispose();
-    });
+    releaseEffects(ctx);
 
     const now = Date.now();
     let hasActiveEffects = false;
@@ -706,11 +791,12 @@ function updateEffects(ctx, state, time) {
         const p = el / 500;
         const { x, z } = hexToWorld(effect.hex.q, effect.hex.r);
 
-        const sprite = makeSprite(`-${effect.damage}`, 80, "#ff3333", 1.2);
+        const sprite = acquireSprite(ctx);
+        sprite.material.map = getCachedTexture(`-${effect.damage}`, 80, "#ff3333");
+        sprite.scale.set(HEX_3D * 1.3 * 1.2, HEX_3D * 1.3 * 1.2, 1);
         sprite.position.set(x, 0.6 + p * 0.6, z);
         sprite.material.opacity = 1 - p * p;
-        sprite.userData.isEffect = true;
-        ctx.effectGroup.add(sprite);
+        ctx.activeSprites.push(sprite);
     });
 
     // Dying units
@@ -725,26 +811,22 @@ function updateEffects(ctx, state, time) {
         const th = HEIGHTS[terrain];
         const pc = dying.player === 1 ? COL.p1 : COL.p2;
         const s = 1 - p;
-        const a = 1 - p;
-        const ur = HEX_3D * 0.38;
         const uh = HEX_3D * 0.8;
 
-        const body = new THREE.Mesh(
-            new THREE.CylinderGeometry(ur * 0.85, ur, uh * 0.7, 16),
-            new THREE.MeshStandardMaterial({ color: pc.fill, transparent: true, opacity: a, roughness: 0.4 })
-        );
+        const body = acquireMesh(ctx, getDyingBodyGeo(), pc.fill);
         body.position.set(x, th + uh * 0.35 * s, z);
         body.scale.setScalar(s);
         body.rotation.z = p * Math.PI * 0.3;
-        body.userData.isEffect = true;
-        ctx.effectGroup.add(body);
+        body.material.opacity = 1 - p;
+        ctx.activeMeshes.push(body);
 
-        const sprite = makeSprite(dying.symbol, 80, "#fff");
+        const sprite = acquireSprite(ctx);
+        sprite.material.map = getCachedTexture(dying.symbol, 80, "#fff");
+        sprite.scale.set(HEX_3D * 1.3, HEX_3D * 1.3, 1);
         sprite.position.set(x, th + uh * s + 0.1, z);
-        sprite.material.opacity = a;
+        sprite.material.opacity = 1 - p;
         sprite.scale.setScalar(s);
-        sprite.userData.isEffect = true;
-        ctx.effectGroup.add(sprite);
+        ctx.activeSprites.push(sprite);
     });
 
     // AI preview
@@ -759,60 +841,68 @@ function updateEffects(ctx, state, time) {
         const rc = state.aiPreview.type === "attack" ? 0xff2020
             : state.aiPreview.type === "move" ? 0xd04040 : 0xd0a020;
 
-        const ringGeo = new THREE.TorusGeometry(HEX_3D * 0.55, 0.018, 8, 32);
-        ringGeo.rotateX(Math.PI / 2);
-        const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({
-            color: rc, transparent: true, opacity: 0.4 + pulse * 0.5,
-        }));
+        const ring = acquireMesh(ctx, getAiRingGeo(), rc);
+        ring.material.opacity = 0.4 + pulse * 0.5;
         ring.position.set(x, th + 0.02, z);
         ring.scale.setScalar(1 + pulse * 0.08);
-        ring.userData.isEffect = true;
-        ctx.effectGroup.add(ring);
+        ctx.activeMeshes.push(ring);
     }
 
     if (hasActiveEffects) ctx.needsAnimation = true;
 }
 
-export function updateScene(ctx, state, hoveredHex) {
-    if (!state) return;
+function scheduleFrame(ctx) {
+    if (ctx.frameScheduled || ctx.disposed) return;
+    ctx.frameScheduled = true;
+    ctx.animationId = requestAnimationFrame(() => {
+        ctx.frameScheduled = false;
+        if (ctx.disposed) return;
 
-    // Check if state changed (triggers dirty)
-    if (state !== ctx.lastState || hoveredHex !== ctx.lastHoveredHex) {
-        ctx.dirty = true;
-        ctx.lastState = state;
-        ctx.lastHoveredHex = hoveredHex;
-    }
+        const state = ctx.getState();
+        const hoveredHex = ctx.getHoveredHex();
+        if (!state) return;
 
-    // Skip frame if nothing needs updating
-    if (!ctx.dirty && !ctx.needsAnimation) return;
+        if (state !== ctx.lastState || hoveredHex !== ctx.lastHoveredHex) {
+            ctx.dirty = true;
+            ctx.lastState = state;
+            ctx.lastHoveredHex = hoveredHex;
+        }
 
-    ctx.needsAnimation = false;
-    ctx.time += 0.016;
+        if (!ctx.dirty && !ctx.needsAnimation) return;
 
-    getTerrainSets(ctx, state);
-    updateTiles(ctx, state, hoveredHex, ctx.time);
-    updateUnits(ctx, state, ctx.time);
-    updateEffects(ctx, state, ctx.time);
+        ctx.needsAnimation = false;
+        ctx.time += 0.016;
 
-    // Bake shadow map once after first full render (scene is static)
-    if (!ctx.shadowBaked) {
-        ctx.renderer.shadowMap.needsUpdate = true;
-        ctx.shadowBaked = true;
-    }
+        getTerrainSets(ctx, state);
+        updateTiles(ctx, state, hoveredHex, ctx.time);
+        updateUnits(ctx, state, ctx.time);
+        updateEffects(ctx, state, ctx.time);
 
-    ctx.renderer.render(ctx.scene, ctx.camera);
-    ctx.dirty = false;
+        if (!ctx.shadowBaked) {
+            ctx.renderer.shadowMap.needsUpdate = true;
+            ctx.shadowBaked = true;
+        }
+
+        ctx.renderer.render(ctx.scene, ctx.camera);
+        ctx.dirty = false;
+
+        if (ctx.needsAnimation) scheduleFrame(ctx);
+    });
+}
+
+export function requestRedraw(ctx) {
+    ctx.dirty = true;
+    scheduleFrame(ctx);
 }
 
 export function startRenderLoop(ctx, getState, getHoveredHex) {
-    function animate() {
-        ctx.animationId = requestAnimationFrame(animate);
-        updateScene(ctx, getState(), getHoveredHex());
-    }
-    animate();
+    ctx.getState = getState;
+    ctx.getHoveredHex = getHoveredHex;
+    scheduleFrame(ctx);
 }
 
 export function stopRenderLoop(ctx) {
+    ctx.disposed = true;
     if (ctx.animationId) {
         cancelAnimationFrame(ctx.animationId);
         ctx.animationId = null;
@@ -838,4 +928,6 @@ export function disposeScene(ctx) {
         _sharedMats[key].dispose();
         delete _sharedMats[key];
     }
+    if (_dyingBodyGeo) { _dyingBodyGeo.dispose(); _dyingBodyGeo = null; }
+    if (_aiRingGeo) { _aiRingGeo.dispose(); _aiRingGeo = null; }
 }
