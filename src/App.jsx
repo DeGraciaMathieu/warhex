@@ -461,14 +461,15 @@ export default function HexWarhammer() {
                 const animating = showDice;
                 const visibleLog = src ? (animating ? src.log.slice(0, src.phase + 1) : src.log) : [];
                 const hitEntry = visibleLog.find(e => !e.isSave && !e.isSummary);
-                const saveEntry = visibleLog.find(e => e.isSave);
+                const saveEntry = src ? src.log.find(e => e.isSave) : null;
                 const hitPhaseIdx = src ? src.log.findIndex(e => !e.isSave && !e.isSummary) : -1;
                 const savePhaseIdx = src ? src.log.findIndex(e => e.isSave) : -1;
 
                 function renderDiceBlock(entry, phaseIdx) {
                     if (!entry) return null;
                     const isCurrentPhase = animating && phaseIdx === src.phase;
-                    const visibleDice = isCurrentPhase ? (entry.rolls || []).slice(0, src.dice) : (entry.rolls || []);
+                    const isFuturePhase = animating && phaseIdx > src.phase;
+                    const visibleDice = isFuturePhase ? [] : isCurrentPhase ? (entry.rolls || []).slice(0, src.dice) : (entry.rolls || []);
                     return (
                         <div style={{ marginTop: 8 }}>
                             <div style={{ fontSize: 13, color: "#6a5a40", marginBottom: visibleDice.length ? 4 : 0 }}>{entry.label}</div>
