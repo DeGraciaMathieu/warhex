@@ -310,26 +310,21 @@ export default function HexWarhammer() {
                         Villes aléatoires
                     </button>
                 </div>
-                <div style={{ background: "#ece5d8", border: "1px solid #d5cbb8", borderRadius: 6, padding: "16px 24px", width: 688 }}>
-                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 13, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 12, textAlign: "center" }}>DENSITÉ DES TERRAINS</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px 24px" }}>
+                <div style={{ background: "#ece5d8", border: "1px solid #d5cbb8", borderRadius: 6, padding: "14px 24px" }}>
+                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 12, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 10, textAlign: "center" }}>TERRAINS</div>
+                    <div className="density-grid">
                         {[
-                            { key: "obstacles", label: "Obstacles", icon: "🪨" },
-                            { key: "rivers", label: "Rivières", icon: "💧" },
-                            { key: "towns", label: "Villes", icon: "🏰" },
-                            { key: "forests", label: "Forêts", icon: "🌲" },
-                            { key: "hills", label: "Collines", icon: "⛰" },
-                            { key: "swamps", label: "Marais", icon: "🟤" },
-                        ].map(({ key, label, icon }) => (
-                            <div key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <span style={{ fontSize: 14, minWidth: 100 }}>{icon} {label}</span>
-                                <input
-                                    type="range" min={0} max={3} step={1}
-                                    value={terrainDensity[key]}
-                                    onChange={e => setDensity(key, Number(e.target.value))}
-                                    style={{ flex: 1 }}
-                                />
-                                <span style={{ fontSize: 12, color: "#8a7a60", minWidth: 60 }}>{TERRAIN_DENSITY_LABELS[terrainDensity[key]]}</span>
+                            { key: "obstacles", label: "🪨 Obstacles" },
+                            { key: "rivers", label: "💧 Rivières" },
+                            { key: "towns", label: "🏰 Villes" },
+                            { key: "forests", label: "🌲 Forêts" },
+                            { key: "hills", label: "⛰ Collines" },
+                            { key: "swamps", label: "🟤 Marais" },
+                        ].map(({ key, label }) => (
+                            <div key={key} className="density-row">
+                                <span className="density-label">{label}</span>
+                                <input type="range" min={0} max={3} step={1} className="density-slider" value={terrainDensity[key]} onChange={e => setDensity(key, Number(e.target.value))} />
+                                <span className="density-value">{TERRAIN_DENSITY_LABELS[terrainDensity[key]]}</span>
                             </div>
                         ))}
                     </div>

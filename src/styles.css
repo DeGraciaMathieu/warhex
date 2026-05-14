@@ -17,6 +17,38 @@
 .btn-gold  { background: rgba(150,110,10,.1); border: 1px solid #8a6a08; color: #8a6a08; }
 .btn-grey  { background: transparent; border: 1px solid #c8b898; color: #8a7a60; }
 
+.density-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px;
+}
+.density-row {
+    display: flex; align-items: center; gap: 10px;
+}
+.density-label {
+    font-size: 13px; color: #5a4a30; min-width: 90px; white-space: nowrap;
+}
+.density-value {
+    font-size: 12px; color: #8a6a08; font-weight: 600; min-width: 62px; text-align: right;
+}
+.density-slider {
+    -webkit-appearance: none; appearance: none;
+    flex: 1; height: 4px; border-radius: 2px;
+    background: #d5cbb8; outline: none; cursor: pointer;
+}
+.density-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #8a6a08; border: 2px solid #f5f0e8;
+    box-shadow: 0 1px 3px rgba(0,0,0,.2);
+    cursor: pointer; transition: transform .15s;
+}
+.density-slider::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #8a6a08; border: 2px solid #f5f0e8;
+    box-shadow: 0 1px 3px rgba(0,0,0,.2);
+    cursor: pointer;
+}
+.density-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
 .weapon-card {
     width: 100%; background: #ece5d8; border: 1px solid #d5cbb8; color: #2a2015;
     font-family: 'Crimson Text', serif; text-align: left; padding: 10px 14px; margin-bottom: 8px;
