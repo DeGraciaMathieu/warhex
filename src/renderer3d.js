@@ -268,9 +268,6 @@ export function createScene(container) {
         cachedState: null,
         cachedTerrainSets: null,
         cachedTerrainTypes: null,
-        // Effect object pool
-        effectPool: [],
-        effectPoolSprites: [],
     };
 
     updateCameraPosition(ctx);
