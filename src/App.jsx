@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.js";
-import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN } from "./units.js";
+import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, TERRAIN_DENSITY_LABELS, DEFAULT_TERRAIN_DENSITY } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION } from "./renderer.js";
 import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, getCombatModifiers } from "./game.js";
 import { computeAIAction, buildAIPreview } from "./ai.js";
@@ -109,6 +109,7 @@ export default function HexWarhammer() {
     const [showGuide, setShowGuide] = useState(false);
     const [vsAI, setVsAI] = useState(false);
     const [fairTowns, setFairTowns] = useState(true);
+    const [terrainDensity, setTerrainDensity] = useState(DEFAULT_TERRAIN_DENSITY);
     const [selections, setSelections] = useState({ 1: [], 2: [] });
     const [state, setState] = useState(null);
     const [hoveredHex, setHoveredHex] = useState(null);
@@ -248,7 +249,7 @@ export default function HexWarhammer() {
     }
 
     function endTurn() { setState(computeEndTurn); }
-    function restart() { resetUID(); setSelections({ 1: [], 2: [] }); setArmyPhase(true); setState(null); setVsAI(false); setFairTowns(true); }
+    function restart() { resetUID(); setSelections({ 1: [], 2: [] }); setArmyPhase(true); setState(null); setVsAI(false); setFairTowns(true); setTerrainDensity(DEFAULT_TERRAIN_DENSITY); }
 
     function addUnit(player, type) {
         setSelections(prev => {
@@ -269,9 +270,13 @@ export default function HexWarhammer() {
         setSelections(prev => ({ ...prev, [player]: army }));
     }
 
+    function setDensity(terrain, value) {
+        setTerrainDensity(prev => ({ ...prev, [terrain]: value }));
+    }
+
     function startGame() {
         resetUID();
-        setState(initState(selections, { fairTowns }));
+        setState(initState(selections, { fairTowns, terrainDensity }));
         setArmyPhase(false);
     }
 
@@ -305,6 +310,31 @@ export default function HexWarhammer() {
                         Villes aléatoires
                     </button>
                 </div>
+                <div style={{ background: "#ece5d8", border: "1px solid #d5cbb8", borderRadius: 6, padding: "16px 24px", width: 688 }}>
+                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 13, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 12, textAlign: "center" }}>DENSITÉ DES TERRAINS</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px 24px" }}>
+                        {[
+                            { key: "obstacles", label: "Obstacles", icon: "🪨" },
+                            { key: "rivers", label: "Rivières", icon: "💧" },
+                            { key: "towns", label: "Villes", icon: "🏰" },
+                            { key: "forests", label: "Forêts", icon: "🌲" },
+                            { key: "hills", label: "Collines", icon: "⛰" },
+                            { key: "swamps", label: "Marais", icon: "🟤" },
+                        ].map(({ key, label, icon }) => (
+                            <div key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 14, minWidth: 100 }}>{icon} {label}</span>
+                                <input
+                                    type="range" min={0} max={3} step={1}
+                                    value={terrainDensity[key]}
+                                    onChange={e => setDensity(key, Number(e.target.value))}
+                                    style={{ flex: 1 }}
+                                />
+                                <span style={{ fontSize: 12, color: "#8a7a60", minWidth: 60 }}>{TERRAIN_DENSITY_LABELS[terrainDensity[key]]}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
                 <div style={{ display: "flex", gap: 48 }}>
                     {[1, 2].map(player => {
                         const isAIPlayer = vsAI && player === 2;
