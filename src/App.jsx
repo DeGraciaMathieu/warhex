@@ -74,8 +74,8 @@ function WeaponCard({ weapon, attacker, target, hills, towns, aiPreview, onSelec
                 </div>
             ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 6, fontSize: 13, color: "#6a5a40" }}>
-                    <div>{weapon.type === "ranged" ? `Portée ${weapon.minRange ? `${weapon.minRange}-` : ""}${weapon.range + rangeBonus} hex${rangeBonus ? " ⛰" : ""}` : "Mêlée (adjacent)"} · Distance : {dist}</div>
-                    <div>Touche sur {skill}+ · {weapon.attacks} {weapon.attacks > 1 ? "attaques" : "attaque"}</div>
+                    <div>{weapon.type === "ranged" ? `Portée ${weapon.minRange ? `${weapon.minRange}-` : ""}${weapon.range + rangeBonus} hex${rangeBonus ? " ⛰" : ""}` : "Mêlée (adjacent)"}</div>
+                    <div>{weapon.attacks} {weapon.attacks > 1 ? "attaques" : "attaque"} · Touche sur {skill}+</div>
                     <div>{weapon.damage} {weapon.damage > 1 ? "dégâts" : "dégât"} par touche · Pénétration {Math.abs(weapon.ap)}</div>
                     <div style={{ color: saveColor, fontWeight: 600, marginTop: 2 }}>
                         {cantSave ? "Sauvegarde impossible" : `Sauvegarde ennemie sur ${effectiveSave}+`}{inTown ? " 🏰 (couvert)" : ""}
