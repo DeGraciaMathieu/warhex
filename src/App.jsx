@@ -98,6 +98,7 @@ export default function HexWarhammer() {
     const [state, setState] = useState(null);
     const [hoveredHex, setHoveredHex] = useState(null);
     const [diceAnim, setDiceAnim] = useState(null);
+    const [pendingDamage, setPendingDamage] = useState(null);
 
     useEffect(() => {
         if (!armyPhase && state) drawScene(canvasRef.current, state, hoveredHex);
@@ -144,10 +145,19 @@ export default function HexWarhammer() {
 
     function closeCombatModal() {
         if (diceAnim) {
-            setState(s => applyDamage(s, diceAnim));
+            setPendingDamage(diceAnim);
             setDiceAnim(null);
         }
     }
+
+    useEffect(() => {
+        if (!pendingDamage) return;
+        const timer = setTimeout(() => {
+            setState(s => applyDamage(s, pendingDamage));
+            setPendingDamage(null);
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [pendingDamage]);
 
     useEffect(() => {
         if (!diceAnim?.done) return;
