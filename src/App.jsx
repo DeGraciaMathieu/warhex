@@ -331,8 +331,13 @@ export default function HexWarhammer() {
 
         return (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif", gap: 24 }}>
-                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 28, fontWeight: 700, letterSpacing: ".2em", color: "#8a6a08" }}>
-                    ⚔ WARHEX ⚔
+                <div className="home-title">
+                    <div className="home-title-line" />
+                    <div>
+                        <div className="home-title-text">WARHEX</div>
+                        <div className="home-title-sub">Tactique hexagonale</div>
+                    </div>
+                    <div className="home-title-line" />
                 </div>
 
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 24 }}>

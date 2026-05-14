@@ -17,6 +17,24 @@
 .btn-gold  { background: rgba(150,110,10,.1); border: 1px solid #8a6a08; color: #8a6a08; }
 .btn-grey  { background: transparent; border: 1px solid #c8b898; color: #8a7a60; }
 
+.home-title {
+    display: flex; align-items: center; gap: 20px;
+}
+.home-title-line {
+    width: 60px; height: 1px;
+    background: linear-gradient(90deg, transparent, #8a6a08, transparent);
+}
+.home-title-text {
+    font-family: 'Cinzel', serif; font-size: 36px; font-weight: 700;
+    letter-spacing: .35em; color: #8a6a08; text-align: center;
+    text-shadow: 0 1px 0 rgba(138,106,8,.15);
+}
+.home-title-sub {
+    font-family: 'Cinzel', serif; font-size: 11px; font-weight: 400;
+    letter-spacing: .4em; color: #b0a080; text-align: center;
+    text-transform: uppercase; margin-top: 2px;
+}
+
 .preset-card {
     display: flex; flex-direction: column; align-items: center; gap: 4px;
     padding: 14px 10px 12px; border-radius: 6px;
