@@ -346,7 +346,7 @@ export default function HexWarhammer() {
         };
 
         return (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif", gap: 24 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif", gap: 20, padding: "24px 0" }}>
                 <div className="home-title">
                     <div className="home-title-line" />
                     <div>
@@ -408,18 +408,16 @@ export default function HexWarhammer() {
                                 ))}
                             </div>
                         </div>
+
+                        <div style={{ position: "relative", border: "1px solid #d5cbb8", borderRadius: 6, overflow: "hidden", alignSelf: "center" }}>
+                            <canvas ref={previewCanvasRef} width={CANVAS_W} height={CANVAS_H} style={{ display: "block", width: 380, height: 335 }} />
+                            <button className="btn btn-grey" onClick={regeneratePreview} style={{ position: "absolute", top: 8, right: 8, width: "auto", padding: "4px 10px", fontSize: 12, marginBottom: 0, background: "rgba(236,229,216,0.9)" }}>
+                                🔄
+                            </button>
+                        </div>
                     </div>
 
                     {renderArmyPanel(2)}
-                </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ position: "relative", border: "1px solid #d5cbb8", borderRadius: 6, overflow: "hidden" }}>
-                        <canvas ref={previewCanvasRef} width={CANVAS_W} height={CANVAS_H} style={{ display: "block", width: 350, height: 308 }} />
-                        <button className="btn btn-grey" onClick={regeneratePreview} style={{ position: "absolute", top: 8, right: 8, width: "auto", padding: "4px 10px", fontSize: 12, marginBottom: 0, background: "rgba(236,229,216,0.9)" }}>
-                            🔄
-                        </button>
-                    </div>
                 </div>
 
                 <div style={{ display: "flex", gap: 12 }}>
