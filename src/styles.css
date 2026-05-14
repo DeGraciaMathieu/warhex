@@ -42,13 +42,24 @@
 
 canvas { cursor: crosshair; display: block; }
 
-.roll-new { animation: diceAppear .45s ease-out; }
+.roll-new { animation: diceReveal .35s ease-out; }
+.roll-spinning {
+    background: rgba(138,106,8,.08); border-color: #c8b898; color: #8a7a60;
+    animation: diceSpin .45s linear infinite;
+}
 
-@keyframes diceAppear {
-    0% { transform: scale(0) rotate(-180deg); opacity: 0; }
-    50% { transform: scale(1.4) rotate(15deg); opacity: 1; }
-    75% { transform: scale(0.9) rotate(-5deg); opacity: 1; }
-    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+@keyframes diceSpin {
+    0% { transform: rotateY(0deg) rotateX(0deg); }
+    25% { transform: rotateY(90deg) rotateX(15deg); }
+    50% { transform: rotateY(180deg) rotateX(0deg); }
+    75% { transform: rotateY(270deg) rotateX(-15deg); }
+    100% { transform: rotateY(360deg) rotateX(0deg); }
+}
+
+@keyframes diceReveal {
+    0% { transform: rotateY(90deg) scale(1.2); opacity: 0.5; }
+    50% { transform: rotateY(-10deg) scale(1.15); opacity: 1; }
+    100% { transform: rotateY(0deg) scale(1); opacity: 1; }
 }
 
 @keyframes pulse {

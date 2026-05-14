@@ -106,7 +106,7 @@ export default function HexWarhammer() {
 
     useEffect(() => {
         if (!diceAnim || diceAnim.done) return;
-        const { log, phase, dice } = diceAnim;
+        const { log, phase, dice, rolling } = diceAnim;
         const entry = log[phase];
         if (!entry) {
             setDiceAnim(a => ({ ...a, done: true }));
@@ -115,10 +115,14 @@ export default function HexWarhammer() {
         const rolls = entry.rolls || [];
         if (rolls.length === 0 || dice >= rolls.length) {
             const delay = entry.isSummary ? 800 : 600;
-            const timer = setTimeout(() => setDiceAnim(a => ({ ...a, phase: a.phase + 1, dice: 0 })), delay);
+            const timer = setTimeout(() => setDiceAnim(a => ({ ...a, phase: a.phase + 1, dice: 0, rolling: false })), delay);
             return () => clearTimeout(timer);
         }
-        const timer = setTimeout(() => setDiceAnim(a => ({ ...a, dice: a.dice + 1 })), 350);
+        if (!rolling) {
+            setDiceAnim(a => ({ ...a, rolling: true }));
+            return;
+        }
+        const timer = setTimeout(() => setDiceAnim(a => ({ ...a, dice: a.dice + 1, rolling: false })), 450);
         return () => clearTimeout(timer);
     }, [diceAnim]);
 
@@ -480,10 +484,11 @@ export default function HexWarhammer() {
                     const isCurrentPhase = animating && phaseIdx === src.phase;
                     const isFuturePhase = animating && phaseIdx > src.phase;
                     const visibleDice = isFuturePhase ? [] : isCurrentPhase ? (entry.rolls || []).slice(0, src.dice) : (entry.rolls || []);
+                    const showSpinning = isCurrentPhase && src.rolling;
                     return (
                         <div style={{ marginTop: 8 }}>
-                            <div style={{ fontSize: 13, color: "#6a5a40", marginBottom: visibleDice.length ? 4 : 0 }}>{entry.label}</div>
-                            {visibleDice.length > 0 && (
+                            <div style={{ fontSize: 13, color: "#6a5a40", marginBottom: (visibleDice.length || showSpinning) ? 4 : 0 }}>{entry.label}</div>
+                            {(visibleDice.length > 0 || showSpinning) && (
                                 <div style={{ display: "flex", flexWrap: "wrap", gap: 0, justifyContent: "center" }}>
                                     {visibleDice.map((r, j) => {
                                         const needed = entry.isSave
@@ -491,9 +496,10 @@ export default function HexWarhammer() {
                                             : parseInt((entry.label.match(/(\d+)\+/) || [0, 0])[1]);
                                         const hit = r >= needed;
                                         const cls = entry.isSave ? (hit ? "roll-save" : "roll-save-fail") : (hit ? "roll-hit" : "roll-miss");
-                                        const isNew = isCurrentPhase && j === src.dice - 1;
+                                        const isNew = isCurrentPhase && j === src.dice - 1 && !src.rolling;
                                         return <span key={j} className={`roll-chip ${cls}${isNew ? " roll-new" : ""}`}>{r}</span>;
                                     })}
+                                    {showSpinning && <span className="roll-chip roll-spinning">?</span>}
                                 </div>
                             )}
                         </div>
