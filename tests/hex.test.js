@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { hexDistance, hexKey, hexToPixel, pixelToHex, isValidHex, hexNeighbors, hasLineOfSight, hexesInRange } from "../src/hex.js";
+import { hexDistance, hexKey, hexToPixel, pixelToHex, isValidHex, hexNeighbors, hasLineOfSight, hexesInRange, pathDistance } from "../src/hex.js";
 
 describe("distance hexagonale", () => {
     it("la distance entre un hex et lui-même est 0", () => {
@@ -76,6 +76,50 @@ describe("conversions hex ↔ pixel", () => {
         expect(result.length).toBeLessThan(18);
     });
 
+});
+
+describe("pathDistance", () => {
+    it("la distance entre un hex et lui-même est 0", () => {
+        const hex = { q: 0, r: 0, s: 0 };
+        expect(pathDistance(hex, hex)).toBe(0);
+    });
+
+    it("la distance entre deux hexes adjacents sans obstacle est 1", () => {
+        const a = { q: 0, r: 0, s: 0 };
+        const b = { q: 1, r: -1, s: 0 };
+        expect(pathDistance(a, b)).toBe(1);
+    });
+
+    it("contourne un obstacle entre deux hexes", () => {
+        const a = { q: 0, r: 0, s: 0 };
+        const b = { q: 2, r: 0, s: -2 };
+        const obstacle = { q: 1, r: 0, s: -1 };
+        const obsKeys = new Set([hexKey(obstacle)]);
+        const dist = pathDistance(a, b, obsKeys);
+        // En ligne droite = 2, mais l'obstacle force un détour = 3
+        expect(dist).toBeGreaterThan(hexDistance(a, b));
+    });
+
+    it("retourne Infinity quand le chemin est totalement bloqué", () => {
+        // Entourer la cible d'obstacles
+        const target = { q: 0, r: 0, s: 0 };
+        const neighbors = hexNeighbors(target);
+        const obsKeys = new Set(neighbors.map(hexKey));
+        const start = { q: 2, r: 0, s: -2 };
+        expect(pathDistance(start, target, obsKeys)).toBe(Infinity);
+    });
+
+    it("prend en compte le coût double des terrains costKeys", () => {
+        const a = { q: 0, r: 0, s: 0 };
+        const b = { q: 2, r: 0, s: -2 };
+        const forest = { q: 1, r: 0, s: -1 };
+        const costKeys = new Set([hexKey(forest)]);
+        // Sans coût = 2, avec forêt au milieu = 3
+        expect(pathDistance(a, b, new Set(), costKeys)).toBe(3);
+    });
+});
+
+describe("voisins, portée et ligne de vue", () => {
     it("deux hexes adjacents sont toujours en ligne de vue", () => {
         const a = { q: 0, r: 0, s: 0 };
         const neighbors = hexNeighbors(a);

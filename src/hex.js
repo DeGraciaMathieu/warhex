@@ -48,6 +48,35 @@ export function hexCorners(cx, cy, size) {
     });
 }
 
+export function pathDistance(start, target, obstacleKeys = new Set(), costKeys = new Set()) {
+    const targetKey = hexKey(target);
+    const startKey = hexKey(start);
+    if (startKey === targetKey) return 0;
+    const dist = new Map([[startKey, 0]]);
+    const queue = [{ hex: start, d: 0 }];
+    while (queue.length) {
+        let minIdx = 0;
+        for (let i = 1; i < queue.length; i++) {
+            if (queue[i].d < queue[minIdx].d) minIdx = i;
+        }
+        const { hex: cur, d } = queue.splice(minIdx, 1)[0];
+        const curKey = hexKey(cur);
+        if (curKey === targetKey) return d;
+        if (d > dist.get(curKey)) continue;
+        for (const n of hexNeighbors(cur)) {
+            const k = hexKey(n);
+            if (obstacleKeys.has(k) || !isValidHex(n)) continue;
+            const cost = costKeys.has(k) ? 2 : 1;
+            const newDist = d + cost;
+            if (!dist.has(k) || newDist < dist.get(k)) {
+                dist.set(k, newDist);
+                queue.push({ hex: n, d: newDist });
+            }
+        }
+    }
+    return Infinity;
+}
+
 export function reachableHexes(start, movement, occupiedKeys, obstacleKeys = new Set(), stopKeys = new Set(), costKeys = new Set()) {
     const startKey = hexKey(start);
     const visited = new Map([[startKey, 0]]);
