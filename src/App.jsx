@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.js";
+import { hexDistance, hexKey } from "./hex.js";
 import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, TERRAIN_DENSITY_LABELS, DEFAULT_TERRAIN_DENSITY, TERRAIN_PRESETS } from "./units.js";
-import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION } from "./renderer.js";
+import { drawScene, CANVAS_W, CANVAS_H, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION } from "./renderer.js";
+import { createScene, setupControls, handleResize, startRenderLoop, disposeScene } from "./renderer3d.js";
 import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, getCombatModifiers } from "./game.js";
 import { computeAIAction, buildAIPreview } from "./ai.js";
 import Guide from "./Guide.jsx";
@@ -105,6 +106,10 @@ const ARMY_SIZE = 5;
 
 export default function HexWarhammer() {
     const canvasRef = useRef(null);
+    const sceneContainerRef = useRef(null);
+    const sceneCtxRef = useRef(null);
+    const stateRef = useRef(null);
+    const hoveredHexRef = useRef(null);
     const [armyPhase, setArmyPhase] = useState(true);
     const [showGuide, setShowGuide] = useState(false);
     const [vsAI, setVsAI] = useState(false);
@@ -118,9 +123,48 @@ export default function HexWarhammer() {
     const [diceAnim, setDiceAnim] = useState(null);
     const [pendingDamage, setPendingDamage] = useState(null);
 
+    stateRef.current = state;
+    hoveredHexRef.current = hoveredHex;
+    const vsAIRef = useRef(false);
+    const diceAnimRef = useRef(null);
+    vsAIRef.current = vsAI;
+    diceAnimRef.current = diceAnim;
+
+    // Initialize Three.js scene when entering game phase
     useEffect(() => {
-        if (!armyPhase && state) drawScene(canvasRef.current, state, hoveredHex);
-    }, [state, hoveredHex, armyPhase]);
+        if (armyPhase || !sceneContainerRef.current) return;
+        if (sceneCtxRef.current) return;
+
+        const ctx = createScene(sceneContainerRef.current);
+        sceneCtxRef.current = ctx;
+
+        setupControls(ctx,
+            (hex) => setHoveredHex(hex),
+            (hex) => {
+                if (!hex) return;
+                if (vsAIRef.current && stateRef.current?.currentPlayer === 2) return;
+                if (diceAnimRef.current && !diceAnimRef.current.done) return;
+                setState(prev => {
+                    if (prev.winner) return prev;
+                    return handleClick(prev, hex);
+                });
+            }
+        );
+
+        startRenderLoop(ctx,
+            () => stateRef.current,
+            () => hoveredHexRef.current
+        );
+
+        const onResize = () => handleResize(ctx);
+        window.addEventListener("resize", onResize);
+
+        return () => {
+            window.removeEventListener("resize", onResize);
+            disposeScene(ctx);
+            sceneCtxRef.current = null;
+        };
+    }, [armyPhase]);
 
     function regeneratePreview() {
         resetUID();
@@ -160,24 +204,18 @@ export default function HexWarhammer() {
 
     useEffect(() => {
         const hasDying = state?.dyingUnits?.length > 0;
-        const hasPreview = !!state?.aiPreview;
         const hasHitEffects = state?.hitEffects?.length > 0;
-        if (!state || (!hasDying && !hasPreview && !hasHitEffects)) return;
-        let frameId;
-        const animate = () => {
-            drawScene(canvasRef.current, state, hoveredHex);
+        if (!state || (!hasDying && !hasHitEffects)) return;
+        const timer = setTimeout(() => {
             const now = Date.now();
             const dyingDone = !hasDying || !state.dyingUnits.some(d => now - d.deathTime < DEATH_ANIM_DURATION);
             const hitDone = !hasHitEffects || !state.hitEffects.some(e => now - e.time < HIT_EFFECT_DURATION);
-            if (dyingDone && hitDone && !hasPreview) {
+            if (dyingDone && hitDone) {
                 setState(s => ({ ...s, dyingUnits: [], hitEffects: [] }));
-                return;
             }
-            frameId = requestAnimationFrame(animate);
-        };
-        frameId = requestAnimationFrame(animate);
-        return () => cancelAnimationFrame(frameId);
-    }, [state?.dyingUnits, state?.aiPreview, state?.hitEffects]);
+        }, Math.max(DEATH_ANIM_DURATION, HIT_EFFECT_DURATION) + 50);
+        return () => clearTimeout(timer);
+    }, [state?.dyingUnits, state?.hitEffects]);
 
     function closeCombatModal() {
         if (diceAnim) {
@@ -230,28 +268,6 @@ export default function HexWarhammer() {
         return () => clearTimeout(timer);
     }, [state, vsAI, diceAnim]);
 
-    function onCanvasClick(e) {
-        if (vsAI && state?.currentPlayer === 2) return;
-        if (diceAnim && !diceAnim.done) return;
-        if (diceAnim?.done) closeCombatModal();
-        const rect = canvasRef.current.getBoundingClientRect();
-        const sx = CANVAS_W / rect.width, sy = CANVAS_H / rect.height;
-        const x = (e.clientX - rect.left) * sx - OX;
-        const y = (e.clientY - rect.top) * sy - OY;
-        const hex = pixelToHex(x, y);
-        if (!isValidHex(hex)) return;
-        setState(prev => handleClick(prev, hex));
-    }
-
-    function onMouseMove(e) {
-        const rect = canvasRef.current.getBoundingClientRect();
-        const sx = CANVAS_W / rect.width, sy = CANVAS_H / rect.height;
-        const x = (e.clientX - rect.left) * sx - OX;
-        const y = (e.clientY - rect.top) * sy - OY;
-        const hex = pixelToHex(x, y);
-        setHoveredHex(isValidHex(hex) ? hex : null);
-    }
-
     function startMove() { setState(computeMove); }
     function startAttack() { setState(computeAttack); }
 
@@ -265,7 +281,13 @@ export default function HexWarhammer() {
     }
 
     function endTurn() { setState(computeEndTurn); }
-    function restart() { resetUID(); setSelections({ 1: [], 2: [] }); setArmyPhase(true); setState(null); setVsAI(false); setFairTowns(true); setTerrainDensity(DEFAULT_TERRAIN_DENSITY); }
+    function restart() {
+        if (sceneCtxRef.current) {
+            disposeScene(sceneCtxRef.current);
+            sceneCtxRef.current = null;
+        }
+        resetUID(); setSelections({ 1: [], 2: [] }); setArmyPhase(true); setState(null); setVsAI(false); setFairTowns(true); setTerrainDensity(DEFAULT_TERRAIN_DENSITY);
+    }
 
     function addUnit(player, type) {
         setSelections(prev => {
@@ -440,17 +462,12 @@ export default function HexWarhammer() {
         <div style={{ display: "flex", height: "100vh", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif", overflow: "hidden" }}>
             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: 20 }}>
                 <div style={{ fontFamily: "'Cinzel', serif", fontSize: 24, fontWeight: 700, letterSpacing: ".2em", color: "#8a6a08", textShadow: "0 0 30px rgba(138,106,8,.2)" }}>
-                    ⚔ WARHEX ⚔
+                    ⚔ WARHEX 3D ⚔
                 </div>
 
-                <canvas
-                    ref={canvasRef}
-                    width={CANVAS_W}
-                    height={CANVAS_H}
-                    style={{ border: "1px solid #c8b898", maxWidth: "100%" }}
-                    onClick={onCanvasClick}
-                    onMouseMove={onMouseMove}
-                    onMouseLeave={() => setHoveredHex(null)}
+                <div
+                    ref={sceneContainerRef}
+                    style={{ width: 700, height: 616, border: "1px solid #c8b898", maxWidth: "100%", position: "relative" }}
                 />
 
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", maxWidth: CANVAS_W, width: "100%", marginTop: 6 }}>
