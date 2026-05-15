@@ -641,7 +641,7 @@ export default function HexWarhammer() {
                                     <div className="combat-col">
                                         <div className="combat-col-role">DÉFENSEUR</div>
                                         <div className="combat-col-name" style={{ color: P[combatTarget?.player] }}>{combatTarget?.symbol} {combatTarget?.name}</div>
-                                        <div style={{ fontSize: 12, color: "#8a7a60" }}>{combatTarget?.currentWounds} / {combatTarget?.wounds} PV</div>
+                                        <div style={{ fontSize: 12, color: "#8a7a60" }}>{combatTarget?.currentWounds} / {combatTarget?.wounds} PV · Svg {combatTarget?.save}+</div>
                                         {modifiers.target.map((m, i) => (
                                             <span key={i} className={`combat-modifier ${m.type}`}>{m.icon} {m.label}</span>
                                         ))}
