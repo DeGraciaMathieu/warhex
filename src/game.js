@@ -26,9 +26,9 @@ export function getCombatModifiers(attacker, target, state) {
     const attackerMods = [];
     const targetMods = [];
     if (hillKeys.has(ak)) attackerMods.push({ type: "bonus", label: "Colline (portée +1)", icon: "⛰" });
-    if (townKeys.has(tk)) targetMods.push({ type: "malus", label: "Couvert de ville (svg -1)", icon: "🏰" });
-    if (forestKeys.has(tk)) targetMods.push({ type: "malus", label: "Couvert de forêt (svg -1)", icon: "🌲" });
-    if (riverKeys.has(tk)) targetMods.push({ type: "bonus", label: "Rivière (svg +1)", icon: "🏞" });
+    if (townKeys.has(tk)) targetMods.push({ type: "bonus", label: "Couvert de ville (svg -1)", icon: "🏰" });
+    if (forestKeys.has(tk)) targetMods.push({ type: "bonus", label: "Couvert de forêt (svg -1)", icon: "🌲" });
+    if (riverKeys.has(tk)) targetMods.push({ type: "malus", label: "Rivière (svg +1)", icon: "🏞" });
     return { attacker: attackerMods, target: targetMods };
 }
 

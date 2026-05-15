@@ -1118,38 +1118,38 @@ describe("modificateurs de combat", () => {
         expect(mods.target).toHaveLength(0);
     });
 
-    it("cible dans une ville retourne un malus côté défenseur", () => {
+    it("cible dans une ville retourne un bonus côté défenseur", () => {
         const town = { q: 1, r: -1, s: 0 };
         const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
         const target = createUnit("warrior", 2, town);
         const s = makeState({ units: [attacker, target], towns: [town] });
         const mods = getCombatModifiers(attacker, target, s);
         expect(mods.target).toHaveLength(1);
-        expect(mods.target[0].type).toBe("malus");
+        expect(mods.target[0].type).toBe("bonus");
         expect(mods.target[0].icon).toBe("🏰");
         expect(mods.attacker).toHaveLength(0);
     });
 
-    it("cible dans une forêt retourne un malus côté défenseur", () => {
+    it("cible dans une forêt retourne un bonus côté défenseur", () => {
         const forest = { q: 1, r: -1, s: 0 };
         const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
         const target = createUnit("warrior", 2, forest);
         const s = makeState({ units: [attacker, target], forests: [forest] });
         const mods = getCombatModifiers(attacker, target, s);
         expect(mods.target).toHaveLength(1);
-        expect(mods.target[0].type).toBe("malus");
+        expect(mods.target[0].type).toBe("bonus");
         expect(mods.target[0].icon).toBe("🌲");
         expect(mods.attacker).toHaveLength(0);
     });
 
-    it("cible sur une rivière retourne un bonus côté défenseur", () => {
+    it("cible sur une rivière retourne un malus côté défenseur", () => {
         const river = { q: 1, r: -1, s: 0 };
         const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
         const target = createUnit("warrior", 2, river);
         const s = makeState({ units: [attacker, target], rivers: [river] });
         const mods = getCombatModifiers(attacker, target, s);
         expect(mods.target).toHaveLength(1);
-        expect(mods.target[0].type).toBe("bonus");
+        expect(mods.target[0].type).toBe("malus");
         expect(mods.target[0].icon).toBe("🏞");
         expect(mods.attacker).toHaveLength(0);
     });
