@@ -711,6 +711,7 @@ export default function HexWarhammer() {
                 const combatTarget = showWeapons ? state.pendingAttack.target : src?.target;
                 const modifiers = combatAttacker && combatTarget ? getCombatModifiers(combatAttacker, combatTarget, state) : { attacker: [], target: [] };
                 const povPlayer = myPlayer || (vsAI ? 1 : null);
+                const combatWeapon = src ? src.attacker?.weapons?.find(w => w.name === src.weaponName) : null;
 
                 const animating = showDice;
                 const visibleLog = src ? (animating ? src.log.slice(0, src.phase + 1) : src.log) : [];
@@ -727,6 +728,25 @@ export default function HexWarhammer() {
                     const needed = parseInt((saveEntry.label.match(/(\d+)\+/) || [0, 7])[1]);
                     const dice = isSavePhase ? (saveEntry.rolls || []).slice(0, src.dice) : (saveEntry.rolls || []);
                     return dice.filter(r => r >= needed).length;
+                }
+
+                function renderHpBar(unit, losing = 0) {
+                    if (!unit) return null;
+                    const remaining = unit.currentWounds - losing;
+                    const ratio = remaining / unit.wounds;
+                    const level = ratio > 0.6 ? "hp-high" : ratio > 0.3 ? "hp-mid" : "hp-low";
+                    return (
+                        <div className="combat-hp">
+                            <div className="combat-hp-bar">
+                                {Array.from({ length: unit.wounds }, (_, i) => {
+                                    const cls = i < remaining ? `combat-hp-seg ${level}` : i < unit.currentWounds ? "combat-hp-seg losing" : "combat-hp-seg empty";
+                                    const delay = i >= remaining && i < unit.currentWounds ? { animationDelay: `${(unit.currentWounds - 1 - i) * 0.18}s` } : undefined;
+                                    return <span key={i} className={cls} style={delay} />;
+                                })}
+                            </div>
+                            <span className="combat-hp-text">{remaining} / {unit.wounds}</span>
+                        </div>
+                    );
                 }
 
                 function renderDiceBlock(entry, phaseIdx, struckCount = 0) {
@@ -763,11 +783,41 @@ export default function HexWarhammer() {
 
                 return (
                     <div className="combat-overlay" onClick={showResult ? closeCombatModal : undefined}>
-                        <div className="combat-modal" onClick={e => e.stopPropagation()}>
+                        <div className={`combat-modal${showResult && src.damage > 0 ? " shake" : ""}`} onClick={e => e.stopPropagation()}>
                             <div className="combat-modal-header">
                                 <h2>COMBAT</h2>
                                 {(showDice || showResult) && src && (
-                                    <div style={{ fontSize: 13, color: "#8a7a60", marginTop: 2 }}>{src.weaponName}</div>
+                                    <div className="combat-weapon">
+                                        <div className="combat-weapon-name">{src.weaponType === "melee" ? "⚔" : "🏹"} {src.weaponName}</div>
+                                        {combatWeapon && (
+                                            <div className="combat-weapon-chips">
+                                                <span className="combat-weapon-chip">Portée {combatWeapon.range}</span>
+                                                <span className="combat-weapon-chip">{combatWeapon.attacks} att.</span>
+                                                {combatWeapon.ap !== 0 && <span className="combat-weapon-chip">PA {combatWeapon.ap}</span>}
+                                                <span className="combat-weapon-chip">D{combatWeapon.damage}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                {(showDice || showResult) && src && (
+                                    <div className="combat-steps">
+                                        {[
+                                            { label: "Touche", idx: hitPhaseIdx },
+                                            { label: "Sauvegarde", idx: savePhaseIdx },
+                                            { label: "Résultat", idx: null },
+                                        ].map((step, i) => {
+                                            const cls = showResult
+                                                ? (step.idx === null ? "active" : "done")
+                                                : step.idx !== null && step.idx !== -1 && src.phase > step.idx ? "done"
+                                                : step.idx === src.phase ? "active"
+                                                : "todo";
+                                            return (
+                                                <span key={i} className={`combat-step ${cls}`}>
+                                                    <span className="combat-step-dot" />{step.label}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
                                 )}
                             </div>
 
@@ -779,8 +829,9 @@ export default function HexWarhammer() {
                                             {povPlayer && <div className="combat-col-side">{combatAttacker?.player === povPlayer ? "VOUS" : "ADVERSAIRE"}</div>}
                                         </div>
                                         <div className="combat-col-body">
-                                            <div className="combat-col-name" style={{ color: P[combatAttacker?.player] }}>{combatAttacker?.symbol} {combatAttacker?.name}</div>
-                                            <div style={{ fontSize: 12, color: "#8a7a60" }}>{combatAttacker?.currentWounds} / {combatAttacker?.wounds} PV</div>
+                                            <div className="combat-medallion" style={{ borderColor: P[combatAttacker?.player] }}>{combatAttacker?.symbol}</div>
+                                            <div className="combat-col-name" style={{ color: P[combatAttacker?.player] }}>{combatAttacker?.name}</div>
+                                            {renderHpBar(combatAttacker)}
                                             {modifiers.attacker.map((m, i) => (
                                                 <span key={i} className={`combat-modifier ${m.type}`}>{m.icon} {m.label}</span>
                                             ))}
@@ -794,15 +845,20 @@ export default function HexWarhammer() {
                                             {(showDice || showResult) && renderDiceBlock(hitEntry, hitPhaseIdx, countVisibleSaves())}
                                         </div>
                                     </div>
-                                    <div className="combat-vs">VS</div>
-                                    <div className={`combat-col player-${combatTarget?.player}`}>
+                                    <div className={`combat-vs${showDice ? " vs-clash" : ""}`}>VS</div>
+                                    <div className={`combat-col player-${combatTarget?.player}${showResult ? (src.damage > 0 ? " flash-damage" : " flash-saved") : ""}`}>
                                         <div className="combat-col-banner">
                                             <div className="combat-col-role">DÉFENSEUR</div>
                                             {povPlayer && <div className="combat-col-side">{combatTarget?.player === povPlayer ? "VOUS" : "ADVERSAIRE"}</div>}
                                         </div>
                                         <div className="combat-col-body">
-                                            <div className="combat-col-name" style={{ color: P[combatTarget?.player] }}>{combatTarget?.symbol} {combatTarget?.name}</div>
-                                            <div style={{ fontSize: 12, color: "#8a7a60" }}>{combatTarget?.currentWounds} / {combatTarget?.wounds} PV · Svg {combatTarget?.save}+</div>
+                                            <div className={`combat-medallion${showResult && src.isDead ? " dead" : ""}`} style={{ borderColor: P[combatTarget?.player] }}>
+                                                {combatTarget?.symbol}
+                                                {showResult && src.isDead && <span className="combat-medallion-skull">💀</span>}
+                                            </div>
+                                            <div className="combat-col-name" style={{ color: P[combatTarget?.player] }}>{combatTarget?.name}</div>
+                                            {renderHpBar(combatTarget, showResult ? Math.min(src.damage, combatTarget?.currentWounds ?? 0) : 0)}
+                                            <div className="combat-meta">🛡 Svg {combatTarget?.save}+</div>
                                             {modifiers.target.map((m, i) => (
                                                 <span key={i} className={`combat-modifier ${m.type}`}>{m.icon} {m.label}</span>
                                             ))}
@@ -810,14 +866,9 @@ export default function HexWarhammer() {
                                         </div>
                                     </div>
                                 </div>
-                                {animating && (
-                                    <div style={{ fontSize: 14, color: "#8a7a60", marginTop: 12, fontStyle: "italic", textAlign: "center", animation: "pulse 1s infinite" }}>
-                                        Lancement des dés...
-                                    </div>
-                                )}
                                 {showResult && (
-                                    <div className="combat-modal-result" style={{ color: src.damage > 0 ? "#e53935" : "#4caf50" }}>
-                                        {src.isDead ? `💀 ${src.target.name} éliminé !` : src.damage > 0 ? `${src.damage} dégât(s) infligé(s)` : "Aucun dégât !"}
+                                    <div className={`combat-result-banner ${src.isDead ? "dead" : src.damage > 0 ? "damage" : "saved"}`}>
+                                        {src.isDead ? `💀 ${src.target.name} éliminé !` : src.damage > 0 ? `💥 ${src.damage} dégât(s) infligé(s)` : "🛡 Attaque parée !"}
                                     </div>
                                 )}
                             </div>
