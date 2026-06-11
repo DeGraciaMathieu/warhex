@@ -4,6 +4,7 @@ import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, TERRAIN_DENS
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION } from "./renderer.js";
 import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, getCombatModifiers } from "./game.js";
 import { computeAIAction, buildAIPreview } from "./ai.js";
+import { hostGame, joinGame, generateCode, normalizeCode, isValidCode, onlinePlayerNumber, isNotMyTurn, shouldApplyDamage, applyOnlineMessage } from "./online.js";
 import Guide from "./Guide.jsx";
 import "./styles.css";
 
@@ -117,6 +118,81 @@ export default function HexWarhammer() {
     const [hoveredHex, setHoveredHex] = useState(null);
     const [diceAnim, setDiceAnim] = useState(null);
     const [pendingDamage, setPendingDamage] = useState(null);
+    const [online, setOnline] = useState(null);
+    const [joinCode, setJoinCode] = useState("");
+    const peerRef = useRef(null);
+    const connRef = useRef(null);
+
+    const myPlayer = onlinePlayerNumber(online);
+    const notMyTurn = isNotMyTurn(state, online, myPlayer);
+
+    function sendMsg(msg) {
+        const conn = connRef.current;
+        if (conn?.open) conn.send(msg);
+    }
+
+    function applyAction(fn) {
+        setState(prev => {
+            const next = fn(prev);
+            if (online && next !== prev) sendMsg({ type: "state", state: next });
+            return next;
+        });
+    }
+
+    function handleMessage(msg) {
+        const effects = applyOnlineMessage(msg);
+        if (!effects) return;
+        if (effects.armySelection) setSelections(prev => ({ ...prev, [effects.armySelection.player]: effects.armySelection.selections }));
+        if (effects.state) setState(effects.state);
+        if (effects.startGame) setArmyPhase(false);
+        if (effects.diceAnim) setDiceAnim(effects.diceAnim);
+    }
+
+    function peerHandlers() {
+        return {
+            onConnect: conn => { connRef.current = conn; setOnline(o => o && { ...o, status: "connected" }); },
+            onMessage: handleMessage,
+            onDisconnect: () => { connRef.current = null; setOnline(o => o && { ...o, status: "left" }); },
+            onError: () => setOnline(o => o && (o.status === "connected" ? { ...o, status: "left" } : { ...o, status: "error" })),
+        };
+    }
+
+    function createOnlineGame() {
+        const code = generateCode();
+        setOnline({ role: "host", code, status: "waiting" });
+        peerRef.current = hostGame(code, peerHandlers());
+    }
+
+    function joinOnlineGame() {
+        const code = normalizeCode(joinCode);
+        if (!isValidCode(code)) return;
+        setOnline({ role: "guest", code, status: "connecting" });
+        peerRef.current = joinGame(code, peerHandlers());
+    }
+
+    function quitOnline() {
+        peerRef.current?.destroy();
+        peerRef.current = null;
+        connRef.current = null;
+        setOnline(null);
+        setJoinCode("");
+    }
+
+    function backToOnlineMenu() {
+        peerRef.current?.destroy();
+        peerRef.current = null;
+        connRef.current = null;
+        setOnline({ role: null, status: "menu" });
+        setJoinCode("");
+    }
+
+    useEffect(() => () => peerRef.current?.destroy(), []);
+
+    const mySelections = online && myPlayer ? selections[myPlayer] : null;
+    useEffect(() => {
+        if (!armyPhase || !mySelections || online?.status !== "connected") return;
+        sendMsg({ type: "army", player: myPlayer, selections: mySelections });
+    }, [mySelections, online?.status, armyPhase]);
 
     useEffect(() => {
         if (!armyPhase && state) drawScene(canvasRef.current, state, hoveredHex);
@@ -133,8 +209,8 @@ export default function HexWarhammer() {
     }, [terrainDensity, fairTowns]);
 
     useEffect(() => {
-        if (armyPhase && previewState) drawScene(previewCanvasRef.current, previewState, null);
-    }, [previewState, armyPhase]);
+        if (armyPhase && previewState && previewCanvasRef.current) drawScene(previewCanvasRef.current, previewState, null);
+    }, [previewState, armyPhase, online?.role]);
 
     useEffect(() => {
         if (!diceAnim || diceAnim.done) return;
@@ -180,16 +256,15 @@ export default function HexWarhammer() {
     }, [state?.dyingUnits, state?.aiPreview, state?.hitEffects]);
 
     function closeCombatModal() {
-        if (diceAnim) {
-            setPendingDamage(diceAnim);
-            setDiceAnim(null);
-        }
+        if (!diceAnim) return;
+        if (shouldApplyDamage(diceAnim, online, myPlayer)) setPendingDamage(diceAnim);
+        setDiceAnim(null);
     }
 
     useEffect(() => {
         if (!pendingDamage) return;
         const timer = setTimeout(() => {
-            setState(s => applyDamage(s, pendingDamage));
+            applyAction(s => applyDamage(s, pendingDamage));
             setPendingDamage(null);
         }, 400);
         return () => clearTimeout(timer);
@@ -203,6 +278,7 @@ export default function HexWarhammer() {
 
     useEffect(() => {
         if (state && state.autoEndTurn) {
+            if (notMyTurn) return;
             const timer = setTimeout(() => endTurn(), 1200);
             return () => clearTimeout(timer);
         }
@@ -232,6 +308,7 @@ export default function HexWarhammer() {
 
     function onCanvasClick(e) {
         if (vsAI && state?.currentPlayer === 2) return;
+        if (notMyTurn) return;
         if (diceAnim && !diceAnim.done) return;
         if (diceAnim?.done) closeCombatModal();
         const rect = canvasRef.current.getBoundingClientRect();
@@ -240,7 +317,7 @@ export default function HexWarhammer() {
         const y = (e.clientY - rect.top) * sy - OY;
         const hex = pixelToHex(x, y);
         if (!isValidHex(hex)) return;
-        setState(prev => handleClick(prev, hex));
+        applyAction(prev => handleClick(prev, hex));
     }
 
     function onMouseMove(e) {
@@ -252,20 +329,22 @@ export default function HexWarhammer() {
         setHoveredHex(isValidHex(hex) ? hex : null);
     }
 
-    function startMove() { setState(computeMove); }
-    function startAttack() { setState(computeAttack); }
+    function startMove() { applyAction(computeMove); }
+    function startAttack() { applyAction(computeAttack); }
 
     function selectWeapon(weapon) {
+        if (notMyTurn) return;
         setState(s => {
             const result = computeWeaponSelect(s, weapon);
             if (!result) return s;
             if (result.anim) setDiceAnim(result.anim);
+            if (online) sendMsg(result.anim ? { type: "combat", state: result.state, anim: result.anim } : { type: "state", state: result.state });
             return result.state;
         });
     }
 
-    function endTurn() { setState(computeEndTurn); }
-    function restart() { resetUID(); setSelections({ 1: [], 2: [] }); setArmyPhase(true); setState(null); setVsAI(false); setFairTowns(true); setTerrainDensity(DEFAULT_TERRAIN_DENSITY); }
+    function endTurn() { applyAction(computeEndTurn); }
+    function restart() { quitOnline(); resetUID(); setSelections({ 1: [], 2: [] }); setArmyPhase(true); setState(null); setVsAI(false); setFairTowns(true); setTerrainDensity(DEFAULT_TERRAIN_DENSITY); }
 
     function addUnit(player, type) {
         setSelections(prev => {
@@ -292,7 +371,9 @@ export default function HexWarhammer() {
 
     function startGame() {
         resetUID();
-        setState(initState(selections, { fairTowns, terrainDensity }));
+        const s = initState(selections, { fairTowns, terrainDensity });
+        if (online) sendMsg({ type: "start", state: s });
+        setState(s);
         setArmyPhase(false);
     }
 
@@ -307,10 +388,12 @@ export default function HexWarhammer() {
     if (armyPhase) {
         const renderArmyPanel = (player) => {
             const isAIPlayer = vsAI && player === 2;
+            const isRemotePlayer = !!online && player !== myPlayer;
+            const locked = isAIPlayer || isRemotePlayer;
             return (
-                <div style={{ width: 240, border: `2px solid ${P[player]}`, borderRadius: 6, padding: 16, background: "#ece5d8", opacity: isAIPlayer ? 0.5 : 1, pointerEvents: isAIPlayer ? "none" : "auto" }}>
+                <div style={{ width: 240, border: `2px solid ${P[player]}`, borderRadius: 6, padding: 16, background: "#ece5d8", opacity: locked ? 0.5 : 1, pointerEvents: locked ? "none" : "auto" }}>
                     <div style={{ fontFamily: "'Cinzel', serif", fontSize: 14, fontWeight: 700, color: P[player], marginBottom: 12, textAlign: "center" }}>
-                        {isAIPlayer ? "IA" : `JOUEUR ${player}`} ({selections[player].length}/{ARMY_SIZE})
+                        {isAIPlayer ? "IA" : isRemotePlayer ? "ADVERSAIRE" : `JOUEUR ${player}`} ({selections[player].length}/{ARMY_SIZE})
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 12 }}>
                         {UNIT_TYPES.map(type => {
@@ -361,13 +444,60 @@ export default function HexWarhammer() {
 
                     <div style={{ display: "flex", flexDirection: "column", gap: 16, width: 420 }}>
                         <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-                            <button className={`btn ${!vsAI ? "btn-gold" : "btn-grey"}`} onClick={() => { setVsAI(false); setSelections(prev => ({ ...prev, 2: [] })); }} style={{ width: "auto", padding: "7px 18px", marginBottom: 0 }}>
+                            <button className={`btn ${!vsAI && !online ? "btn-gold" : "btn-grey"}`} onClick={() => { quitOnline(); setVsAI(false); setSelections(prev => ({ ...prev, 2: [] })); }} style={{ width: "auto", padding: "7px 18px", marginBottom: 0 }}>
                                 2 Joueurs
                             </button>
-                            <button className={`btn ${vsAI ? "btn-gold" : "btn-grey"}`} onClick={() => { setVsAI(true); randomArmy(2); }} style={{ width: "auto", padding: "7px 18px", marginBottom: 0 }}>
+                            <button className={`btn ${vsAI ? "btn-gold" : "btn-grey"}`} onClick={() => { quitOnline(); setVsAI(true); randomArmy(2); }} style={{ width: "auto", padding: "7px 18px", marginBottom: 0 }}>
                                 vs IA
                             </button>
+                            <button className={`btn ${online ? "btn-gold" : "btn-grey"}`} onClick={() => { if (!online) { setVsAI(false); setSelections({ 1: [], 2: [] }); setOnline({ role: null, status: "menu" }); } }} style={{ width: "auto", padding: "7px 18px", marginBottom: 0 }}>
+                                🌐 En ligne
+                            </button>
                         </div>
+
+                        {online && (
+                            <div style={{ background: "#ece5d8", border: "1px solid #d5cbb8", borderRadius: 6, padding: "14px 18px", display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
+                                {online.status === "menu" && <>
+                                    <button className="btn btn-gold" onClick={createOnlineGame} style={{ width: "auto", padding: "7px 18px", marginBottom: 0 }}>
+                                        Créer une partie
+                                    </button>
+                                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                        <input
+                                            value={joinCode}
+                                            onChange={e => setJoinCode(normalizeCode(e.target.value))}
+                                            placeholder="CODE"
+                                            maxLength={4}
+                                            style={{ width: 90, padding: "7px 10px", fontSize: 16, letterSpacing: ".25em", textAlign: "center", fontFamily: "'Cinzel', serif", border: "1px solid #c8b898", borderRadius: 4, background: "#f5f0e8", color: "#2a2015" }}
+                                        />
+                                        <button className="btn btn-grey" disabled={!isValidCode(joinCode)} onClick={joinOnlineGame} style={{ width: "auto", padding: "7px 18px", marginBottom: 0 }}>
+                                            Rejoindre
+                                        </button>
+                                    </div>
+                                </>}
+                                {(online.status === "waiting" || online.status === "connected") && (
+                                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 26, fontWeight: 700, letterSpacing: ".3em", color: "#8a6a08" }}>{online.code}</div>
+                                )}
+                                {online.status === "waiting" && (
+                                    <div style={{ fontSize: 14, color: "#8a7a60", fontStyle: "italic" }}>Partagez ce code — en attente d'un adversaire…</div>
+                                )}
+                                {online.status === "connecting" && (
+                                    <div style={{ fontSize: 14, color: "#8a7a60", fontStyle: "italic" }}>Connexion à la partie {online.code}…</div>
+                                )}
+                                {online.status === "connected" && (
+                                    <div style={{ fontSize: 14, color: "#2e7d32" }}>✓ Adversaire connecté</div>
+                                )}
+                                {(online.status === "error" || online.status === "left") && <>
+                                    <div style={{ fontSize: 14, color: "#a03030" }}>
+                                        {online.status === "error" ? (online.role === "guest" ? "Connexion impossible — vérifiez le code." : "Erreur de connexion.") : "L'adversaire s'est déconnecté."}
+                                    </div>
+                                    <button className="btn btn-grey" onClick={backToOnlineMenu} style={{ width: "auto", padding: "7px 18px", marginBottom: 0 }}>
+                                        Réessayer
+                                    </button>
+                                </>}
+                            </div>
+                        )}
+
+                        {online?.role !== "guest" && <>
                         <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
                             <button className={`btn ${fairTowns ? "btn-gold" : "btn-grey"}`} onClick={() => setFairTowns(true)} style={{ width: "auto", padding: "7px 18px", marginBottom: 0 }}>
                                 Villes équitables
@@ -414,15 +544,28 @@ export default function HexWarhammer() {
                                 🔄
                             </button>
                         </div>
+                        </>}
+
+                        {online?.role === "guest" && (
+                            <div style={{ fontSize: 14, color: "#8a7a60", fontStyle: "italic", textAlign: "center" }}>
+                                L'hôte configure le terrain et lance la partie.
+                            </div>
+                        )}
                     </div>
 
                     {renderArmyPanel(2)}
                 </div>
 
                 <div style={{ display: "flex", gap: 12 }}>
-                    <button className="btn btn-gold" disabled={!canStart} onClick={startGame} style={{ fontSize: 17, padding: "12px 36px" }}>
-                        ⚔ Lancer la partie
-                    </button>
+                    {online?.role === "guest" ? (
+                        <button className="btn btn-grey" disabled style={{ fontSize: 17, padding: "12px 36px" }}>
+                            En attente du lancement par l'hôte…
+                        </button>
+                    ) : (
+                        <button className="btn btn-gold" disabled={!canStart || (online && online.status !== "connected")} onClick={startGame} style={{ fontSize: 17, padding: "12px 36px" }}>
+                            ⚔ Lancer la partie
+                        </button>
+                    )}
                     <button className="btn btn-grey" onClick={() => setShowGuide(true)} style={{ fontSize: 17, padding: "12px 28px" }}>
                         ? Guide
                     </button>
@@ -443,6 +586,12 @@ export default function HexWarhammer() {
                     ⚔ WARHEX ⚔
                 </div>
 
+                {online?.status === "left" && !state.winner && (
+                    <div style={{ background: "#a03030", color: "#f5f0e8", padding: "6px 16px", borderRadius: 4, fontSize: 14 }}>
+                        L'adversaire s'est déconnecté — la partie ne peut pas continuer.
+                    </div>
+                )}
+
                 <canvas
                     ref={canvasRef}
                     width={CANVAS_W}
@@ -459,7 +608,7 @@ export default function HexWarhammer() {
                         padding: "6px 14px", fontFamily: "'Cinzel', serif", fontSize: 13, letterSpacing: ".1em",
                         color: P[state.currentPlayer], borderRadius: 3,
                     }}>
-                        {state.winner ? (state.winner === "draw" ? "⚖ ÉGALITÉ" : `🏆 JOUEUR ${state.winner} VICTORIEUX`) : `J${state.currentPlayer} — ${phaseLabel} · ⚡${ACTIVATIONS_PER_TURN - state.activationsUsed}`}
+                        {state.winner ? (state.winner === "draw" ? "⚖ ÉGALITÉ" : `🏆 JOUEUR ${state.winner} VICTORIEUX`) : `J${state.currentPlayer}${online ? (notMyTurn ? " (ADVERSAIRE)" : " (VOUS)") : ""} — ${phaseLabel} · ⚡${ACTIVATIONS_PER_TURN - state.activationsUsed}`}
                     </div>
                     <div style={{ background: "#ece5d8", border: "1px solid #c8b898", padding: "6px 12px", fontFamily: "'Cinzel', serif", fontSize: 12, color: "#8a7a60", display: "flex", gap: 12, alignItems: "center", borderRadius: 3 }}>
                         <span style={{ color: "#2a6fa8" }}>{state.scores[1]} pts</span>
@@ -539,11 +688,11 @@ export default function HexWarhammer() {
                 <div style={{ padding: "16px 20px", borderBottom: "1px solid #d5cbb8" }}>
                     <div style={{ fontFamily: "'Cinzel', serif", fontSize: 12, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 12 }}>ACTIONS</div>
 
-                    <button className="btn btn-blue" disabled={!sel || sel.hasMoved || state.phase === "attack" || (vsAI && state.currentPlayer === 2)} onClick={startMove}>⟶ Déplacer</button>
-                    <button className="btn btn-red" disabled={!sel || sel.hasAttacked || (vsAI && state.currentPlayer === 2)} onClick={startAttack}>⚔ Attaquer</button>
-                    {sel && <button className="btn btn-grey" onClick={() => setState(computeDeselect)}>✕ Désélectionner</button>}
+                    <button className="btn btn-blue" disabled={!sel || sel.hasMoved || state.phase === "attack" || (vsAI && state.currentPlayer === 2) || notMyTurn} onClick={startMove}>⟶ Déplacer</button>
+                    <button className="btn btn-red" disabled={!sel || sel.hasAttacked || (vsAI && state.currentPlayer === 2) || notMyTurn} onClick={startAttack}>⚔ Attaquer</button>
+                    {sel && <button className="btn btn-grey" disabled={notMyTurn} onClick={() => applyAction(computeDeselect)}>✕ Désélectionner</button>}
                     <div style={{ borderTop: "1px solid #d5cbb8", marginTop: 6, paddingTop: 8 }}>
-                        <button className="btn btn-gold" disabled={!!state.winner || (vsAI && state.currentPlayer === 2)} onClick={endTurn}>⏭ Fin de tour</button>
+                        <button className="btn btn-gold" disabled={!!state.winner || (vsAI && state.currentPlayer === 2) || notMyTurn} onClick={endTurn}>⏭ Fin de tour</button>
                     </div>
                 </div>
 
@@ -661,8 +810,8 @@ export default function HexWarhammer() {
                             </div>
 
                             <div className="combat-modal-footer">
-                                {showWeapons && (
-                                    <button className="btn btn-grey" style={{ width: "auto", padding: "8px 24px" }} onClick={() => setState(s => ({ ...s, phase: "select", pendingAttack: null, validTargets: [], validMoves: [] }))}>✕ Annuler</button>
+                                {showWeapons && !notMyTurn && (
+                                    <button className="btn btn-grey" style={{ width: "auto", padding: "8px 24px" }} onClick={() => applyAction(s => ({ ...s, phase: "select", pendingAttack: null, validTargets: [], validMoves: [] }))}>✕ Annuler</button>
                                 )}
                                 {showResult && (
                                     <button className="btn btn-gold" style={{ width: "auto", padding: "8px 24px" }} onClick={closeCombatModal}>Fermer</button>
