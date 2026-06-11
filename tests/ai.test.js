@@ -677,6 +677,55 @@ describe("IA — gestion d'unité morte", () => {
     });
 });
 
+describe("IA — consolidation", () => {
+    function consolidateState(overrides = {}) {
+        const enemy = createUnit("warrior", 1, { q: -1, r: 0, s: 1 });
+        const unit = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        return makeState({
+            units: [enemy, unit],
+            phase: "consolidate",
+            pendingConsolidation: { unitId: unit.id, hex: { q: 1, r: -1, s: 0 } },
+            ...overrides,
+        });
+    }
+
+    it("renvoie une action de consolidation en phase consolidate", () => {
+        const state = consolidateState();
+        const action = computeAIAction(state);
+        expect(action.type).toBe("consolidate");
+        expect(typeof action.accept).toBe("boolean");
+    });
+
+    it("accepte de prendre la place si l'hex libéré est une ville", () => {
+        const state = consolidateState({ towns: [{ q: 1, r: -1, s: 0 }] });
+        const action = computeAIAction(state);
+        expect(action.accept).toBe(true);
+    });
+
+    it("refuse de prendre la place si l'hex libéré est un marais", () => {
+        const state = consolidateState({ swamps: [{ q: 1, r: -1, s: 0 }], towns: [] });
+        const action = computeAIAction(state);
+        expect(action.accept).toBe(false);
+    });
+
+    it("reste sur place si l'hex libéré n'apporte aucun avantage", () => {
+        // L'ennemi menace les deux hex avec la même arme : aucune réduction de menace
+        const state = consolidateState();
+        const action = computeAIAction(state);
+        expect(action.accept).toBe(false);
+    });
+
+    it("prend la place si l'hex libéré est moins exposé", () => {
+        // À portée d'épée de l'hex actuel, mais seulement de fusil de l'hex libéré
+        const state = consolidateState({
+            units: [createUnit("warrior", 1, { q: -4, r: 0, s: 4 }), createUnit("warrior", 2, { q: 0, r: 0, s: 0 })],
+        });
+        state.pendingConsolidation = { unitId: state.units[1].id, hex: { q: 1, r: -1, s: 0 } };
+        const action = computeAIAction(state);
+        expect(action.accept).toBe(true);
+    });
+});
+
 describe("IA et marais", () => {
     it("une unité à 1 PV n'entre pas dans un marais", () => {
         const swamp = { q: 1, r: 0, s: -1 };

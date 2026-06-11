@@ -281,6 +281,15 @@ function threatAt(unit, hex, state) {
     return total;
 }
 
+export function shouldConsolidate(unit, hex, state) {
+    const k = hexKey(hex);
+    const swampKeys = new Set((state.swamps || []).map(hexKey));
+    if (swampKeys.has(k)) return false;
+    const townKeys = new Set((state.towns || []).map(hexKey));
+    if (townKeys.has(k)) return true;
+    return threatAt(unit, hex, state) < threatAt(unit, unit.hex, state);
+}
+
 export function buildAIPreview(state, action) {
     if (!action || action.type === "endTurn" || action.type === "cancel") return null;
     if (action.type === "weapon") return { type: "weapon", weapon: action.weapon };
@@ -294,6 +303,11 @@ export function buildAIPreview(state, action) {
 }
 
 export function computeAIAction(state) {
+    if (state.phase === "consolidate" && state.pendingConsolidation) {
+        const unit = state.units.find(u => u.id === state.pendingConsolidation.unitId);
+        return { type: "consolidate", accept: shouldConsolidate(unit, state.pendingConsolidation.hex, state) };
+    }
+
     if (state.phase === "weapon_select" && state.pendingAttack) {
         const weapon = pickWeapon(state.pendingAttack.attacker, state.pendingAttack.target, state);
         if (weapon) return { type: "weapon", weapon };
