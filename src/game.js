@@ -198,7 +198,7 @@ export function computeWeaponSelect(s, weapon) {
 
     return {
         state: { ...s, phase: "resolving", activeUnitId: attacker.id },
-        anim: { log, phase: 0, dice: 0, done: false, attacker, target, weaponName: weapon.name, damage, isDead },
+        anim: { log, phase: 0, dice: 0, done: false, attacker, target, weaponName: weapon.name, weaponType: weapon.type, damage, isDead },
     };
 }
 
@@ -218,8 +218,11 @@ export function applyDamage(s, anim) {
     const hitEffects = damage > 0
         ? [...(s.hitEffects || []), { hex: target.hex, damage, time: Date.now() }]
         : (s.hitEffects || []);
+    const attackEffects = damage > 0
+        ? [...(s.attackEffects || []), { from: attacker.hex, to: target.hex, weaponType: anim.weaponType, time: Date.now() }]
+        : (s.attackEffects || []);
     return {
-        ...s, units, dyingUnits, kills, hitEffects, ...finishActivation(s, attacker.id, units),
+        ...s, units, dyingUnits, kills, hitEffects, attackEffects, ...finishActivation(s, attacker.id, units),
     };
 }
 

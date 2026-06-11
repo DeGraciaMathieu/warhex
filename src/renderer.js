@@ -8,6 +8,7 @@ export const OY = CANVAS_H / 2;
 
 export const DEATH_ANIM_DURATION = 600;
 export const HIT_EFFECT_DURATION = 500;
+export const ATTACK_EFFECT_DURATION = 400;
 
 export function drawScene(canvas, state, hoveredHex) {
     if (!canvas) return;
@@ -326,6 +327,76 @@ export function drawScene(canvas, state, hoveredHex) {
         ctx.fillStyle = "#2a2015";
         ctx.fillText(dying.symbol, 0, 0);
 
+        ctx.restore();
+    });
+
+    // Attack effects: sword slash on target (melee) or bullet from attacker to target (ranged)
+    (state.attackEffects || []).forEach(effect => {
+        const elapsed = now - effect.time;
+        if (elapsed >= ATTACK_EFFECT_DURATION) return;
+        const progress = elapsed / ATTACK_EFFECT_DURATION;
+        const from = hexToPixel(effect.from.q, effect.from.r);
+        const to = hexToPixel(effect.to.q, effect.to.r);
+
+        ctx.save();
+        if (effect.weaponType === "melee") {
+            // Crescent slash cutting across the target: the arc is revealed
+            // quickly in the attack direction, then fades out
+            const cx = to.x + OX, cy = to.y + OY;
+            const attackDir = Math.atan2(to.y - from.y, to.x - from.x);
+            const reveal = Math.min(1, progress / 0.55);
+            const fade = progress < 0.55 ? 1 : 1 - (progress - 0.55) / 0.45;
+            const sweep = Math.PI * 0.55;
+            const start = attackDir - sweep / 2;
+            // Arc center pulled back toward the attacker so the blade arc
+            // crosses the target instead of orbiting around it
+            const ox = cx - Math.cos(attackDir) * HEX_SIZE * 0.5;
+            const oy = cy - Math.sin(attackDir) * HEX_SIZE * 0.5;
+            const r = HEX_SIZE * 0.95;
+            // Tapered crescent: thick in the middle, pointed at both tips,
+            // like the trail left by a blade
+            const steps = 16;
+            ctx.globalAlpha = fade;
+            ctx.beginPath();
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                const ang = start + sweep * reveal * t;
+                const w = Math.sin(Math.PI * t) * HEX_SIZE * 0.22;
+                const x = ox + Math.cos(ang) * (r + w / 2);
+                const y = oy + Math.sin(ang) * (r + w / 2);
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }
+            for (let i = steps; i >= 0; i--) {
+                const t = i / steps;
+                const ang = start + sweep * reveal * t;
+                const w = Math.sin(Math.PI * t) * HEX_SIZE * 0.22;
+                ctx.lineTo(ox + Math.cos(ang) * (r - w / 2), oy + Math.sin(ang) * (r - w / 2));
+            }
+            ctx.closePath();
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = "rgba(110, 130, 155, 0.9)";
+            ctx.fillStyle = "#ffffff";
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = "#8a97a5";
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+        } else {
+            // Bullet travelling from attacker to target with a short trail
+            const bx = from.x + (to.x - from.x) * progress + OX;
+            const by = from.y + (to.y - from.y) * progress + OY;
+            const dirAngle = Math.atan2(to.y - from.y, to.x - from.x);
+            ctx.strokeStyle = "rgba(42, 32, 21, 0.45)";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(bx - Math.cos(dirAngle) * 14, by - Math.sin(dirAngle) * 14);
+            ctx.lineTo(bx, by);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(bx, by, 3, 0, Math.PI * 2);
+            ctx.fillStyle = "#2a2015";
+            ctx.fill();
+        }
         ctx.restore();
     });
 

@@ -297,5 +297,6 @@ export function initState(armies, options = {}) {
         kills: { 1: 0, 2: 0 },
         scoreHistory: [],
         hitEffects: [],
+        attackEffects: [],
     };
 }

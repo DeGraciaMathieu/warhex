@@ -193,6 +193,39 @@ describe("attaque et armes", () => {
     });
 });
 
+describe("animations d'attaque", () => {
+    it("computeWeaponSelect transmet le type d'arme dans l'animation", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const weapon = attacker.weapons.find(w => w.id === "sword");
+        const s = makeState({ units: [attacker, target], pendingAttack: { attacker, target } });
+        const result = computeWeaponSelect(s, weapon);
+        expect(result.anim.weaponType).toBe("melee");
+    });
+
+    it("applyDamage déclenche une animation d'attaque vers la cible quand des dégâts sont infligés", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [attacker, target] });
+        const anim = { attacker, target, damage: 2, weaponName: "Rifle", weaponType: "ranged", log: [], isDead: false };
+        const result = applyDamage(s, anim);
+        expect(result.attackEffects).toHaveLength(1);
+        expect(result.attackEffects[0].from).toEqual(attacker.hex);
+        expect(result.attackEffects[0].to).toEqual(target.hex);
+        expect(result.attackEffects[0].weaponType).toBe("ranged");
+        expect(result.attackEffects[0].time).toBeGreaterThan(0);
+    });
+
+    it("applyDamage ne déclenche pas d'animation d'attaque si l'attaque ne fait aucun dégât", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [attacker, target] });
+        const anim = { attacker, target, damage: 0, weaponName: "Sword", weaponType: "melee", log: [], isDead: false };
+        const result = applyDamage(s, anim);
+        expect(result.attackEffects).toHaveLength(0);
+    });
+});
+
 describe("fin de tour", () => {
     it("computeEndTurn passe au joueur suivant et réinitialise les flags", () => {
         const u1 = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });

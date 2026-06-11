@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.js";
 import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, TERRAIN_DENSITY_LABELS, DEFAULT_TERRAIN_DENSITY, TERRAIN_PRESETS } from "./units.js";
-import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION } from "./renderer.js";
+import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION, ATTACK_EFFECT_DURATION } from "./renderer.js";
 import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, getCombatModifiers } from "./game.js";
 import { computeAIAction, buildAIPreview } from "./ai.js";
 import { hostGame, joinGame, generateCode, normalizeCode, isValidCode, onlinePlayerNumber, isNotMyTurn, shouldApplyDamage, applyOnlineMessage } from "./online.js";
@@ -238,22 +238,24 @@ export default function HexWarhammer() {
         const hasDying = state?.dyingUnits?.length > 0;
         const hasPreview = !!state?.aiPreview;
         const hasHitEffects = state?.hitEffects?.length > 0;
-        if (!state || (!hasDying && !hasPreview && !hasHitEffects)) return;
+        const hasAttackEffects = state?.attackEffects?.length > 0;
+        if (!state || (!hasDying && !hasPreview && !hasHitEffects && !hasAttackEffects)) return;
         let frameId;
         const animate = () => {
             drawScene(canvasRef.current, state, hoveredHex);
             const now = Date.now();
             const dyingDone = !hasDying || !state.dyingUnits.some(d => now - d.deathTime < DEATH_ANIM_DURATION);
             const hitDone = !hasHitEffects || !state.hitEffects.some(e => now - e.time < HIT_EFFECT_DURATION);
-            if (dyingDone && hitDone && !hasPreview) {
-                setState(s => ({ ...s, dyingUnits: [], hitEffects: [] }));
+            const attackDone = !hasAttackEffects || !state.attackEffects.some(e => now - e.time < ATTACK_EFFECT_DURATION);
+            if (dyingDone && hitDone && attackDone && !hasPreview) {
+                setState(s => ({ ...s, dyingUnits: [], hitEffects: [], attackEffects: [] }));
                 return;
             }
             frameId = requestAnimationFrame(animate);
         };
         frameId = requestAnimationFrame(animate);
         return () => cancelAnimationFrame(frameId);
-    }, [state?.dyingUnits, state?.aiPreview, state?.hitEffects]);
+    }, [state?.dyingUnits, state?.aiPreview, state?.hitEffects, state?.attackEffects]);
 
     function closeCombatModal() {
         if (!diceAnim) return;
