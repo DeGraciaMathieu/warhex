@@ -23,6 +23,7 @@ export function remapAnimationTimes(state, now = Date.now()) {
         ...state,
         dyingUnits: (state.dyingUnits || []).map(d => ({ ...d, deathTime: now })),
         hitEffects: (state.hitEffects || []).map(e => ({ ...e, time: now })),
+        attackEffects: (state.attackEffects || []).map(e => ({ ...e, time: now })),
     };
 }
 

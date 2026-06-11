@@ -35,13 +35,16 @@ describe("remapAnimationTimes", () => {
             units: [{ id: 0 }],
             dyingUnits: [{ hex: { q: 0, r: 0, s: 0 }, symbol: "⚔", player: 1, deathTime: 12345 }],
             hitEffects: [{ hex: { q: 1, r: -1, s: 0 }, damage: 2, time: 67890 }],
+            attackEffects: [{ from: { q: 0, r: 0, s: 0 }, to: { q: 1, r: -1, s: 0 }, weaponType: "ranged", time: 11111 }],
         };
         const now = 999999;
         const remapped = remapAnimationTimes(state, now);
         expect(remapped.dyingUnits[0].deathTime).toBe(now);
         expect(remapped.hitEffects[0].time).toBe(now);
+        expect(remapped.attackEffects[0].time).toBe(now);
         expect(remapped.dyingUnits[0].symbol).toBe("⚔");
         expect(remapped.hitEffects[0].damage).toBe(2);
+        expect(remapped.attackEffects[0].weaponType).toBe("ranged");
         expect(remapped.units).toEqual(state.units);
     });
 
@@ -49,6 +52,7 @@ describe("remapAnimationTimes", () => {
         const remapped = remapAnimationTimes({ units: [] });
         expect(remapped.dyingUnits).toEqual([]);
         expect(remapped.hitEffects).toEqual([]);
+        expect(remapped.attackEffects).toEqual([]);
     });
 });
 
