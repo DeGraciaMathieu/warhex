@@ -708,6 +708,7 @@ export default function HexWarhammer() {
                 const combatAttacker = showWeapons ? state.pendingAttack.attacker : src?.attacker;
                 const combatTarget = showWeapons ? state.pendingAttack.target : src?.target;
                 const modifiers = combatAttacker && combatTarget ? getCombatModifiers(combatAttacker, combatTarget, state) : { attacker: [], target: [] };
+                const povPlayer = myPlayer || (vsAI ? 1 : null);
 
                 const animating = showDice;
                 const visibleLog = src ? (animating ? src.log.slice(0, src.phase + 1) : src.log) : [];
@@ -770,31 +771,41 @@ export default function HexWarhammer() {
 
                             <div className="combat-modal-body">
                                 <div className="combat-columns">
-                                    <div className="combat-col">
-                                        <div className="combat-col-role">ATTAQUANT</div>
-                                        <div className="combat-col-name" style={{ color: P[combatAttacker?.player] }}>{combatAttacker?.symbol} {combatAttacker?.name}</div>
-                                        <div style={{ fontSize: 12, color: "#8a7a60" }}>{combatAttacker?.currentWounds} / {combatAttacker?.wounds} PV</div>
-                                        {modifiers.attacker.map((m, i) => (
-                                            <span key={i} className={`combat-modifier ${m.type}`}>{m.icon} {m.label}</span>
-                                        ))}
-                                        {showWeapons && (
-                                            <div className="combat-col-weapons">
-                                                {state.pendingAttack.attacker.weapons.map(w => (
-                                                    <WeaponCard key={w.id} weapon={w} attacker={state.pendingAttack.attacker} target={state.pendingAttack.target} hills={state.hills} towns={state.towns} aiPreview={state.aiPreview} onSelect={selectWeapon} />
-                                                ))}
-                                            </div>
-                                        )}
-                                        {(showDice || showResult) && renderDiceBlock(hitEntry, hitPhaseIdx, countVisibleSaves())}
+                                    <div className={`combat-col player-${combatAttacker?.player}`}>
+                                        <div className="combat-col-banner">
+                                            <div className="combat-col-role">ATTAQUANT</div>
+                                            {povPlayer && <div className="combat-col-side">{combatAttacker?.player === povPlayer ? "VOUS" : "ADVERSAIRE"}</div>}
+                                        </div>
+                                        <div className="combat-col-body">
+                                            <div className="combat-col-name" style={{ color: P[combatAttacker?.player] }}>{combatAttacker?.symbol} {combatAttacker?.name}</div>
+                                            <div style={{ fontSize: 12, color: "#8a7a60" }}>{combatAttacker?.currentWounds} / {combatAttacker?.wounds} PV</div>
+                                            {modifiers.attacker.map((m, i) => (
+                                                <span key={i} className={`combat-modifier ${m.type}`}>{m.icon} {m.label}</span>
+                                            ))}
+                                            {showWeapons && (
+                                                <div className="combat-col-weapons">
+                                                    {state.pendingAttack.attacker.weapons.map(w => (
+                                                        <WeaponCard key={w.id} weapon={w} attacker={state.pendingAttack.attacker} target={state.pendingAttack.target} hills={state.hills} towns={state.towns} aiPreview={state.aiPreview} onSelect={selectWeapon} />
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {(showDice || showResult) && renderDiceBlock(hitEntry, hitPhaseIdx, countVisibleSaves())}
+                                        </div>
                                     </div>
-                                    <div className="combat-col-separator" />
-                                    <div className="combat-col">
-                                        <div className="combat-col-role">DÉFENSEUR</div>
-                                        <div className="combat-col-name" style={{ color: P[combatTarget?.player] }}>{combatTarget?.symbol} {combatTarget?.name}</div>
-                                        <div style={{ fontSize: 12, color: "#8a7a60" }}>{combatTarget?.currentWounds} / {combatTarget?.wounds} PV · Svg {combatTarget?.save}+</div>
-                                        {modifiers.target.map((m, i) => (
-                                            <span key={i} className={`combat-modifier ${m.type}`}>{m.icon} {m.label}</span>
-                                        ))}
-                                        {(showDice || showResult) && renderDiceBlock(saveEntry, savePhaseIdx)}
+                                    <div className="combat-vs">VS</div>
+                                    <div className={`combat-col player-${combatTarget?.player}`}>
+                                        <div className="combat-col-banner">
+                                            <div className="combat-col-role">DÉFENSEUR</div>
+                                            {povPlayer && <div className="combat-col-side">{combatTarget?.player === povPlayer ? "VOUS" : "ADVERSAIRE"}</div>}
+                                        </div>
+                                        <div className="combat-col-body">
+                                            <div className="combat-col-name" style={{ color: P[combatTarget?.player] }}>{combatTarget?.symbol} {combatTarget?.name}</div>
+                                            <div style={{ fontSize: 12, color: "#8a7a60" }}>{combatTarget?.currentWounds} / {combatTarget?.wounds} PV · Svg {combatTarget?.save}+</div>
+                                            {modifiers.target.map((m, i) => (
+                                                <span key={i} className={`combat-modifier ${m.type}`}>{m.icon} {m.label}</span>
+                                            ))}
+                                            {(showDice || showResult) && renderDiceBlock(saveEntry, savePhaseIdx)}
+                                        </div>
                                     </div>
                                 </div>
                                 {animating && (
