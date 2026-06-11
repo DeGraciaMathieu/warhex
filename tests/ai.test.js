@@ -198,7 +198,7 @@ describe("IA — contrôle des villes", () => {
         });
         const action = computeAIAction(state);
         expect(action.type).toBe("weapon");
-        // Sword (3 attacks × 1 damage = 3) > Rifle (2 attacks × 1 damage = 2)
+        // Dégâts espérés : sword (2/3) > rifle (11/27)
         expect(action.weapon.id).toBe("sword");
     });
 
@@ -507,6 +507,115 @@ describe("IA — sélection de cible", () => {
         const state = makeState({ units: [u1a, u1b, u2], towns: [town1, town2] });
         const target = pickTarget(u2, state);
         expect(target.id).toBe(u1b.id);
+    });
+});
+
+describe("IA — choix par dégâts espérés", () => {
+    it("choisit l'arme PA quand son espérance bat l'arme à rafale malgré un brut inférieur", () => {
+        const u1 = createUnit("warrior", 1, { q: 1, r: 0, s: -1 });
+        const u2 = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        u2.weapons = [
+            // brut 4, mais save 4+ tenue : espérance ≈ 0.797
+            { id: "burst", name: "Burst", type: "ranged", range: 2, attacks: 4, ap: 0, damage: 1 },
+            // brut 2, mais save impossible (PA -3) : espérance 1.0
+            { id: "plasma", name: "Plasma", type: "ranged", range: 2, attacks: 2, ap: -3, damage: 1 },
+        ];
+        const state = makeState({
+            units: [u1, u2],
+            phase: "weapon_select",
+            selectedUnit: u2,
+            pendingAttack: { attacker: u2, target: u1 },
+        });
+        const action = computeAIAction(state);
+        expect(action.type).toBe("weapon");
+        expect(action.weapon.id).toBe("plasma");
+    });
+
+    it("préfère une cible à découvert à une cible plus blessée retranchée en forêt", () => {
+        const forest = { q: 1, r: 0, s: -1 };
+        const u1Covered = createUnit("warrior", 1, forest);
+        u1Covered.currentWounds = 1;
+        const u1Open = createUnit("warrior", 1, { q: -1, r: 0, s: 1 });
+        const u2 = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        const state = makeState({ units: [u1Covered, u1Open, u2], forests: [forest] });
+        const target = pickTarget(u2, state);
+        expect(target.id).toBe(u1Open.id);
+    });
+
+    it("préfère une cible tuable en espérance à une cible aux dégâts plafonnés supérieurs", () => {
+        const u1Weak = createUnit("warrior", 1, { q: 1, r: 0, s: -1 });
+        u1Weak.currentWounds = 1;
+        const u1Strong = createUnit("warrior", 1, { q: -1, r: 0, s: 1 });
+        const u2 = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        // Espérance 1.5 : tue u1Weak (1 PV), mais plafonné à 1 contre lui vs 1.5 contre u1Strong
+        u2.weapons = [{ id: "axe", name: "Axe", type: "melee", range: 1, attacks: 3, ap: 0, damage: 2 }];
+        const state = makeState({ units: [u1Weak, u1Strong, u2] });
+        const target = pickTarget(u2, state);
+        expect(target.id).toBe(u1Weak.id);
+    });
+});
+
+describe("IA — position de tir", () => {
+    it("se repositionne au corps à corps avant d'attaquer plutôt que de tirer de loin", () => {
+        // À dist 2 : rifle (11/27) ; adjacent : sword (2/3) → bouge d'abord
+        const u1 = createUnit("warrior", 1, { q: 2, r: 0, s: -2 });
+        const u2 = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        const state = makeState({ units: [u1, u2], selectedUnit: u2, phase: "move" });
+        const action = computeAIAction(state);
+        expect(action.type).toBe("click");
+        expect(hexKey(action.hex)).not.toBe(hexKey(u1.hex));
+        const dist = Math.max(Math.abs(action.hex.q - u1.hex.q), Math.abs(action.hex.r - u1.hex.r), Math.abs(action.hex.s - u1.hex.s));
+        expect(dist).toBe(1);
+    });
+
+    it("monte sur une colline quand c'est la seule position de tir", () => {
+        const hill = { q: 2, r: 0, s: -2 };
+        const enemy = createUnit("warrior", 1, { q: 5, r: 0, s: -5 });
+        const u2 = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        u2.weapons = [{ id: "rifle", name: "Rifle", type: "ranged", range: 2, attacks: 2, ap: -1, damage: 1 }];
+        const state = makeState({ units: [enemy, u2], hills: [hill] });
+        const dest = pickMoveTarget(u2, state);
+        expect(hexKey(dest)).toBe(hexKey(hill));
+    });
+
+    it("préfère tirer depuis une forêt (couvert) à espérance égale", () => {
+        const forest = { q: 2, r: 0, s: -2 };
+        const enemy = createUnit("warrior", 1, { q: 4, r: 0, s: -4 });
+        const u2 = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        u2.weapons = [{ id: "rifle", name: "Rifle", type: "ranged", range: 2, attacks: 2, ap: -1, damage: 1 }];
+        const state = makeState({ units: [enemy, u2], forests: [forest] });
+        const dest = pickMoveTarget(u2, state);
+        expect(hexKey(dest)).toBe(hexKey(forest));
+    });
+
+    it("reste sur place quand sa position de tir est déjà optimale", () => {
+        const enemy = createUnit("warrior", 1, { q: 1, r: 0, s: -1 });
+        const u2 = createUnit("warrior", 2, { q: 0, r: 0, s: 0 });
+        const dest = pickMoveTarget(u2, makeState({ units: [enemy, u2] }));
+        expect(dest).toBeNull();
+    });
+});
+
+describe("IA — survie", () => {
+    it("un sniper blessé fuit une menace qu'il ne peut pas atteindre", () => {
+        const knight = createUnit("knight", 1, { q: 6, r: 0, s: -6 });
+        const sniper = createUnit("sniper", 2, { q: 0, r: 0, s: 0 });
+        const state = makeState({ units: [knight, sniper] });
+        const dest = pickMoveTarget(sniper, state);
+        expect(dest).not.toBeNull();
+        const distAfter = Math.max(Math.abs(dest.q - knight.hex.q), Math.abs(dest.r - knight.hex.r), Math.abs(dest.s - knight.hex.s));
+        // Le knight menace jusqu'à dist 6 (mouvement 5 + lance 1) → fuir au-delà
+        expect(distAfter).toBeGreaterThan(6);
+    });
+
+    it("une unité fragile hors de toute menace avance normalement", () => {
+        const enemy = createUnit("warrior", 1, { q: 8, r: 0, s: -8 });
+        const sniper = createUnit("sniper", 2, { q: 0, r: 0, s: 0 });
+        const state = makeState({ units: [enemy, sniper] });
+        const dest = pickMoveTarget(sniper, state);
+        expect(dest).not.toBeNull();
+        const distAfter = Math.max(Math.abs(dest.q - enemy.hex.q), Math.abs(dest.r - enemy.hex.r), Math.abs(dest.s - enemy.hex.s));
+        expect(distAfter).toBeLessThan(8);
     });
 });
 

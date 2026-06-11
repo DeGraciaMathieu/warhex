@@ -1,5 +1,5 @@
 import { hexDistance, hexKey, reachableHexes, hasLineOfSight, pathDistance } from "./hex.js";
-import { findValidTargets } from "./combat.js";
+import { findValidTargets, expectedDamage } from "./combat.js";
 
 function buildLosKeys(state) {
     return new Set([...state.obstacles, ...(state.towns || []), ...(state.forests || []), ...(state.hills || [])].map(hexKey));
@@ -145,24 +145,37 @@ export function pickMoveTarget(unit, state) {
         if (bestDist < currentDist && bestDist < Infinity) return reachable[0];
     }
 
-    // 3. Move toward enemy on town (to attack next turn)
-    if (enemyOnTown.length > 0) {
-        reachable.sort((a, b) => {
-            const da = Math.min(...enemyOnTown.map(e => hexDistance(a, e.hex)));
-            const db = Math.min(...enemyOnTown.map(e => hexDistance(b, e.hex)));
-            return da - db;
-        });
-        return reachable[0];
+    // 3. Firing position: best expected damage, exposure as tie-break (safety first at 1 HP)
+    const enemies = state.units.filter(u => u.player === 1 && u.currentWounds > 0);
+    if (enemies.length === 0) return null;
+    const candidates = [unit.hex, ...reachable].map(h => ({
+        hex: h,
+        offense: attackScoreFrom(unit, h, state),
+        threat: threatAt(unit, h, state),
+    }));
+    const fragile = unit.currentWounds <= 1;
+    const shooting = candidates.filter(c => c.offense > 0);
+    if (shooting.length > 0) {
+        shooting.sort((a, b) => fragile
+            ? (a.threat - b.threat) || (b.offense - a.offense)
+            : (b.offense - a.offense) || (a.threat - b.threat));
+        const best = shooting[0];
+        return hexKey(best.hex) === hexKey(unit.hex) ? null : best.hex;
     }
 
-    // 4. Fallback: move toward closest enemy
-    const enemies = state.units.filter(u => u.player === 1 && u.currentWounds > 0);
-    if (enemies.length === 0) return reachable[0];
-    const closest = enemies.reduce((best, e) => {
-        const d = hexDistance(unit.hex, e.hex);
-        return d < best.dist ? { enemy: e, dist: d } : best;
-    }, { enemy: null, dist: Infinity });
-    reachable.sort((a, b) => hexDistance(a, closest.enemy.hex) - hexDistance(b, closest.enemy.hex));
+    // 4. No shot possible: fragile threatened units flee
+    const distToEnemies = h => Math.min(...enemies.map(e => hexDistance(h, e.hex)));
+    if (fragile && candidates[0].threat > 0) {
+        candidates.sort((a, b) => (a.threat - b.threat) || (distToEnemies(b.hex) - distToEnemies(a.hex)));
+        const best = candidates[0];
+        return hexKey(best.hex) === hexKey(unit.hex) ? null : best.hex;
+    }
+
+    // 5. Advance toward enemies on towns first, then any enemy, least exposed on ties
+    const goals = enemyOnTown.length > 0 ? enemyOnTown.map(e => e.hex) : enemies.map(e => e.hex);
+    const distToGoal = h => Math.min(...goals.map(g => hexDistance(h, g)));
+    const threatByKey = new Map(candidates.map(c => [hexKey(c.hex), c.threat]));
+    reachable.sort((a, b) => (distToGoal(a) - distToGoal(b)) || (threatByKey.get(hexKey(a)) - threatByKey.get(hexKey(b))));
     return reachable[0];
 }
 
@@ -176,17 +189,37 @@ export function pickTarget(unit, state) {
 
     const { townKeys } = townContext(state);
 
-    // Priority: enemies on towns first, then lowest HP
-    targets.sort((a, b) => {
-        const aOnTown = townKeys.has(hexKey(a.hex)) ? 1 : 0;
-        const bOnTown = townKeys.has(hexKey(b.hex)) ? 1 : 0;
-        if (aOnTown !== bOnTown) return bOnTown - aOnTown;
-        return a.currentWounds - b.currentWounds;
+    // Priority: enemies on towns, then expected kills, then best expected damage
+    const scored = targets.map(t => {
+        const option = bestAttackOption(unit, t, state);
+        return {
+            target: t,
+            onTown: townKeys.has(hexKey(t.hex)) ? 1 : 0,
+            canKill: option && option.expected >= t.currentWounds ? 1 : 0,
+            capped: option ? option.capped : 0,
+        };
     });
-    return targets[0];
+    scored.sort((a, b) => {
+        if (a.onTown !== b.onTown) return b.onTown - a.onTown;
+        if (a.canKill !== b.canKill) return b.canKill - a.canKill;
+        if (a.capped !== b.capped) return b.capped - a.capped;
+        return a.target.currentWounds - b.target.currentWounds;
+    });
+    return scored[0].target;
 }
 
-function pickWeapon(attacker, target, state) {
+function targetTerrainMods(state, targetHex) {
+    const k = hexKey(targetHex);
+    const townKeys = new Set((state.towns || []).map(hexKey));
+    const forestKeys = new Set((state.forests || []).map(hexKey));
+    const riverKeys = new Set((state.rivers || []).map(hexKey));
+    return {
+        coverBonus: (townKeys.has(k) || forestKeys.has(k)) ? 1 : 0,
+        penalty: riverKeys.has(k) ? 1 : 0,
+    };
+}
+
+function bestAttackOption(attacker, target, state) {
     const dist = hexDistance(attacker.hex, target.hex);
     const hillKeys = new Set((state.hills || []).map(hexKey));
     const onHill = hillKeys.has(hexKey(attacker.hex));
@@ -195,8 +228,57 @@ function pickWeapon(attacker, target, state) {
         return dist >= (w.minRange || 1) && dist <= w.range + bonus;
     });
     if (usable.length === 0) return null;
-    usable.sort((a, b) => (b.attacks * b.damage) - (a.attacks * a.damage));
-    return usable[0];
+
+    const mods = targetTerrainMods(state, target.hex);
+    let best = null;
+    for (const w of usable) {
+        const expected = expectedDamage(attacker, w, target, mods);
+        const capped = Math.min(expected, target.currentWounds);
+        if (!best || capped > best.capped) best = { weapon: w, expected, capped };
+    }
+    return best;
+}
+
+function pickWeapon(attacker, target, state) {
+    const option = bestAttackOption(attacker, target, state);
+    return option ? option.weapon : null;
+}
+
+function attackScoreFrom(unit, hex, state) {
+    const enemies = state.units.filter(u => u.player === 1 && u.currentWounds > 0);
+    const losKeys = buildLosKeys(state);
+    const onHill = new Set((state.hills || []).map(hexKey)).has(hexKey(hex));
+    let best = 0;
+    for (const e of enemies) {
+        const dist = hexDistance(hex, e.hex);
+        if (!hasLineOfSight(hex, e.hex, losKeys)) continue;
+        const mods = targetTerrainMods(state, e.hex);
+        for (const w of unit.weapons) {
+            const bonus = (w.type === "ranged" && onHill) ? 1 : 0;
+            if (dist < (w.minRange || 1) || dist > w.range + bonus) continue;
+            const capped = Math.min(expectedDamage(unit, w, e, mods), e.currentWounds);
+            if (capped > best) best = capped;
+        }
+    }
+    return best;
+}
+
+function threatAt(unit, hex, state) {
+    // Estimate: an enemy threatens hex if it can be in weapon range after moving (terrain ignored)
+    const enemies = state.units.filter(u => u.player === 1 && u.currentWounds > 0);
+    const mods = targetTerrainMods(state, hex);
+    let total = 0;
+    for (const e of enemies) {
+        const dist = hexDistance(e.hex, hex);
+        let best = 0;
+        for (const w of e.weapons) {
+            if (dist > e.movement + w.range) continue;
+            const dmg = expectedDamage(e, w, unit, mods);
+            if (dmg > best) best = dmg;
+        }
+        total += best;
+    }
+    return total;
 }
 
 export function buildAIPreview(state, action) {
@@ -227,24 +309,23 @@ export function computeAIAction(state) {
 
         const sel = state.units.find(u => u.id === state.selectedUnit.id);
 
-        // Move first if a priority town is reachable (capture > opportunistic attack)
+        // Move first if it captures a priority town or improves the expected attack
         if (!sel.hasMoved) {
             const moveHex = pickMoveTarget(sel, state);
             if (moveHex) {
                 const { townKeys, priorityTowns } = townContext(state);
                 const movesToTown = townKeys.has(hexKey(moveHex)) && priorityTowns.some(t => hexKey(t) === hexKey(moveHex));
                 if (movesToTown) return { type: "click", hex: moveHex };
+                if (!sel.hasAttacked && attackScoreFrom(sel, moveHex, state) > attackScoreFrom(sel, sel.hex, state)) {
+                    return { type: "click", hex: moveHex };
+                }
             }
-        }
-
-        if (!sel.hasAttacked) {
-            const target = pickTarget(sel, state);
-            if (target) return { type: "click", hex: target.hex };
-        }
-
-        if (!sel.hasMoved) {
-            const moveHex = pickMoveTarget(sel, state);
+            if (!sel.hasAttacked) {
+                const target = pickTarget(sel, state);
+                if (target) return { type: "click", hex: target.hex };
+            }
             if (moveHex) return { type: "click", hex: moveHex };
+            return { type: "endTurn" };
         }
 
         if (!sel.hasAttacked) {

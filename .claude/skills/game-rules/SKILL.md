@@ -22,7 +22,10 @@ Chaque tour, un joueur active **deux unites** (`ACTIVATIONS_PER_TURN = 2`), une 
 
 Ordre de priorite dans `computeAIAction` :
 1. **Capturer une ville prioritaire** — si une ville atteignable est non possedee ou menacee par un ennemi, l'IA s'y deplace avant toute attaque
-2. **Attaquer** — cible les ennemis sur les villes en priorite, puis les plus faibles
-3. **Se deplacer** — vers la ville prioritaire la plus proche, ou a defaut vers l'ennemi
+2. **Se repositionner** — si un deplacement ameliore l'attaque esperee (meilleure arme, colline pour la portee, couvert), l'IA bouge avant de tirer (une attaque termine l'activation, le mouvement vient donc toujours avant)
+3. **Attaquer** — cible les ennemis sur les villes en priorite, puis ceux tuables en esperance, puis ceux aux degats esperes les plus eleves (PV les plus bas en departage)
+4. **Se deplacer** — vers la ville prioritaire la plus proche, sinon meilleure position de tir (`attackScoreFrom`, exposition `threatAt` en departage — securite d'abord a 1 PV), sinon avancer vers l'ennemi ; une unite a 1 PV sans tir possible fuit hors de portee des menaces
 
 Une ville possedee et non menacee est ignoree (l'IA ne gaspille pas de mouvement pour la defendre).
+
+Le choix de cible et d'arme repose sur `expectedDamage(attacker, weapon, target, { coverBonus, penalty })` (`combat.js`) : esperance exacte des degats (lois binomiales sur to-hit et sauvegardes), integrant CC/CT, PA, couvert (ville/foret) et penalite riviere. L'arme retenue maximise l'esperance plafonnee aux PV restants de la cible (anti-overkill). `threatAt` estime les degats que les ennemis peuvent infliger a un hex au tour suivant (mouvement + portee, terrain ignore).
