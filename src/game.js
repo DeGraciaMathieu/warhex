@@ -87,6 +87,35 @@ function finishActivation(s, unitId, units) {
     };
 }
 
+function applyArrivalEffects(s, unit, hex) {
+    const k = hexKey(hex);
+    const swampKeys = new Set((s.swamps || []).map(hexKey));
+    const townKeys = new Set((s.towns || []).map(hexKey));
+    const moved = { ...unit, hex };
+    const landed = swampKeys.has(k)
+        ? { ...moved, currentWounds: Math.max(0, moved.currentWounds - 1) }
+        : moved;
+    const townOwnership = townKeys.has(k)
+        ? { ...s.townOwnership, [k]: s.currentPlayer }
+        : s.townOwnership;
+    return { landed, townOwnership };
+}
+
+export function computeConsolidate(s, accept) {
+    const pending = s.pendingConsolidation;
+    if (!pending) return s;
+    const cur = s.units.find(u => u.id === pending.unitId);
+    if (!accept || !cur) {
+        return { ...s, pendingConsolidation: null, ...finishActivation(s, pending.unitId, s.units) };
+    }
+    const { landed, townOwnership } = applyArrivalEffects(s, cur, pending.hex);
+    const units = s.units.map(u => u.id === landed.id ? landed : u);
+    const dyingUnits = landed.currentWounds <= 0
+        ? [...(s.dyingUnits || []), { hex: landed.hex, symbol: landed.symbol, player: landed.player, deathTime: Date.now() }]
+        : (s.dyingUnits || []);
+    return { ...s, units, townOwnership, dyingUnits, pendingConsolidation: null, ...finishActivation(s, landed.id, units) };
+}
+
 export function computeDeselect(s) {
     const sel = s.units.find(u => u.id === s.selectedUnit?.id);
     const hasActed = sel && (sel.hasMoved || sel.hasAttacked);
@@ -98,6 +127,12 @@ export function computeDeselect(s) {
 
 export function handleClick(s, hex) {
     if (s.winner || s.phase === "weapon_select" || s.phase === "resolving" || s.autoEndTurn) return s;
+    if (s.phase === "consolidate") {
+        if (s.pendingConsolidation && hexKey(hex) === hexKey(s.pendingConsolidation.hex)) {
+            return computeConsolidate(s, true);
+        }
+        return s;
+    }
     const k = hexKey(hex);
     const unitOnHex = s.units.find(u => u.currentWounds > 0 && hexKey(u.hex) === k);
     const moveKeys = new Set(s.validMoves.map(hexKey));
@@ -109,17 +144,9 @@ export function handleClick(s, hex) {
     }
 
     if ((s.phase === "select" || s.phase === "move") && moveKeys.has(k)) {
-        const movedUnit = { ...s.selectedUnit, hex, hasMoved: true };
-        const swampKeys = new Set((s.swamps || []).map(hexKey));
         const hillKeys = new Set((s.hills || []).map(hexKey));
-        const townKeys = new Set((s.towns || []).map(hexKey));
-        const poisoned = swampKeys.has(k)
-            ? { ...movedUnit, currentWounds: Math.max(0, movedUnit.currentWounds - 1) }
-            : movedUnit;
+        const { landed: poisoned, townOwnership } = applyArrivalEffects(s, { ...s.selectedUnit, hasMoved: true }, hex);
         const units = s.units.map(u => u.id === poisoned.id ? poisoned : u);
-        const townOwnership = townKeys.has(k)
-            ? { ...s.townOwnership, [k]: s.currentPlayer }
-            : s.townOwnership;
         if (poisoned.currentWounds <= 0) {
             const dyingUnits = [...(s.dyingUnits || []), { hex: poisoned.hex, symbol: poisoned.symbol, player: poisoned.player, deathTime: Date.now() }];
             return { ...s, units, townOwnership, dyingUnits, ...finishActivation(s, poisoned.id, units) };
@@ -221,9 +248,22 @@ export function applyDamage(s, anim) {
     const attackEffects = damage > 0
         ? [...(s.attackEffects || []), { from: attacker.hex, to: target.hex, weaponType: anim.weaponType, time: Date.now() }]
         : (s.attackEffects || []);
-    return {
-        ...s, units, dyingUnits, kills, hitEffects, attackEffects, ...finishActivation(s, attacker.id, units),
-    };
+    const base = { ...s, units, dyingUnits, kills, hitEffects, attackEffects };
+    const canConsolidate = isDead && anim.weaponType === "melee" && hexDistance(attacker.hex, target.hex) === 1;
+    if (canConsolidate) {
+        return {
+            ...base,
+            phase: "consolidate",
+            pendingConsolidation: { unitId: attacker.id, hex: target.hex },
+            selectedUnit: units.find(u => u.id === attacker.id),
+            activeUnitId: attacker.id,
+            validMoves: [target.hex],
+            validTargets: [],
+            attackRangeHexes: [],
+            pendingAttack: null,
+        };
+    }
+    return { ...base, ...finishActivation(s, attacker.id, units) };
 }
 
 export function computeEndTurn(s) {
@@ -243,7 +283,7 @@ export function computeEndTurn(s) {
         ...s, scores, scoreHistory,
         units: s.units.map(u => ({ ...u, hasMoved: false, hasAttacked: false })),
         currentPlayer: nextPlayer, activeUnitId: null, activationsUsed: 0, activatedUnitIds: [],
-        phase: "select", selectedUnit: null, validMoves: [], validTargets: [], attackRangeHexes: [], pendingAttack: null,
+        phase: "select", selectedUnit: null, validMoves: [], validTargets: [], attackRangeHexes: [], pendingAttack: null, pendingConsolidation: null,
         round: newRound, winner,
         autoEndTurn: false,
     };

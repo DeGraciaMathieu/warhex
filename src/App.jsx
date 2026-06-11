@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.js";
 import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, TERRAIN_DENSITY_LABELS, DEFAULT_TERRAIN_DENSITY, TERRAIN_PRESETS } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION, ATTACK_EFFECT_DURATION } from "./renderer.js";
-import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, getCombatModifiers } from "./game.js";
+import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, getCombatModifiers } from "./game.js";
 import { computeAIAction, buildAIPreview } from "./ai.js";
 import { hostGame, joinGame, generateCode, normalizeCode, isValidCode, onlinePlayerNumber, isNotMyTurn, shouldApplyDamage, applyOnlineMessage } from "./online.js";
 import Guide from "./Guide.jsx";
@@ -303,6 +303,7 @@ export default function HexWarhammer() {
             if (state.aiPreview) setState(s => ({ ...s, aiPreview: null }));
             if (action.type === "click") setState(prev => handleClick(prev, action.hex));
             else if (action.type === "weapon") selectWeapon(action.weapon);
+            else if (action.type === "consolidate") applyAction(s => computeConsolidate(s, action.accept));
             else if (action.type === "endTurn") endTurn();
         }, state.aiPreview ? 800 : 1000);
         return () => clearTimeout(timer);
@@ -578,7 +579,7 @@ export default function HexWarhammer() {
 
     const sel = state.selectedUnit ? state.units.find(u => u.id === state.selectedUnit.id) : null;
     const phaseLabel = {
-        select: "SÉLECTION", move: "MOUVEMENT", attack: "ATTAQUE", weapon_select: "CHOIX D'ARME", resolving: "RÉSOLUTION",
+        select: "SÉLECTION", move: "MOUVEMENT", attack: "ATTAQUE", weapon_select: "CHOIX D'ARME", resolving: "RÉSOLUTION", consolidate: "CONSOLIDATION",
     }[state.phase] || "";
 
     return (
@@ -690,9 +691,19 @@ export default function HexWarhammer() {
                 <div style={{ padding: "16px 20px", borderBottom: "1px solid #d5cbb8" }}>
                     <div style={{ fontFamily: "'Cinzel', serif", fontSize: 12, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 12 }}>ACTIONS</div>
 
-                    <button className="btn btn-blue" disabled={!sel || sel.hasMoved || state.phase === "attack" || (vsAI && state.currentPlayer === 2) || notMyTurn} onClick={startMove}>⟶ Déplacer</button>
-                    <button className="btn btn-red" disabled={!sel || sel.hasAttacked || (vsAI && state.currentPlayer === 2) || notMyTurn} onClick={startAttack}>⚔ Attaquer</button>
-                    {sel && <button className="btn btn-grey" disabled={notMyTurn} onClick={() => applyAction(computeDeselect)}>✕ Désélectionner</button>}
+                    {state.phase === "consolidate" && state.pendingConsolidation ? (
+                        <>
+                            <div style={{ fontSize: 14, color: "#3a3020", marginBottom: 10 }}>Unité ennemie éliminée — prendre sa place ?</div>
+                            <button className="btn btn-gold" disabled={(vsAI && state.currentPlayer === 2) || notMyTurn} onClick={() => applyAction(s => computeConsolidate(s, true))}>⟶ Prendre la place</button>
+                            <button className="btn btn-grey" disabled={(vsAI && state.currentPlayer === 2) || notMyTurn} onClick={() => applyAction(s => computeConsolidate(s, false))}>✕ Rester</button>
+                        </>
+                    ) : (
+                        <>
+                            <button className="btn btn-blue" disabled={!sel || sel.hasMoved || state.phase === "attack" || (vsAI && state.currentPlayer === 2) || notMyTurn} onClick={startMove}>⟶ Déplacer</button>
+                            <button className="btn btn-red" disabled={!sel || sel.hasAttacked || (vsAI && state.currentPlayer === 2) || notMyTurn} onClick={startAttack}>⚔ Attaquer</button>
+                            {sel && <button className="btn btn-grey" disabled={notMyTurn} onClick={() => applyAction(computeDeselect)}>✕ Désélectionner</button>}
+                        </>
+                    )}
                     <div style={{ borderTop: "1px solid #d5cbb8", marginTop: 6, paddingTop: 8 }}>
                         <button className="btn btn-gold" disabled={!!state.winner || (vsAI && state.currentPlayer === 2) || notMyTurn} onClick={endTurn}>⏭ Fin de tour</button>
                     </div>

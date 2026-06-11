@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { hexKey, reachableHexes, isValidHex } from "../src/hex.js";
 import { createUnit, resetUID } from "../src/units.js";
-import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, getUnitTerrainEffects, getCombatModifiers } from "../src/game.js";
+import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, getUnitTerrainEffects, getCombatModifiers } from "../src/game.js";
 
 beforeEach(() => resetUID());
 
@@ -190,6 +190,106 @@ describe("attaque et armes", () => {
         const anim = { attacker, target, damage: 1, weaponName: "Sword", log: [], isDead: false };
         const result = applyDamage(s, anim);
         expect(result.dyingUnits).toHaveLength(0);
+    });
+});
+
+describe("consolidation après un kill au corps à corps", () => {
+    function meleeKillState(overrides = {}) {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [attacker, target], ...overrides });
+        const anim = { attacker, target, damage: 99, weaponName: "Sword", weaponType: "melee", log: [], isDead: true };
+        return { s, attacker, target, anim };
+    }
+
+    it("un kill en mêlée adjacent propose la consolidation", () => {
+        const { s, attacker, target, anim } = meleeKillState();
+        const result = applyDamage(s, anim);
+        expect(result.phase).toBe("consolidate");
+        expect(result.pendingConsolidation).toEqual({ unitId: attacker.id, hex: target.hex });
+        expect(result.validMoves).toEqual([target.hex]);
+        expect(result.autoEndTurn).toBe(false);
+        expect(result.activationsUsed).toBe(0);
+    });
+
+    it("un kill à distance ne propose pas de consolidation", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
+        const s = makeState({ units: [attacker, target] });
+        const anim = { attacker, target, damage: 99, weaponName: "Rifle", weaponType: "ranged", log: [], isDead: true };
+        const result = applyDamage(s, anim);
+        expect(result.phase).toBe("select");
+        expect(result.pendingConsolidation).toBeUndefined();
+        expect(result.activationsUsed).toBe(1);
+    });
+
+    it("une attaque en mêlée non létale ne propose pas de consolidation", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [attacker, target] });
+        const anim = { attacker, target, damage: 1, weaponName: "Sword", weaponType: "melee", log: [], isDead: false };
+        const result = applyDamage(s, anim);
+        expect(result.phase).toBe("select");
+        expect(result.activationsUsed).toBe(1);
+    });
+
+    it("accepter déplace l'attaquant sur l'hex libéré et termine l'activation", () => {
+        const { s, attacker, target, anim } = meleeKillState();
+        const consolidating = applyDamage(s, anim);
+        const result = computeConsolidate(consolidating, true);
+        const atk = result.units.find(u => u.id === attacker.id);
+        expect(atk.hex).toEqual(target.hex);
+        expect(result.pendingConsolidation).toBeNull();
+        expect(result.phase).toBe("select");
+        expect(result.activationsUsed).toBe(1);
+    });
+
+    it("refuser laisse l'attaquant sur place et termine l'activation", () => {
+        const { s, attacker, anim } = meleeKillState();
+        const consolidating = applyDamage(s, anim);
+        const result = computeConsolidate(consolidating, false);
+        const atk = result.units.find(u => u.id === attacker.id);
+        expect(atk.hex).toEqual(attacker.hex);
+        expect(result.pendingConsolidation).toBeNull();
+        expect(result.activationsUsed).toBe(1);
+    });
+
+    it("consolider sur une ville la capture", () => {
+        const { s, target, anim } = meleeKillState({ towns: [{ q: 1, r: -1, s: 0 }] });
+        const consolidating = applyDamage(s, anim);
+        const result = computeConsolidate(consolidating, true);
+        expect(result.townOwnership[hexKey(target.hex)]).toBe(1);
+    });
+
+    it("consolider sur un marais inflige 1 dégât", () => {
+        const { s, attacker, anim } = meleeKillState({ swamps: [{ q: 1, r: -1, s: 0 }] });
+        const consolidating = applyDamage(s, anim);
+        const result = computeConsolidate(consolidating, true);
+        const atk = result.units.find(u => u.id === attacker.id);
+        expect(atk.currentWounds).toBe(attacker.currentWounds - 1);
+    });
+
+    it("cliquer sur l'hex libéré accepte la consolidation", () => {
+        const { s, attacker, target, anim } = meleeKillState();
+        const consolidating = applyDamage(s, anim);
+        const result = handleClick(consolidating, target.hex);
+        const atk = result.units.find(u => u.id === attacker.id);
+        expect(atk.hex).toEqual(target.hex);
+        expect(result.pendingConsolidation).toBeNull();
+    });
+
+    it("cliquer ailleurs pendant la consolidation ne fait rien", () => {
+        const { s, anim } = meleeKillState();
+        const consolidating = applyDamage(s, anim);
+        const result = handleClick(consolidating, { q: -2, r: 1, s: 1 });
+        expect(result).toEqual(consolidating);
+    });
+
+    it("computeEndTurn annule une consolidation en attente", () => {
+        const { s, anim } = meleeKillState();
+        const consolidating = applyDamage(s, anim);
+        const result = computeEndTurn(consolidating);
+        expect(result.pendingConsolidation).toBeNull();
     });
 });
 
@@ -558,8 +658,8 @@ describe("double activation", () => {
         // Choisir l'arme
         const weapon = u1.weapons.find(w => w.id === "sword");
         const result = computeWeaponSelect(clicked, weapon);
-        // Appliquer les dégâts
-        const afterDmg = applyDamage(result.state, result.anim);
+        // Appliquer des dégâts non létaux (un kill en mêlée ouvrirait la consolidation)
+        const afterDmg = applyDamage(result.state, { ...result.anim, damage: 1, isDead: false });
         expect(afterDmg.activationsUsed).toBe(1);
         expect(afterDmg.activatedUnitIds).toContain(u1.id);
         // On peut encore sélectionner u2
@@ -579,9 +679,10 @@ describe("double activation", () => {
         const clicked = handleClick(selected, enemy.hex);
         const weapon = u1.weapons.find(w => w.id === "sword");
         const result = computeWeaponSelect(clicked, weapon);
-        // Simuler dégâts fatals
+        // Simuler dégâts fatals — le kill en mêlée ouvre la consolidation
         const fatalAnim = { ...result.anim, damage: 99, isDead: true };
-        const afterKill = applyDamage(result.state, fatalAnim);
+        const consolidating = applyDamage(result.state, fatalAnim);
+        const afterKill = computeConsolidate(consolidating, false);
         expect(afterKill.activationsUsed).toBe(1);
         expect(afterKill.autoEndTurn).toBe(false);
         // u2 est toujours sélectionnable
