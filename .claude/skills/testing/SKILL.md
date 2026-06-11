@@ -29,6 +29,7 @@ source ~/.nvm/nvm.sh && nvm use 22 && npx vitest run
 | `tests/scoring.test.js` | Controle de villes, victoire, systeme de points |
 | `tests/game.test.js` | Logique de jeu (selection, deplacement, attaque, fin de tour, collines, marais) |
 | `tests/ai.test.js` | IA (selection d'unite, deplacement, attaque, choix d'arme) |
+| `tests/online.test.js` | Mode en ligne (codes de partie, protocole de messages, verrou de tour, application des degats) |
 
 ## Ou placer un nouveau test
 
@@ -39,3 +40,4 @@ source ~/.nvm/nvm.sh && nvm use 22 && npx vitest run
 - Scoring / victoire → `scoring.test.js`
 - Flux de jeu complet → `game.test.js`
 - Comportement IA → `ai.test.js`
+- Mode en ligne (helpers purs) → `online.test.js`
