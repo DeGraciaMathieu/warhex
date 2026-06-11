@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { resolveAttack } from "../src/combat.js";
+import { resolveAttack, expectedDamage } from "../src/combat.js";
 import { createUnit, resetUID } from "../src/units.js";
 
 beforeEach(() => resetUID());
@@ -136,6 +136,51 @@ describe("penalty rivière", () => {
             totalPenalty += resolveAttack(attacker, weapon, target, { penalty: 1 }).damage;
         }
         expect(totalPenalty).toBeGreaterThan(totalNoPenalty);
+    });
+});
+
+describe("expectedDamage", () => {
+    it("calcule l'espérance exacte du sword warrior contre warrior", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const sword = attacker.weapons.find(w => w.id === "sword");
+        // WS 3+ (pHit 2/3), 2 attaques, save 4+ (pSave 1/2), damage 2 → 2/3
+        expect(expectedDamage(attacker, sword, target)).toBeCloseTo(2 / 3, 5);
+    });
+
+    it("tient compte de la PA : le rifle dégrade la sauvegarde", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const rifle = attacker.weapons.find(w => w.id === "rifle");
+        // BS 4+ (pHit 1/2), 2 attaques, save effective 5+ (pSave 1/3), damage 1 → 11/27
+        expect(expectedDamage(attacker, rifle, target)).toBeCloseTo(11 / 27, 5);
+    });
+
+    it("le couvert réduit les dégâts espérés", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const sword = attacker.weapons.find(w => w.id === "sword");
+        const open = expectedDamage(attacker, sword, target);
+        const covered = expectedDamage(attacker, sword, target, { coverBonus: 1 });
+        expect(covered).toBeLessThan(open);
+        expect(covered).toBeCloseTo(8 / 27, 5);
+    });
+
+    it("le penalty rivière augmente les dégâts espérés", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const sword = attacker.weapons.find(w => w.id === "sword");
+        const open = expectedDamage(attacker, sword, target);
+        const exposed = expectedDamage(attacker, sword, target, { penalty: 1 });
+        expect(exposed).toBeGreaterThan(open);
+    });
+
+    it("une PA rendant la sauvegarde impossible donne touches espérées × damage", () => {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const bigAP = { id: "test", name: "Test", type: "melee", range: 1, attacks: 4, ap: -3, damage: 1 };
+        // save effective 7+ impossible → 4 × 2/3 × 1
+        expect(expectedDamage(attacker, bigAP, target)).toBeCloseTo(8 / 3, 5);
     });
 });
 

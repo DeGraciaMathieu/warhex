@@ -34,6 +34,33 @@ export function resolveAttack(attacker, weapon, target, { coverBonus = 0, penalt
     return { damage: totalDamage, log };
 }
 
+function binomialProbs(n, p) {
+    const probs = [];
+    for (let k = 0; k <= n; k++) {
+        let c = 1;
+        for (let i = 0; i < k; i++) c = (c * (n - i)) / (i + 1);
+        probs.push(c * p ** k * (1 - p) ** (n - k));
+    }
+    return probs;
+}
+
+export function expectedDamage(attacker, weapon, target, { coverBonus = 0, penalty = 0 } = {}) {
+    const skillStat = weapon.type === "ranged" ? attacker.ballisticSkill : attacker.weaponSkill;
+    const pHit = Math.min(1, Math.max(0, (7 - skillStat) / 6));
+    const effectiveSave = target.save - coverBonus + penalty + Math.abs(weapon.ap);
+    const pSave = effectiveSave > 6 ? 0 : Math.min(1, Math.max(0, (7 - effectiveSave) / 6));
+
+    const hitProbs = binomialProbs(weapon.attacks, pHit);
+    const saveProbs = binomialProbs(3, pSave);
+    let expectedUnsaved = 0;
+    for (let h = 1; h < hitProbs.length; h++) {
+        for (let s = 0; s < h && s < saveProbs.length; s++) {
+            expectedUnsaved += hitProbs[h] * saveProbs[s] * (h - s);
+        }
+    }
+    return expectedUnsaved * weapon.damage;
+}
+
 export function findValidTargets(unit, enemies, losKeys, rangeBonus = 0) {
     return enemies.filter(e => {
         const dist = hexDistance(unit.hex, e.hex);
