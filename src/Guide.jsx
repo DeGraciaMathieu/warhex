@@ -677,7 +677,8 @@ export default function Guide({ onBack }) {
                     <div style={TEXT_STYLE}>
                         <p style={{ margin: "0 0 6px" }}><strong>1. To Hit</strong> — Lancez autant de D6 que l'arme a d'attaques. Chaque dé supérieur ou égal à la compétence (CC au corps à corps, CT à distance) est une touche.</p>
                         <p style={{ margin: "0 0 6px" }}><strong>2. Sauvegarde</strong> — Le défenseur lance 3 D6. Chaque dé supérieur ou égal à (sauvegarde + |PA|) annule une touche. Si le seuil dépasse 6, la sauvegarde est impossible.</p>
-                        <p style={{ margin: 0 }}><strong>3. Dégâts</strong> — Chaque touche non sauvée inflige les dégâts de l'arme.</p>
+                        <p style={{ margin: "0 0 6px" }}><strong>3. Dégâts</strong> — Chaque touche non sauvée inflige les dégâts de l'arme.</p>
+                        <p style={{ margin: 0 }}><strong>4. Consolidation</strong> — Si une unité tue un ennemi adjacent au corps à corps, elle peut prendre la place de l'unité éliminée. Les effets du terrain d'arrivée s'appliquent (capture de ville, poison du marais).</p>
                     </div>
                 </div>
 
