@@ -1,14 +1,21 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.js";
 import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, TERRAIN_DENSITY_LABELS, DEFAULT_TERRAIN_DENSITY, TERRAIN_PRESETS } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION, ATTACK_EFFECT_DURATION, moveAnimDuration } from "./renderer.js";
 import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, getCombatModifiers } from "./game.js";
 import { computeAIAction, buildAIPreview } from "./ai.js";
 import { hostGame, joinGame, generateCode, normalizeCode, isValidCode, onlinePlayerNumber, isNotMyTurn, shouldApplyDamage, applyOnlineMessage } from "./online.js";
+import { setupSteps, nextSetupStep, canAdvanceFromMode } from "./setup.js";
 import Guide from "./Guide.jsx";
 import "./styles.css";
 
 const UNIT_TYPES = Object.keys(UNIT_TEMPLATES);
+
+const STEP_META = {
+    mode:    { label: "Mode",    title: "Mode de jeu",            desc: "Affrontez un ami en local, défiez l'IA, ou jouez à distance." },
+    terrain: { label: "Terrain", title: "Champ de bataille",      desc: "Réglez le terrain et prévisualisez la carte avant le combat." },
+    armies:  { label: "Armées",  title: "Composition des armées", desc: "Choisissez 5 unités par camp, puis lancez la partie." },
+};
 
 const W = 260, H = 140, PAD_X = 30, PAD_Y = 20;
 const CHART_W = W - PAD_X * 2, CHART_H = H - PAD_Y * 2;
@@ -107,6 +114,7 @@ const ARMY_SIZE = 5;
 export default function HexWarhammer() {
     const canvasRef = useRef(null);
     const [armyPhase, setArmyPhase] = useState(true);
+    const [setupStep, setSetupStep] = useState("mode");
     const [showGuide, setShowGuide] = useState(false);
     const [vsAI, setVsAI] = useState(false);
     const [fairTowns, setFairTowns] = useState(true);
@@ -210,7 +218,13 @@ export default function HexWarhammer() {
 
     useEffect(() => {
         if (armyPhase && previewState && previewCanvasRef.current) drawScene(previewCanvasRef.current, previewState, null);
-    }, [previewState, armyPhase, online?.role]);
+    }, [previewState, armyPhase, online?.role, setupStep]);
+
+    // Une déconnexion / erreur survenue après l'étape Mode ramène au début du flux.
+    useEffect(() => {
+        if (!armyPhase || setupStep === "mode") return;
+        if (online?.status === "left" || online?.status === "error") setSetupStep("mode");
+    }, [online?.status, armyPhase, setupStep]);
 
     useEffect(() => {
         if (!diceAnim || diceAnim.done) return;
@@ -351,7 +365,7 @@ export default function HexWarhammer() {
     }
 
     function endTurn() { applyAction(computeEndTurn); }
-    function restart() { quitOnline(); resetUID(); setSelections({ 1: [], 2: [] }); setArmyPhase(true); setState(null); setVsAI(false); setFairTowns(true); setTerrainDensity(DEFAULT_TERRAIN_DENSITY); }
+    function restart() { quitOnline(); resetUID(); setSelections({ 1: [], 2: [] }); setArmyPhase(true); setSetupStep("mode"); setState(null); setVsAI(false); setFairTowns(true); setTerrainDensity(DEFAULT_TERRAIN_DENSITY); }
 
     function addUnit(player, type) {
         setSelections(prev => {
@@ -435,6 +449,19 @@ export default function HexWarhammer() {
             );
         };
 
+        const goNext = () => setSetupStep(s => nextSetupStep(s, online));
+        const steps = setupSteps(online);
+        const currentIndex = steps.indexOf(setupStep);
+
+        const stepFooter = (action) => (
+            <div style={{ display: "flex", gap: 12 }}>
+                {action}
+                <button className="btn btn-grey" onClick={() => setShowGuide(true)} style={{ fontSize: 17, padding: "12px 28px" }}>
+                    ? Guide
+                </button>
+            </div>
+        );
+
         return (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif", gap: 20, padding: "24px 0" }}>
                 <div className="home-title">
@@ -446,19 +473,40 @@ export default function HexWarhammer() {
                     <div className="home-title-line" />
                 </div>
 
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 24 }}>
-                    {renderArmyPanel(1)}
+                <div className="steps">
+                    {steps.map((s, i) => (
+                        <Fragment key={s}>
+                            {i > 0 && <div className={`step-connector${i <= currentIndex ? " done" : ""}`} />}
+                            <div className={`step ${i === currentIndex ? "active" : i < currentIndex ? "done" : ""}`}>
+                                <div className="step-pill">{i + 1}</div>
+                                <div className="step-label">{STEP_META[s].label}</div>
+                            </div>
+                        </Fragment>
+                    ))}
+                </div>
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: 16, width: 420 }}>
-                        <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-                            <button className={`btn ${!vsAI && !online ? "btn-gold" : "btn-grey"}`} onClick={() => { quitOnline(); setVsAI(false); setSelections(prev => ({ ...prev, 2: [] })); }} style={{ width: "auto", padding: "7px 18px", marginBottom: 0 }}>
-                                2 Joueurs
+                <div className="step-header">
+                    <div className="step-title">{STEP_META[setupStep].title}</div>
+                    <div className="step-desc">{STEP_META[setupStep].desc}</div>
+                </div>
+
+                {setupStep === "mode" && <>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 16, alignItems: "center" }}>
+                        <div className="mode-cards">
+                            <button className={`mode-card${!vsAI && !online ? " active" : ""}`} onClick={() => { quitOnline(); setVsAI(false); setSelections(prev => ({ ...prev, 2: [] })); }}>
+                                <span className="mode-card-icon">⚔</span>
+                                <span className="mode-card-title">2 JOUEURS</span>
+                                <span className="mode-card-desc">Deux joueurs sur le même écran, chacun son tour.</span>
                             </button>
-                            <button className={`btn ${vsAI ? "btn-gold" : "btn-grey"}`} onClick={() => { quitOnline(); setVsAI(true); randomArmy(2); }} style={{ width: "auto", padding: "7px 18px", marginBottom: 0 }}>
-                                vs IA
+                            <button className={`mode-card${vsAI ? " active" : ""}`} onClick={() => { quitOnline(); setVsAI(true); randomArmy(2); }}>
+                                <span className="mode-card-icon">🤖</span>
+                                <span className="mode-card-title">VS IA</span>
+                                <span className="mode-card-desc">Affrontez l'intelligence artificielle.</span>
                             </button>
-                            <button className={`btn ${online ? "btn-gold" : "btn-grey"}`} onClick={() => { if (!online) { setVsAI(false); setSelections({ 1: [], 2: [] }); setOnline({ role: null, status: "menu" }); } }} style={{ width: "auto", padding: "7px 18px", marginBottom: 0 }}>
-                                🌐 En ligne
+                            <button className={`mode-card${online ? " active" : ""}`} onClick={() => { if (!online) { setVsAI(false); setSelections({ 1: [], 2: [] }); setOnline({ role: null, status: "menu" }); } }}>
+                                <span className="mode-card-icon">🌐</span>
+                                <span className="mode-card-title">EN LIGNE</span>
+                                <span className="mode-card-desc">Jouez à distance via un code de partie.</span>
                             </button>
                         </div>
 
@@ -503,8 +551,17 @@ export default function HexWarhammer() {
                                 </>}
                             </div>
                         )}
+                    </div>
 
-                        {online?.role !== "guest" && <>
+                    {stepFooter(
+                        <button className="btn btn-gold" disabled={!canAdvanceFromMode(online)} onClick={goNext} style={{ fontSize: 17, padding: "12px 36px" }}>
+                            Suivant →
+                        </button>
+                    )}
+                </>}
+
+                {setupStep === "terrain" && <>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 16, width: 420 }}>
                         <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
                             <button className={`btn ${fairTowns ? "btn-gold" : "btn-grey"}`} onClick={() => setFairTowns(true)} style={{ width: "auto", padding: "7px 18px", marginBottom: 0 }}>
                                 Villes équitables
@@ -551,32 +608,33 @@ export default function HexWarhammer() {
                                 🔄
                             </button>
                         </div>
-                        </>}
-
-                        {online?.role === "guest" && (
-                            <div style={{ fontSize: 14, color: "#8a7a60", fontStyle: "italic", textAlign: "center" }}>
-                                L'hôte configure le terrain et lance la partie.
-                            </div>
-                        )}
                     </div>
 
-                    {renderArmyPanel(2)}
-                </div>
-
-                <div style={{ display: "flex", gap: 12 }}>
-                    {online?.role === "guest" ? (
-                        <button className="btn btn-grey" disabled style={{ fontSize: 17, padding: "12px 36px" }}>
-                            En attente du lancement par l'hôte…
-                        </button>
-                    ) : (
-                        <button className="btn btn-gold" disabled={!canStart || (online && online.status !== "connected")} onClick={startGame} style={{ fontSize: 17, padding: "12px 36px" }}>
-                            ⚔ Lancer la partie
+                    {stepFooter(
+                        <button className="btn btn-gold" onClick={goNext} style={{ fontSize: 17, padding: "12px 36px" }}>
+                            Suivant →
                         </button>
                     )}
-                    <button className="btn btn-grey" onClick={() => setShowGuide(true)} style={{ fontSize: 17, padding: "12px 28px" }}>
-                        ? Guide
-                    </button>
-                </div>
+                </>}
+
+                {setupStep === "armies" && <>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 24 }}>
+                        {renderArmyPanel(1)}
+                        {renderArmyPanel(2)}
+                    </div>
+
+                    {stepFooter(
+                        online?.role === "guest" ? (
+                            <button className="btn btn-grey" disabled style={{ fontSize: 17, padding: "12px 36px" }}>
+                                En attente du lancement par l'hôte…
+                            </button>
+                        ) : (
+                            <button className="btn btn-gold" disabled={!canStart || (online && online.status !== "connected")} onClick={startGame} style={{ fontSize: 17, padding: "12px 36px" }}>
+                                ⚔ Lancer la partie
+                            </button>
+                        )
+                    )}
+                </>}
             </div>
         );
     }
