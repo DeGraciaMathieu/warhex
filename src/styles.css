@@ -188,15 +188,45 @@
     position: fixed;
     pointer-events: none;
     z-index: 100;
-    background: #f5f0e8;
+    background: #fdfaf4;
     border: 1px solid #c8b898;
-    border-radius: 4px;
-    padding: 8px 12px;
+    border-radius: 8px;
+    padding: 12px;
     font-size: 12px;
     color: #2a2015;
-    box-shadow: 0 2px 8px rgba(42, 32, 21, 0.25);
-    max-width: 240px;
-    line-height: 1.5;
+    box-shadow: 0 4px 14px rgba(42, 32, 21, 0.3);
+    width: 230px;
+}
+
+.unit-tooltip-head {
+    display: flex; align-items: center; gap: 10px;
+}
+
+.unit-tooltip-head .combat-medallion {
+    width: 42px; height: 42px; font-size: 21px; border-width: 2px; flex-shrink: 0;
+}
+
+.unit-tooltip-name {
+    font-family: 'Cinzel', serif; font-size: 14px; font-weight: 700;
+    letter-spacing: .04em; margin-bottom: 5px;
+}
+
+.unit-tooltip-stats {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.unit-tooltip-weapons {
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0d6c4;
+    display: flex; flex-direction: column; gap: 6px;
+}
+
+.unit-tooltip-weapon {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+
+.unit-tooltip-weapon-name {
+    font-weight: 600; color: #3a3020; white-space: nowrap;
 }
 
 .roll-chip {

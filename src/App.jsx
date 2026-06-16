@@ -791,21 +791,43 @@ export default function HexWarhammer() {
             </>}
             </div>
 
-            {hoveredUnit && tooltipPos && tooltipUnitId === hoveredUnit.id && (
-                <div className="unit-tooltip" style={{ left: tooltipPos.x + 16, top: tooltipPos.y + 16 }}>
-                    <div style={{ fontWeight: 600, color: P[hoveredUnit.player], marginBottom: 4 }}>{hoveredUnit.symbol} {hoveredUnit.name}</div>
-                    <div style={{ display: "flex", gap: 12, marginBottom: 4 }}>
-                        <span style={{ color: hoveredUnit.currentWounds > hoveredUnit.wounds / 2 ? "#4caf50" : "#e53935", fontWeight: 600 }}>PV {hoveredUnit.currentWounds}/{hoveredUnit.wounds}</span>
-                        <span>MVT {hoveredUnit.movement}</span>
-                        <span>SVG {hoveredUnit.save}+</span>
-                    </div>
-                    {hoveredUnit.weapons.map(w => (
-                        <div key={w.id} style={{ color: "#5a5040" }}>
-                            {w.name} <span style={{ color: "#8a7a60" }}>({w.type === "ranged" ? "tir" : "mêlée"})</span> · portée {w.minRange ? `${w.minRange}-` : ""}{w.range} · DGT {w.damage}
+            {hoveredUnit && tooltipPos && tooltipUnitId === hoveredUnit.id && (() => {
+                const ratio = hoveredUnit.currentWounds / hoveredUnit.wounds;
+                const level = ratio > 0.6 ? "hp-high" : ratio > 0.3 ? "hp-mid" : "hp-low";
+                return (
+                    <div className="unit-tooltip" style={{ left: tooltipPos.x + 16, top: tooltipPos.y + 16 }}>
+                        <div className="unit-tooltip-head">
+                            <div className="combat-medallion" style={{ borderColor: P[hoveredUnit.player] }}>{hoveredUnit.symbol}</div>
+                            <div style={{ flex: 1 }}>
+                                <div className="unit-tooltip-name" style={{ color: P[hoveredUnit.player] }}>{hoveredUnit.name}</div>
+                                <div className="combat-hp">
+                                    <div className="combat-hp-bar">
+                                        {Array.from({ length: hoveredUnit.wounds }, (_, i) => (
+                                            <span key={i} className={`combat-hp-seg ${i < hoveredUnit.currentWounds ? level : "empty"}`} />
+                                        ))}
+                                    </div>
+                                    <span className="combat-hp-text">{hoveredUnit.currentWounds} / {hoveredUnit.wounds}</span>
+                                </div>
+                            </div>
                         </div>
-                    ))}
-                </div>
-            )}
+                        <div className="unit-tooltip-stats">
+                            <span className="combat-weapon-chip">MVT {hoveredUnit.movement}</span>
+                            <span className="combat-weapon-chip">SVG {hoveredUnit.save}+</span>
+                        </div>
+                        <div className="unit-tooltip-weapons">
+                            {hoveredUnit.weapons.map(w => (
+                                <div key={w.id} className="unit-tooltip-weapon">
+                                    <span className="unit-tooltip-weapon-name">{w.type === "ranged" ? "🏹" : "⚔"} {w.name}</span>
+                                    <span className="combat-weapon-chips" style={{ justifyContent: "flex-end" }}>
+                                        <span className="combat-weapon-chip">Portée {w.minRange ? `${w.minRange}-` : ""}{w.range}</span>
+                                        <span className="combat-weapon-chip">D{w.damage}</span>
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            })()}
 
             {state && !state.winner && (state.phase === "weapon_select" && state.pendingAttack || diceAnim) && (() => {
                 const showWeapons = state.phase === "weapon_select" && state.pendingAttack && (!diceAnim || diceAnim.done);
