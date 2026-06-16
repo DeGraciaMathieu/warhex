@@ -32,6 +32,20 @@ export function getCombatModifiers(attacker, target, state) {
     return { attacker: attackerMods, target: targetMods };
 }
 
+// Modificateur de sauvegarde apporté par le terrain de la case d'une unité, pour
+// l'affichage du tooltip. Négatif = sauvegarde améliorée (couvert ville/forêt),
+// positif = dégradée (rivière), 0 = terrain neutre. Une sauvegarde plus basse
+// (X+) est meilleure.
+export function getSaveModifier(unit, state) {
+    const k = hexKey;
+    const uk = k(unit.hex);
+    const coverKeys = new Set([...(state.towns || []), ...(state.forests || [])].map(k));
+    const riverKeys = new Set((state.rivers || []).map(k));
+    if (coverKeys.has(uk)) return -1;
+    if (riverKeys.has(uk)) return 1;
+    return 0;
+}
+
 function buildLosKeys(state) {
     return new Set([...state.obstacles, ...(state.towns || []), ...(state.forests || []), ...(state.hills || [])].map(hexKey));
 }

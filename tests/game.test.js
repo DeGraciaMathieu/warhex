@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { hexKey, reachableHexes, isValidHex, hexDistance, findPath } from "../src/hex.js";
 import { createUnit, resetUID } from "../src/units.js";
-import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, computeCancelAttack, unitAt, getUnitTerrainEffects, getCombatModifiers } from "../src/game.js";
+import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, computeCancelAttack, unitAt, getUnitTerrainEffects, getSaveModifier, getCombatModifiers } from "../src/game.js";
 
 beforeEach(() => resetUID());
 
@@ -1411,5 +1411,26 @@ describe("unité sous le curseur (unitAt)", () => {
         const dead = createUnit("warrior", 1, { q: 2, r: -1, s: -1 });
         dead.currentWounds = 0;
         expect(unitAt([dead], { q: 2, r: -1, s: -1 })).toBeNull();
+    });
+});
+
+describe("modificateur de sauvegarde d'une unité (getSaveModifier)", () => {
+    const hex = { q: 0, r: 0, s: 0 };
+
+    it("le couvert (ville ou forêt) améliore la sauvegarde (-1)", () => {
+        const u = createUnit("warrior", 1, hex);
+        expect(getSaveModifier(u, makeState({ units: [u], towns: [hex] }))).toBe(-1);
+        expect(getSaveModifier(u, makeState({ units: [u], forests: [hex] }))).toBe(-1);
+    });
+
+    it("la rivière dégrade la sauvegarde (+1)", () => {
+        const u = createUnit("warrior", 1, hex);
+        expect(getSaveModifier(u, makeState({ units: [u], rivers: [hex] }))).toBe(1);
+    });
+
+    it("un terrain neutre ne modifie pas la sauvegarde (0)", () => {
+        const u = createUnit("warrior", 1, hex);
+        expect(getSaveModifier(u, makeState({ units: [u], hills: [hex] }))).toBe(0);
+        expect(getSaveModifier(u, makeState({ units: [u] }))).toBe(0);
     });
 });

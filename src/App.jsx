@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, Fragment } from "react";
 import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.js";
 import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, TERRAIN_DENSITY_LABELS, DEFAULT_TERRAIN_DENSITY, TERRAIN_PRESETS, computeTownControl } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION, ATTACK_EFFECT_DURATION, moveAnimDuration } from "./renderer.js";
-import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, computeCancelAttack, unitAt, getCombatModifiers } from "./game.js";
+import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, computeCancelAttack, unitAt, getSaveModifier, getCombatModifiers } from "./game.js";
 import { computeAIAction, buildAIPreview } from "./ai.js";
 import { hostGame, joinGame, generateCode, normalizeCode, isValidCode, onlinePlayerNumber, isNotMyTurn, shouldApplyDamage, applyOnlineMessage } from "./online.js";
 import { setupSteps, nextSetupStep, canAdvanceFromMode } from "./setup.js";
@@ -794,6 +794,10 @@ export default function HexWarhammer() {
             {hoveredUnit && tooltipPos && tooltipUnitId === hoveredUnit.id && (() => {
                 const ratio = hoveredUnit.currentWounds / hoveredUnit.wounds;
                 const level = ratio > 0.6 ? "hp-high" : ratio > 0.3 ? "hp-mid" : "hp-low";
+                const saveMod = getSaveModifier(hoveredUnit, state);
+                const effSave = hoveredUnit.save + saveMod;
+                // svg plus basse = meilleure : un modificateur négatif améliore (vert).
+                const saveColor = saveMod < 0 ? "#2e7d32" : saveMod > 0 ? "#c62828" : null;
                 return (
                     <div className="unit-tooltip" style={{ left: tooltipPos.x + 16, top: tooltipPos.y + 16 }}>
                         <div className="unit-tooltip-head">
@@ -812,7 +816,9 @@ export default function HexWarhammer() {
                         </div>
                         <div className="unit-tooltip-stats">
                             <span className="combat-weapon-chip">MVT {hoveredUnit.movement}</span>
-                            <span className="combat-weapon-chip">SVG {hoveredUnit.save}+</span>
+                            <span className="combat-weapon-chip" style={saveColor ? { color: saveColor, borderColor: saveColor } : {}}>
+                                SVG {effSave}+{saveMod !== 0 ? ` (${saveMod > 0 ? "+" : ""}${saveMod})` : ""}
+                            </span>
                         </div>
                         <div className="unit-tooltip-weapons">
                             {hoveredUnit.weapons.map(w => (
