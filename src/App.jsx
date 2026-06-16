@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, Fragment } from "react";
 import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.js";
 import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, TERRAIN_DENSITY_LABELS, DEFAULT_TERRAIN_DENSITY, TERRAIN_PRESETS, computeTownControl } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION, ATTACK_EFFECT_DURATION, moveAnimDuration } from "./renderer.js";
-import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, computeCancelAttack, unitAt, getSaveModifier, getCombatModifiers } from "./game.js";
+import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, computeCancelAttack, unitAt, getSaveModifier, getRangeModifier, getCombatModifiers } from "./game.js";
 import { computeAIAction, buildAIPreview } from "./ai.js";
 import { hostGame, joinGame, generateCode, normalizeCode, isValidCode, onlinePlayerNumber, isNotMyTurn, shouldApplyDamage, applyOnlineMessage } from "./online.js";
 import { setupSteps, nextSetupStep, canAdvanceFromMode } from "./setup.js";
@@ -821,15 +821,22 @@ export default function HexWarhammer() {
                             </span>
                         </div>
                         <div className="unit-tooltip-weapons">
-                            {hoveredUnit.weapons.map(w => (
-                                <div key={w.id} className="unit-tooltip-weapon">
-                                    <span className="unit-tooltip-weapon-name">{w.type === "ranged" ? "🏹" : "⚔"} {w.name}</span>
-                                    <span className="combat-weapon-chips" style={{ justifyContent: "flex-end" }}>
-                                        <span className="combat-weapon-chip">Portée {w.minRange ? `${w.minRange}-` : ""}{w.range}</span>
-                                        <span className="combat-weapon-chip">D{w.damage}</span>
-                                    </span>
-                                </div>
-                            ))}
+                            {hoveredUnit.weapons.map(w => {
+                                const rangeMod = getRangeModifier(hoveredUnit, w, state);
+                                const effRange = w.range + rangeMod;
+                                const rangeColor = rangeMod > 0 ? "#2e7d32" : null;
+                                return (
+                                    <div key={w.id} className="unit-tooltip-weapon">
+                                        <span className="unit-tooltip-weapon-name">{w.type === "ranged" ? "🏹" : "⚔"} {w.name}</span>
+                                        <span className="combat-weapon-chips" style={{ justifyContent: "flex-end" }}>
+                                            <span className="combat-weapon-chip" style={rangeColor ? { color: rangeColor, borderColor: rangeColor } : {}}>
+                                                Portée {w.minRange ? `${w.minRange}-` : ""}{effRange}{rangeMod > 0 ? ` (+${rangeMod})` : ""}
+                                            </span>
+                                            <span className="combat-weapon-chip">D{w.damage}</span>
+                                        </span>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 );

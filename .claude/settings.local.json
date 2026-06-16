@@ -12,7 +12,10 @@
       "Read(//Users/mathieudegracia/.nvm/versions/node/**)",
       "Bash(fnm list:*)",
       "Bash(git push:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(perl -pi -e 's/inset 0 1px 0 rgba\\\\\\(255, 255, 255, \\\\.8\\\\\\)/inset 0 1px 0 rgba\\(255, 255, 255, .07\\)/g' src/styles.css)",
+      "Bash(git restore *)",
+      "Bash(git commit -q -m ' *)"
     ]
   },
   "hooks": {

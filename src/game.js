@@ -46,6 +46,13 @@ export function getSaveModifier(unit, state) {
     return 0;
 }
 
+// Modificateur de portée d'une arme depuis la case de l'unité. La colline donne
+// +1 de portée, mais uniquement aux armes à distance (cf. combat.js).
+export function getRangeModifier(unit, weapon, state) {
+    const hillKeys = new Set((state.hills || []).map(hexKey));
+    return (weapon.type === "ranged" && hillKeys.has(hexKey(unit.hex))) ? 1 : 0;
+}
+
 function buildLosKeys(state) {
     return new Set([...state.obstacles, ...(state.towns || []), ...(state.forests || []), ...(state.hills || [])].map(hexKey));
 }

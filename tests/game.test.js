@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { hexKey, reachableHexes, isValidHex, hexDistance, findPath } from "../src/hex.js";
 import { createUnit, resetUID } from "../src/units.js";
-import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, computeCancelAttack, unitAt, getUnitTerrainEffects, getSaveModifier, getCombatModifiers } from "../src/game.js";
+import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, computeCancelAttack, unitAt, getUnitTerrainEffects, getSaveModifier, getRangeModifier, getCombatModifiers } from "../src/game.js";
 
 beforeEach(() => resetUID());
 
@@ -1432,5 +1432,27 @@ describe("modificateur de sauvegarde d'une unité (getSaveModifier)", () => {
         const u = createUnit("warrior", 1, hex);
         expect(getSaveModifier(u, makeState({ units: [u], hills: [hex] }))).toBe(0);
         expect(getSaveModifier(u, makeState({ units: [u] }))).toBe(0);
+    });
+});
+
+describe("modificateur de portée d'une unité (getRangeModifier)", () => {
+    const hex = { q: 0, r: 0, s: 0 };
+
+    it("sur une colline, une arme à distance gagne +1 de portée", () => {
+        const u = createUnit("warrior", 1, hex);
+        const ranged = u.weapons.find(w => w.type === "ranged");
+        expect(getRangeModifier(u, ranged, makeState({ units: [u], hills: [hex] }))).toBe(1);
+    });
+
+    it("sur une colline, une arme de mêlée ne gagne rien", () => {
+        const u = createUnit("warrior", 1, hex);
+        const melee = u.weapons.find(w => w.type === "melee");
+        expect(getRangeModifier(u, melee, makeState({ units: [u], hills: [hex] }))).toBe(0);
+    });
+
+    it("hors colline, aucune arme ne gagne de portée", () => {
+        const u = createUnit("warrior", 1, hex);
+        const ranged = u.weapons.find(w => w.type === "ranged");
+        expect(getRangeModifier(u, ranged, makeState({ units: [u] }))).toBe(0);
     });
 });
