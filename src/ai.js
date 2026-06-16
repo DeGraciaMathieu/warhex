@@ -1,6 +1,18 @@
 import { hexDistance, hexKey, reachableHexes, hasLineOfSight, pathDistance } from "./hex.js";
 import { findValidTargets, expectedDamage } from "./combat.js";
 
+// Poids de décision de l'IA. Les valeurs par défaut reproduisent à l'identique
+// les constantes historiquement codées en dur dans pickBestUnit : sans argument,
+// le comportement de l'IA est strictement inchangé. Le harness de simulation
+// (harness/) peut passer des poids alternatifs pour comparer des stratégies.
+export const DEFAULT_AI_WEIGHTS = {
+    hitTownEnemy: 100, // peut frapper un ennemi posté sur une ville
+    hasTargets: 10,    // a au moins une cible à portée
+    captureTown: 50,   // peut atteindre une ville prioritaire ce tour
+    towardTown: 20,    // se rapproche d'une ville prioritaire (divisé par la distance)
+    towardEnemy: 5,    // se rapproche d'un ennemi (divisé par la distance)
+};
+
 function buildLosKeys(state) {
     return new Set([...state.obstacles, ...(state.towns || []), ...(state.forests || []), ...(state.hills || [])].map(hexKey));
 }
@@ -46,7 +58,8 @@ function townContext(state) {
     return { townKeys, unitOnTown, emptyTowns, enemyOnTown, priorityTowns };
 }
 
-export function pickBestUnit(state) {
+export function pickBestUnit(state, weights = DEFAULT_AI_WEIGHTS) {
+    const w = { ...DEFAULT_AI_WEIGHTS, ...weights };
     const units = state.units.filter(u => u.player === 2 && u.currentWounds > 0 && !u.hasMoved && !u.hasAttacked);
     if (units.length === 0) return null;
 
@@ -71,23 +84,23 @@ export function pickBestUnit(state) {
 
         // Can attack an enemy sitting on a town — highest priority
         const canHitTownEnemy = targets.some(t => enemyOnTownKeys.has(hexKey(t.hex)));
-        if (canHitTownEnemy) score += 100;
-        else if (targets.length > 0) score += 10;
+        if (canHitTownEnemy) score += w.hitTownEnemy;
+        else if (targets.length > 0) score += w.hasTargets;
 
         // Can actually reach a priority town this turn — strong bonus
         if (priorityTowns.length > 0) {
             const reachable = reachableHexes(unit.hex, unit.movement, occupied, obsKeys, stopKeys, costKeys);
             const canCapture = reachable.some(h => priorityTownKeys.has(hexKey(h)));
             if (canCapture) {
-                score += 50;
+                score += w.captureTown;
             } else {
                 const distToTown = Math.min(...priorityTowns.map(t => pathDistance(unit.hex, t, obsKeys, costKeys)));
-                if (distToTown < Infinity) score += 20 / (1 + distToTown);
+                if (distToTown < Infinity) score += w.towardTown / (1 + distToTown);
             }
         } else if (enemies.length > 0) {
             // No priority towns — prefer units close to enemies
             const distToEnemy = Math.min(...enemies.map(e => hexDistance(unit.hex, e.hex)));
-            score += 5 / (1 + distToEnemy);
+            score += w.towardEnemy / (1 + distToEnemy);
         }
 
         if (score > bestScore) {
@@ -302,7 +315,7 @@ export function buildAIPreview(state, action) {
     return null;
 }
 
-export function computeAIAction(state) {
+export function computeAIAction(state, weights = DEFAULT_AI_WEIGHTS) {
     if (state.phase === "consolidate" && state.pendingConsolidation) {
         const unit = state.units.find(u => u.id === state.pendingConsolidation.unitId);
         return { type: "consolidate", accept: shouldConsolidate(unit, state.pendingConsolidation.hex, state) };
@@ -316,7 +329,7 @@ export function computeAIAction(state) {
 
     if (state.phase === "select" || state.phase === "move" || state.phase === "attack") {
         if (!state.selectedUnit) {
-            const unit = pickBestUnit(state);
+            const unit = pickBestUnit(state, weights);
             if (!unit) return { type: "endTurn" };
             return { type: "click", hex: unit.hex };
         }
