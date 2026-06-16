@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { hexKey, reachableHexes, isValidHex, hexDistance, findPath } from "../src/hex.js";
 import { createUnit, resetUID } from "../src/units.js";
-import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, getUnitTerrainEffects, getCombatModifiers } from "../src/game.js";
+import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, computeCancelAttack, getUnitTerrainEffects, getCombatModifiers } from "../src/game.js";
 
 beforeEach(() => resetUID());
 
@@ -1352,5 +1352,53 @@ describe("modificateurs de combat", () => {
         expect(mods.attacker[0].icon).toBe("⛰");
         expect(mods.target).toHaveLength(1);
         expect(mods.target[0].icon).toBe("🏰");
+    });
+});
+
+describe("annulation du choix de cible", () => {
+    function aimingState() {
+        const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
+        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const s = makeState({ units: [attacker, target] });
+        const selected = handleClick(s, attacker.hex);
+        const aiming = handleClick(selected, target.hex);
+        return { attacker, target, selected, aiming };
+    }
+
+    it("entrer en weapon_select puis annuler revient à la sélection avec les cibles", () => {
+        const { attacker, selected, aiming } = aimingState();
+        expect(aiming.phase).toBe("weapon_select");
+        expect(aiming.pendingAttack).not.toBeNull();
+        const cancelled = computeCancelAttack(aiming);
+        expect(cancelled.phase).toBe("select");
+        expect(cancelled.pendingAttack).toBeNull();
+        expect(cancelled.selectedUnit.id).toBe(attacker.id);
+        expect(cancelled.validTargets.map(u => hexKey(u.hex)))
+            .toEqual(selected.validTargets.map(u => hexKey(u.hex)));
+    });
+
+    it("l'état après annulation équivaut à une nouvelle sélection de l'attaquant", () => {
+        const { attacker, aiming } = aimingState();
+        const cancelled = computeCancelAttack(aiming);
+        const reselect = handleClick(cancelled, attacker.hex);
+        expect(cancelled.validTargets.map(u => hexKey(u.hex)))
+            .toEqual(reselect.validTargets.map(u => hexKey(u.hex)));
+        expect(cancelled.validMoves.map(hexKey)).toEqual(reselect.validMoves.map(hexKey));
+        expect(cancelled.attackRangeHexes.map(hexKey)).toEqual(reselect.attackRangeHexes.map(hexKey));
+    });
+
+    it("ne consomme aucune activation ni état d'action", () => {
+        const { attacker, aiming } = aimingState();
+        const cancelled = computeCancelAttack(aiming);
+        expect(cancelled.activationsUsed).toBe(0);
+        expect(cancelled.activatedUnitIds).toEqual([]);
+        const atk = cancelled.units.find(u => u.id === attacker.id);
+        expect(atk.hasMoved).toBe(false);
+        expect(atk.hasAttacked).toBe(false);
+    });
+
+    it("renvoie l'état inchangé s'il n'y a pas de cible en attente", () => {
+        const s = makeState();
+        expect(computeCancelAttack(s)).toBe(s);
     });
 });

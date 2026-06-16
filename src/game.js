@@ -116,6 +116,33 @@ export function computeConsolidate(s, accept) {
     return { ...s, units, townOwnership, dyingUnits, pendingConsolidation: null, ...finishActivation(s, landed.id, units) };
 }
 
+// Calcule l'état de sélection d'une unité : ses déplacements valides, ses cibles
+// et sa portée d'attaque. Factorisé pour être réutilisé à la sélection (clic) et
+// à l'annulation d'un choix de cible (retour à « cible à choisir »).
+function selectUnit(s, cur) {
+    const occupied = new Set(s.units.filter(u => u.currentWounds > 0 && u.id !== cur.id).map(u => hexKey(u.hex)));
+    const { obsKeys, stopKeys, costKeys } = buildTerrainKeys(s);
+    const validMoves = cur.hasMoved ? [] : reachableHexes(cur.hex, cur.movement, occupied, obsKeys, stopKeys, costKeys);
+    const enemies = s.units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
+    const losKeys = buildLosKeys(s);
+    const hillKeys = new Set((s.hills || []).map(hexKey));
+    const rangeBonus = hillKeys.has(hexKey(cur.hex)) ? 1 : 0;
+    const validTargets = cur.hasAttacked ? [] : findValidTargets(cur, enemies, losKeys, rangeBonus);
+    const attackRangeSources = [cur.hex, ...validMoves];
+    const attackRangeHexes = cur.hasAttacked ? [] : computeAttackRange(cur, attackRangeSources, losKeys, hillKeys);
+    return { ...s, selectedUnit: cur, phase: "select", validMoves, validTargets, attackRangeHexes };
+}
+
+// Annule le choix de cible (phase weapon_select) : on revient à l'état « cible à
+// choisir » de l'attaquant, en recalculant ses cibles/déplacements/portée, sans
+// rien consommer. Permet de rechoisir une cible sans re-sélectionner l'unité.
+export function computeCancelAttack(s) {
+    if (!s.pendingAttack) return s;
+    const cur = s.units.find(u => u.id === s.pendingAttack.attacker.id);
+    if (!cur) return { ...s, phase: "select", pendingAttack: null, validMoves: [], validTargets: [], attackRangeHexes: [] };
+    return { ...selectUnit(s, cur), pendingAttack: null };
+}
+
 export function computeDeselect(s) {
     const sel = s.units.find(u => u.id === s.selectedUnit?.id);
     const hasActed = sel && (sel.hasMoved || sel.hasAttacked);
@@ -169,17 +196,7 @@ export function handleClick(s, hex) {
         if (s.activeUnitId && unitOnHex.id !== s.activeUnitId) return s;
         if (s.activatedUnitIds.includes(unitOnHex.id)) return s;
         const cur = s.units.find(u => u.id === unitOnHex.id);
-        const occupied = new Set(s.units.filter(u => u.currentWounds > 0 && u.id !== cur.id).map(u => hexKey(u.hex)));
-        const { obsKeys, stopKeys, costKeys } = buildTerrainKeys(s);
-        const validMoves = cur.hasMoved ? [] : reachableHexes(cur.hex, cur.movement, occupied, obsKeys, stopKeys, costKeys);
-        const enemies = s.units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
-        const losKeys = buildLosKeys(s);
-        const hillKeys = new Set((s.hills || []).map(hexKey));
-        const rangeBonus = hillKeys.has(hexKey(cur.hex)) ? 1 : 0;
-        const validTargets = cur.hasAttacked ? [] : findValidTargets(cur, enemies, losKeys, rangeBonus);
-        const attackRangeSources = [cur.hex, ...validMoves];
-        const attackRangeHexes = cur.hasAttacked ? [] : computeAttackRange(cur, attackRangeSources, losKeys, hillKeys);
-        return { ...s, selectedUnit: cur, phase: "select", validMoves, validTargets, attackRangeHexes };
+        return selectUnit(s, cur);
     }
 
     if (s.selectedUnit) {

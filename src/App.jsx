@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, Fragment } from "react";
 import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.js";
 import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, TERRAIN_DENSITY_LABELS, DEFAULT_TERRAIN_DENSITY, TERRAIN_PRESETS } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION, ATTACK_EFFECT_DURATION, moveAnimDuration } from "./renderer.js";
-import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, getCombatModifiers } from "./game.js";
+import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, computeCancelAttack, getCombatModifiers } from "./game.js";
 import { computeAIAction, buildAIPreview } from "./ai.js";
 import { hostGame, joinGame, generateCode, normalizeCode, isValidCode, onlinePlayerNumber, isNotMyTurn, shouldApplyDamage, applyOnlineMessage } from "./online.js";
 import { setupSteps, nextSetupStep, canAdvanceFromMode } from "./setup.js";
@@ -967,7 +967,7 @@ export default function HexWarhammer() {
 
                             <div className="combat-modal-footer">
                                 {showWeapons && !notMyTurn && (
-                                    <button className="btn btn-grey" style={{ width: "auto", padding: "8px 24px" }} onClick={() => applyAction(s => ({ ...s, phase: "select", pendingAttack: null, validTargets: [], validMoves: [] }))}>✕ Annuler</button>
+                                    <button className="btn btn-grey" style={{ width: "auto", padding: "8px 24px" }} onClick={() => applyAction(computeCancelAttack)}>✕ Annuler</button>
                                 )}
                                 {showResult && (
                                     <button className="btn btn-gold" style={{ width: "auto", padding: "8px 24px" }} onClick={closeCombatModal}>Fermer</button>
