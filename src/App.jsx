@@ -561,52 +561,66 @@ export default function HexWarhammer() {
                 </>}
 
                 {setupStep === "terrain" && <>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 16, width: 420 }}>
-                        <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-                            <button className={`btn ${fairTowns ? "btn-gold" : "btn-grey"}`} onClick={() => setFairTowns(true)} style={{ width: "auto", padding: "7px 18px", marginBottom: 0 }}>
-                                Villes équitables
-                            </button>
-                            <button className={`btn ${!fairTowns ? "btn-gold" : "btn-grey"}`} onClick={() => setFairTowns(false)} style={{ width: "auto", padding: "7px 18px", marginBottom: 0 }}>
-                                Villes aléatoires
-                            </button>
-                        </div>
-
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
-                            {TERRAIN_PRESETS.map(p => {
-                                const active = Object.keys(p.density).every(k => terrainDensity[k] === p.density[k]);
-                                return (
-                                    <button key={p.id} className={`preset-card${active ? " preset-active" : ""}`} onClick={() => setTerrainDensity(p.density)}>
-                                        <span className="preset-icon">{p.icon}</span>
-                                        <span className="preset-label">{p.label}</span>
+                    <div style={{ display: "flex", alignItems: "stretch", gap: 24 }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 16, width: 460 }}>
+                            <div className="panel">
+                                <div className="section-title">Villes</div>
+                                <div style={{ display: "flex", gap: 8 }}>
+                                    <button className={`btn ${fairTowns ? "btn-gold" : "btn-grey"}`} onClick={() => setFairTowns(true)} style={{ flex: 1, marginBottom: 0 }}>
+                                        Équitables
                                     </button>
-                                );
-                            })}
-                        </div>
+                                    <button className={`btn ${!fairTowns ? "btn-gold" : "btn-grey"}`} onClick={() => setFairTowns(false)} style={{ flex: 1, marginBottom: 0 }}>
+                                        Aléatoires
+                                    </button>
+                                </div>
+                            </div>
 
-                        <div style={{ background: "#ece5d8", border: "1px solid #d5cbb8", borderRadius: 6, padding: "12px 18px" }}>
-                            <div className="density-grid">
-                                {[
-                                    { key: "obstacles", label: "🪨 Obstacles" },
-                                    { key: "rivers", label: "💧 Rivières" },
-                                    { key: "towns", label: "🏰 Villes" },
-                                    { key: "forests", label: "🌲 Forêts" },
-                                    { key: "hills", label: "⛰ Collines" },
-                                    { key: "swamps", label: "🟤 Marais" },
-                                ].map(({ key, label }) => (
-                                    <div key={key} className="density-row">
-                                        <span className="density-label">{label}</span>
-                                        <input type="range" min={0} max={3} step={1} className="density-slider" value={terrainDensity[key]} onChange={e => setDensity(key, Number(e.target.value))} />
-                                        <span className="density-value">{TERRAIN_DENSITY_LABELS[terrainDensity[key]]}</span>
-                                    </div>
-                                ))}
+                            <div className="panel">
+                                <div className="section-title">Type de carte</div>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6 }}>
+                                    {TERRAIN_PRESETS.map(p => {
+                                        const active = Object.keys(p.density).every(k => terrainDensity[k] === p.density[k]);
+                                        return (
+                                            <button key={p.id} className={`preset-card${active ? " preset-active" : ""}`} onClick={() => setTerrainDensity(p.density)}>
+                                                <span className="preset-icon">{p.icon}</span>
+                                                <span className="preset-label">{p.label}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div className="panel">
+                                <div className="section-title">Densité du terrain</div>
+                                <div className="density-grid">
+                                    {[
+                                        { key: "obstacles", label: "🪨 Obstacles" },
+                                        { key: "rivers", label: "💧 Rivières" },
+                                        { key: "towns", label: "🏰 Villes" },
+                                        { key: "forests", label: "🌲 Forêts" },
+                                        { key: "hills", label: "⛰ Collines" },
+                                        { key: "swamps", label: "🟤 Marais" },
+                                    ].map(({ key, label }) => (
+                                        <div key={key} className="density-row">
+                                            <span className="density-label">{label}</span>
+                                            <input type="range" min={0} max={3} step={1} className="density-slider" value={terrainDensity[key]} onChange={e => setDensity(key, Number(e.target.value))} />
+                                            <span className="density-value">{TERRAIN_DENSITY_LABELS[terrainDensity[key]]}</span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 
-                        <div style={{ position: "relative", border: "1px solid #d5cbb8", borderRadius: 6, overflow: "hidden", alignSelf: "center" }}>
-                            <canvas ref={previewCanvasRef} width={CANVAS_W} height={CANVAS_H} style={{ display: "block", width: 380, height: 335 }} />
-                            <button className="btn btn-grey" onClick={regeneratePreview} style={{ position: "absolute", top: 8, right: 8, width: "auto", padding: "4px 10px", fontSize: 12, marginBottom: 0, background: "rgba(236,229,216,0.9)" }}>
-                                🔄
-                            </button>
+                        <div className="panel" style={{ display: "flex", flexDirection: "column" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                                <div className="section-title" style={{ marginBottom: 0 }}>Aperçu de la carte</div>
+                                <button className="btn btn-grey" onClick={regeneratePreview} style={{ width: "auto", padding: "4px 10px", fontSize: 12, marginBottom: 0 }}>
+                                    🔄 Régénérer
+                                </button>
+                            </div>
+                            <div style={{ border: "1px solid #d5cbb8", borderRadius: 6, overflow: "hidden", flex: 1 }}>
+                                <canvas ref={previewCanvasRef} width={CANVAS_W} height={CANVAS_H} style={{ display: "block", width: 460, height: 405 }} />
+                            </div>
                         </div>
                     </div>
 
