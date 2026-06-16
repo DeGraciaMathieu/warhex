@@ -184,10 +184,6 @@
 .weapon-card.disabled { opacity: .35; cursor: not-allowed; }
 .weapon-card.ai-highlight { border-color: #a03030; background: #f0d8d0; box-shadow: 0 0 8px rgba(160, 48, 48, 0.4); }
 
-.sr { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; }
-.sl { color: #8a7a60; font-size: 13px; }
-.sv { font-size: 14px; font-weight: 600; }
-
 .roll-chip {
     display: inline-flex; align-items: center; justify-content: center;
     width: 30px; height: 30px; border-radius: 6px; font-size: 15px; font-weight: 700;

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.js";
-import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, TERRAIN_DENSITY_LABELS, DEFAULT_TERRAIN_DENSITY, TERRAIN_PRESETS } from "./units.js";
+import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, TERRAIN_DENSITY_LABELS, DEFAULT_TERRAIN_DENSITY, TERRAIN_PRESETS, computeTownControl } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION, ATTACK_EFFECT_DURATION, moveAnimDuration } from "./renderer.js";
 import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, computeCancelAttack, getCombatModifiers } from "./game.js";
 import { computeAIAction, buildAIPreview } from "./ai.js";
@@ -730,43 +730,24 @@ export default function HexWarhammer() {
                         <button className="btn btn-grey" onClick={restart}>↺ Nouvelle partie</button>
                     </div>
                 ) : <>
-                <div style={{ padding: "16px 20px", borderBottom: "1px solid #d5cbb8", minHeight: 210 }}>
-                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 12, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 12 }}>UNITÉ SÉLECTIONNÉE</div>
-                    {sel ? (
-                        <>
-                            <div style={{ fontSize: 17, fontWeight: 600, color: P[sel.player], marginBottom: 2 }}>{sel.symbol} {sel.name}</div>
-                            <div style={{ fontSize: 13, color: "#8a7a60", marginBottom: 10 }}>Joueur {sel.player}</div>
-                            <div style={{ borderTop: "1px solid #d5cbb8", paddingTop: 10, display: "flex", flexDirection: "column", gap: 2 }}>
-                                {[
-                                    ["PV (points de vie)", `${sel.currentWounds}/${sel.wounds}`, sel.currentWounds > sel.wounds / 2 ? "#4caf50" : "#e53935"],
-                                    ["MVT (mouvement)", sel.movement], ["CC (capacité combat)", `${sel.weaponSkill}+`], ["CT (capacité tir)", `${sel.ballisticSkill}+`],
-                                    ["SVG (sauvegarde)", `${sel.save}+`],
-                                    ["Déplacé", sel.hasMoved ? "✓" : "—"], ["Attaqué", sel.hasAttacked ? "✓" : "—"],
-                                ].map(([label, val, c]) => (
-                                    <div key={label} className="sr">
-                                        <span className="sl">{label}</span>
-                                        <span className="sv" style={c ? { color: c } : {}}>{val}</span>
+                <div style={{ padding: "16px 20px", borderBottom: "1px solid #d5cbb8" }}>
+                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 12, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 12 }}>INFOS DE PARTIE</div>
+                    {(() => {
+                        const control = computeTownControl(state.townOwnership || {});
+                        return (
+                            <div style={{ display: "flex", justifyContent: "space-around" }}>
+                                {[1, 2].map(p => (
+                                    <div key={p} style={{ textAlign: "center" }}>
+                                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: ".15em", color: P[p], marginBottom: 8 }}>JOUEUR {p}</div>
+                                        <div style={{ fontSize: 22, fontWeight: 700, color: P[p] }}>🏰 {control[p]}</div>
+                                        <div style={{ fontSize: 11, color: "#8a7a60", marginBottom: 8 }}>villes</div>
+                                        <div style={{ fontSize: 22, fontWeight: 700, color: P[p] }}>⚔ {state.kills[p]}</div>
+                                        <div style={{ fontSize: 11, color: "#8a7a60" }}>kills</div>
                                     </div>
                                 ))}
                             </div>
-                            <div style={{ borderTop: "1px solid #d5cbb8", paddingTop: 10, marginTop: 6 }}>
-                                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 6 }}>ARMES</div>
-                                {sel.weapons.map(w => (
-                                    <div key={w.id} style={{ fontSize: 13, color: "#3a3020", marginBottom: 8, padding: "6px 8px", background: "#ece6da", borderRadius: 4 }}>
-                                        <div style={{ fontWeight: 600, marginBottom: 3 }}>{w.name} <span style={{ color: "#8a7a60", fontWeight: 400 }}>({w.type === "ranged" ? "tir" : "mêlée"})</span></div>
-                                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 12px", fontSize: 12, color: "#5a5040" }}>
-                                            <span>Portée : {w.minRange ? `${w.minRange}-` : ""}{w.range}</span>
-                                            <span>ATQ : {w.attacks}</span>
-                                            <span>PA : {w.ap}</span>
-                                            <span>DGT : {w.damage}</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </>
-                    ) : (
-                        <div style={{ color: "#a09080", fontSize: 14, fontStyle: "italic" }}>Cliquez sur une de vos unités pour la sélectionner.</div>
-                    )}
+                        );
+                    })()}
                 </div>
 
                 <div style={{ padding: "16px 20px", borderBottom: "1px solid #d5cbb8" }}>
