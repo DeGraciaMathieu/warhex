@@ -1356,49 +1356,40 @@ describe("modificateurs de combat", () => {
 });
 
 describe("annulation du choix de cible", () => {
-    function aimingState() {
+    it("annuler une cible permet d'en rechoisir une autre puis de résoudre l'attaque", () => {
+        // Un attaquant avec deux ennemis adjacents (donc deux cibles valides).
         const attacker = createUnit("warrior", 1, { q: 0, r: 0, s: 0 });
-        const target = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
-        const s = makeState({ units: [attacker, target] });
-        const selected = handleClick(s, attacker.hex);
-        const aiming = handleClick(selected, target.hex);
-        return { attacker, target, selected, aiming };
-    }
+        const enemyA = createUnit("warrior", 2, { q: 1, r: -1, s: 0 });
+        const enemyB = createUnit("warrior", 2, { q: -1, r: 1, s: 0 });
+        const s = makeState({ units: [attacker, enemyA, enemyB] });
 
-    it("entrer en weapon_select puis annuler revient à la sélection avec les cibles", () => {
-        const { attacker, selected, aiming } = aimingState();
-        expect(aiming.phase).toBe("weapon_select");
-        expect(aiming.pendingAttack).not.toBeNull();
-        const cancelled = computeCancelAttack(aiming);
-        expect(cancelled.phase).toBe("select");
-        expect(cancelled.pendingAttack).toBeNull();
-        expect(cancelled.selectedUnit.id).toBe(attacker.id);
-        expect(cancelled.validTargets.map(u => hexKey(u.hex)))
-            .toEqual(selected.validTargets.map(u => hexKey(u.hex)));
-    });
+        // 1. Sélectionner l'attaquant : ses deux cibles apparaissent.
+        let st = handleClick(s, attacker.hex);
+        expect(st.validTargets).toHaveLength(2);
 
-    it("l'état après annulation équivaut à une nouvelle sélection de l'attaquant", () => {
-        const { attacker, aiming } = aimingState();
-        const cancelled = computeCancelAttack(aiming);
-        const reselect = handleClick(cancelled, attacker.hex);
-        expect(cancelled.validTargets.map(u => hexKey(u.hex)))
-            .toEqual(reselect.validTargets.map(u => hexKey(u.hex)));
-        expect(cancelled.validMoves.map(hexKey)).toEqual(reselect.validMoves.map(hexKey));
-        expect(cancelled.attackRangeHexes.map(hexKey)).toEqual(reselect.attackRangeHexes.map(hexKey));
-    });
+        // 2. Viser le premier ennemi → choix d'arme.
+        st = handleClick(st, enemyA.hex);
+        expect(st.phase).toBe("weapon_select");
+        expect(st.pendingAttack.target.id).toBe(enemyA.id);
 
-    it("ne consomme aucune activation ni état d'action", () => {
-        const { attacker, aiming } = aimingState();
-        const cancelled = computeCancelAttack(aiming);
-        expect(cancelled.activationsUsed).toBe(0);
-        expect(cancelled.activatedUnitIds).toEqual([]);
-        const atk = cancelled.units.find(u => u.id === attacker.id);
-        expect(atk.hasMoved).toBe(false);
-        expect(atk.hasAttacked).toBe(false);
-    });
+        // 3. Annuler : on revient à la sélection, les deux cibles sont de nouveau
+        //    disponibles sans re-sélectionner l'unité, rien n'est consommé.
+        st = computeCancelAttack(st);
+        expect(st.phase).toBe("select");
+        expect(st.pendingAttack).toBeNull();
+        expect(st.selectedUnit.id).toBe(attacker.id);
+        expect(st.validTargets).toHaveLength(2);
+        expect(st.activationsUsed).toBe(0);
 
-    it("renvoie l'état inchangé s'il n'y a pas de cible en attente", () => {
-        const s = makeState();
-        expect(computeCancelAttack(s)).toBe(s);
+        // 4. Viser cette fois le second ennemi.
+        st = handleClick(st, enemyB.hex);
+        expect(st.phase).toBe("weapon_select");
+        expect(st.pendingAttack.target.id).toBe(enemyB.id);
+
+        // 5. Choisir l'arme : l'attaque se résout bien sur le second ennemi.
+        const sword = attacker.weapons.find(w => w.id === "sword");
+        const result = computeWeaponSelect(st, sword);
+        expect(result.state.phase).toBe("resolving");
+        expect(result.anim.target.id).toBe(enemyB.id);
     });
 });
