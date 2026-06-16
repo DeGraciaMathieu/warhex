@@ -332,6 +332,39 @@ describe("génération de la carte", () => {
     });
 });
 
+// Non-régression : la carte prévisualisée doit être exactement celle jouée.
+// Auparavant initState régénérait un terrain aléatoire à chaque appel, donc la
+// preview et le lancement de partie produisaient deux cartes différentes.
+describe("réutilisation du terrain (preview = partie)", () => {
+    const TERRAIN_KEYS = ["obstacles", "rivers", "towns", "forests", "hills", "swamps"];
+
+    it("réutilise tel quel le terrain fourni en option", () => {
+        resetUID();
+        const preview = initState();
+        const terrain = Object.fromEntries(TERRAIN_KEYS.map(k => [k, preview[k]]));
+        resetUID();
+        const game = initState(undefined, { terrain });
+        for (const k of TERRAIN_KEYS) {
+            expect(game[k].map(hexKey)).toEqual(preview[k].map(hexKey));
+        }
+    });
+
+    it("génère un terrain frais quand aucun n'est fourni", () => {
+        // Deux générations indépendantes doivent différer (terrain aléatoire).
+        let identical = true;
+        for (let i = 0; i < 5 && identical; i++) {
+            resetUID();
+            const a = initState();
+            resetUID();
+            const b = initState();
+            identical = TERRAIN_KEYS.every(k =>
+                JSON.stringify(a[k].map(hexKey)) === JSON.stringify(b[k].map(hexKey))
+            );
+        }
+        expect(identical).toBe(false);
+    });
+});
+
 describe("sélection d'armée", () => {
     it("UNIT_TEMPLATES expose les 4 types d'unités", () => {
         expect(Object.keys(UNIT_TEMPLATES)).toEqual(expect.arrayContaining(["warrior", "knight", "sniper", "berserker"]));

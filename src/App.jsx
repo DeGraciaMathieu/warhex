@@ -392,7 +392,12 @@ export default function HexWarhammer() {
 
     function startGame() {
         resetUID();
-        const s = initState(selections, { fairTowns, terrainDensity });
+        // Réutilise le terrain de la preview pour que la carte jouée soit
+        // exactement celle prévisualisée à l'étape précédente.
+        const terrain = previewState
+            ? { obstacles: previewState.obstacles, rivers: previewState.rivers, towns: previewState.towns, forests: previewState.forests, hills: previewState.hills, swamps: previewState.swamps }
+            : undefined;
+        const s = initState(selections, { fairTowns, terrainDensity, terrain });
         if (online) sendMsg({ type: "start", state: s });
         setState(s);
         setArmyPhase(false);

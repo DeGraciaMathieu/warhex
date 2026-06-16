@@ -237,13 +237,11 @@ export const TERRAIN_PRESETS = [
     { id: "siege", label: "Ville assiégée", icon: "🏰", desc: "Beaucoup de villes et obstacles, combat rapproché", density: { obstacles: 3, rivers: 0, towns: 3, forests: 0, hills: 1, swamps: 0 } },
 ];
 
-export function initState(armies, options = {}) {
+// Génère les terrains aléatoirement à partir des positions des unités réservées
+// et de la densité choisie. Extrait d'initState pour pouvoir générer un terrain
+// une seule fois (preview) puis le réutiliser tel quel au lancement de la partie.
+export function generateTerrain(units, options = {}) {
     const { fairTowns = true, terrainDensity = DEFAULT_TERRAIN_DENSITY } = options;
-    const picks = armies || DEFAULT_ARMIES;
-    const units = [
-        ...picks[1].map((type, i) => createUnit(type, 1, SPAWN_POSITIONS[1][i])),
-        ...picks[2].map((type, i) => createUnit(type, 2, SPAWN_POSITIONS[2][i])),
-    ];
     const centerHex = { q: 0, r: 0, s: 0 };
     const reservedKeys = new Set([...units.map(u => `${u.hex.q},${u.hex.r},${u.hex.s}`), `0,0,0`]);
     const obstacleCount = TERRAIN_COUNTS.obstacles[terrainDensity.obstacles];
@@ -269,6 +267,18 @@ export function initState(armies, options = {}) {
     const allReserved5 = new Set([...allReserved4, ...hillKeys]);
     const swampCount = TERRAIN_COUNTS.swamps[terrainDensity.swamps];
     const swamps = randomAvailableHexes(swampCount, allReserved5);
+    return { obstacles, rivers, towns, forests, hills, swamps };
+}
+
+export function initState(armies, options = {}) {
+    const picks = armies || DEFAULT_ARMIES;
+    const units = [
+        ...picks[1].map((type, i) => createUnit(type, 1, SPAWN_POSITIONS[1][i])),
+        ...picks[2].map((type, i) => createUnit(type, 2, SPAWN_POSITIONS[2][i])),
+    ];
+    // Si un terrain a déjà été généré (preview), on le réutilise tel quel pour
+    // que la carte jouée soit exactement celle prévisualisée.
+    const { obstacles, rivers, towns, forests, hills, swamps } = options.terrain || generateTerrain(units, options);
     return {
         units,
         obstacles,
