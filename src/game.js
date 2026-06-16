@@ -152,6 +152,13 @@ export function computeDeselect(s) {
     return { ...s, selectedUnit: null, activeUnitId: null, phase: "select", validMoves: [], validTargets: [], attackRangeHexes: [] };
 }
 
+// Unité vivante présente sur un hex donné, ou null. Pure : sert à la fois au clic
+// de sélection et au survol (tooltip de stats).
+export function unitAt(units, hex) {
+    const k = hexKey(hex);
+    return units.find(u => u.currentWounds > 0 && hexKey(u.hex) === k) || null;
+}
+
 export function handleClick(s, hex) {
     if (s.winner || s.phase === "weapon_select" || s.phase === "resolving" || s.autoEndTurn) return s;
     if (s.phase === "consolidate") {
@@ -161,7 +168,7 @@ export function handleClick(s, hex) {
         return s;
     }
     const k = hexKey(hex);
-    const unitOnHex = s.units.find(u => u.currentWounds > 0 && hexKey(u.hex) === k);
+    const unitOnHex = unitAt(s.units, hex);
     const moveKeys = new Set(s.validMoves.map(hexKey));
     const targetKeys = new Set((s.validTargets || []).map(u => hexKey(u.hex)));
 

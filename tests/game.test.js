@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { hexKey, reachableHexes, isValidHex, hexDistance, findPath } from "../src/hex.js";
 import { createUnit, resetUID } from "../src/units.js";
-import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, computeCancelAttack, getUnitTerrainEffects, getCombatModifiers } from "../src/game.js";
+import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, computeCancelAttack, unitAt, getUnitTerrainEffects, getCombatModifiers } from "../src/game.js";
 
 beforeEach(() => resetUID());
 
@@ -1391,5 +1391,25 @@ describe("annulation du choix de cible", () => {
         const result = computeWeaponSelect(st, sword);
         expect(result.state.phase).toBe("resolving");
         expect(result.anim.target.id).toBe(enemyB.id);
+    });
+});
+
+describe("unité sous le curseur (unitAt)", () => {
+    it("renvoie l'unité vivante présente sur l'hex", () => {
+        const u = createUnit("warrior", 1, { q: 2, r: -1, s: -1 });
+        const enemy = createUnit("warrior", 2, { q: -2, r: 1, s: 1 });
+        expect(unitAt([u, enemy], { q: 2, r: -1, s: -1 })).toBe(u);
+        expect(unitAt([u, enemy], { q: -2, r: 1, s: 1 })).toBe(enemy);
+    });
+
+    it("renvoie null sur un hex vide", () => {
+        const u = createUnit("warrior", 1, { q: 2, r: -1, s: -1 });
+        expect(unitAt([u], { q: 0, r: 0, s: 0 })).toBeNull();
+    });
+
+    it("ignore une unité morte", () => {
+        const dead = createUnit("warrior", 1, { q: 2, r: -1, s: -1 });
+        dead.currentWounds = 0;
+        expect(unitAt([dead], { q: 2, r: -1, s: -1 })).toBeNull();
     });
 });

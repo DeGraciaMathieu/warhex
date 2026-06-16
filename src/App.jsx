@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, Fragment } from "react";
 import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.js";
 import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, TERRAIN_DENSITY_LABELS, DEFAULT_TERRAIN_DENSITY, TERRAIN_PRESETS, computeTownControl } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION, ATTACK_EFFECT_DURATION, moveAnimDuration } from "./renderer.js";
-import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, computeCancelAttack, getCombatModifiers } from "./game.js";
+import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, computeCancelAttack, unitAt, getCombatModifiers } from "./game.js";
 import { computeAIAction, buildAIPreview } from "./ai.js";
 import { hostGame, joinGame, generateCode, normalizeCode, isValidCode, onlinePlayerNumber, isNotMyTurn, shouldApplyDamage, applyOnlineMessage } from "./online.js";
 import { setupSteps, nextSetupStep, canAdvanceFromMode } from "./setup.js";
@@ -110,6 +110,9 @@ function WeaponCard({ weapon, attacker, target, hills, towns, aiPreview, onSelec
 }
 
 const ARMY_SIZE = 5;
+// Délai (ms) avant l'apparition du tooltip d'unité (hover intent) : évite que le
+// tooltip clignote quand le curseur ne fait que traverser le plateau.
+const TOOLTIP_DELAY = 500;
 
 export default function HexWarhammer() {
     const canvasRef = useRef(null);
@@ -124,6 +127,8 @@ export default function HexWarhammer() {
     const [selections, setSelections] = useState({ 1: [], 2: [] });
     const [state, setState] = useState(null);
     const [hoveredHex, setHoveredHex] = useState(null);
+    const [tooltipPos, setTooltipPos] = useState(null);
+    const [tooltipUnitId, setTooltipUnitId] = useState(null);
     const [diceAnim, setDiceAnim] = useState(null);
     const [pendingDamage, setPendingDamage] = useState(null);
     const [online, setOnline] = useState(null);
@@ -205,6 +210,16 @@ export default function HexWarhammer() {
     useEffect(() => {
         if (!armyPhase && state) drawScene(canvasRef.current, state, hoveredHex);
     }, [state, hoveredHex, armyPhase]);
+
+    // Hover intent : le tooltip n'apparaît qu'après un court délai passé sur la
+    // même unité. La dépendance porte sur l'id de l'unité survolée (et non sur la
+    // position) : le timer n'est réarmé que lorsqu'on change réellement d'unité.
+    const hoveredUnitId = (state && hoveredHex) ? (unitAt(state.units, hoveredHex)?.id ?? null) : null;
+    useEffect(() => {
+        if (hoveredUnitId == null) { setTooltipUnitId(null); return; }
+        const timer = setTimeout(() => setTooltipUnitId(hoveredUnitId), TOOLTIP_DELAY);
+        return () => clearTimeout(timer);
+    }, [hoveredUnitId]);
 
     function regeneratePreview() {
         resetUID();
@@ -348,6 +363,7 @@ export default function HexWarhammer() {
         const y = (e.clientY - rect.top) * sy - OY;
         const hex = pixelToHex(x, y);
         setHoveredHex(isValidHex(hex) ? hex : null);
+        setTooltipPos({ x: e.clientX, y: e.clientY });
     }
 
     function startMove() { applyAction(computeMove); }
@@ -659,6 +675,7 @@ export default function HexWarhammer() {
     }
 
     const sel = state.selectedUnit ? state.units.find(u => u.id === state.selectedUnit.id) : null;
+    const hoveredUnit = hoveredHex ? unitAt(state.units, hoveredHex) : null;
     const phaseLabel = {
         select: "SÉLECTION", move: "MOUVEMENT", attack: "ATTAQUE", weapon_select: "CHOIX D'ARME", resolving: "RÉSOLUTION", consolidate: "CONSOLIDATION",
     }[state.phase] || "";
@@ -683,7 +700,7 @@ export default function HexWarhammer() {
                     style={{ border: "1px solid #c8b898", maxWidth: "100%" }}
                     onClick={onCanvasClick}
                     onMouseMove={onMouseMove}
-                    onMouseLeave={() => setHoveredHex(null)}
+                    onMouseLeave={() => { setHoveredHex(null); setTooltipPos(null); }}
                 />
 
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", maxWidth: CANVAS_W, width: "100%", marginTop: 6 }}>
@@ -773,6 +790,22 @@ export default function HexWarhammer() {
 
             </>}
             </div>
+
+            {hoveredUnit && tooltipPos && tooltipUnitId === hoveredUnit.id && (
+                <div className="unit-tooltip" style={{ left: tooltipPos.x + 16, top: tooltipPos.y + 16 }}>
+                    <div style={{ fontWeight: 600, color: P[hoveredUnit.player], marginBottom: 4 }}>{hoveredUnit.symbol} {hoveredUnit.name}</div>
+                    <div style={{ display: "flex", gap: 12, marginBottom: 4 }}>
+                        <span style={{ color: hoveredUnit.currentWounds > hoveredUnit.wounds / 2 ? "#4caf50" : "#e53935", fontWeight: 600 }}>PV {hoveredUnit.currentWounds}/{hoveredUnit.wounds}</span>
+                        <span>MVT {hoveredUnit.movement}</span>
+                        <span>SVG {hoveredUnit.save}+</span>
+                    </div>
+                    {hoveredUnit.weapons.map(w => (
+                        <div key={w.id} style={{ color: "#5a5040" }}>
+                            {w.name} <span style={{ color: "#8a7a60" }}>({w.type === "ranged" ? "tir" : "mêlée"})</span> · portée {w.minRange ? `${w.minRange}-` : ""}{w.range} · DGT {w.damage}
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {state && !state.winner && (state.phase === "weapon_select" && state.pendingAttack || diceAnim) && (() => {
                 const showWeapons = state.phase === "weapon_select" && state.pendingAttack && (!diceAnim || diceAnim.done);
