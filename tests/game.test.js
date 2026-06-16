@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { hexKey, reachableHexes, isValidHex, hexDistance, findPath } from "../src/hex.js";
-import { createUnit, resetUID } from "../src/units.js";
+import { createUnit, resetUID, initState, firstPlayerOfRound } from "../src/units.js";
 import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, computeCancelAttack, unitAt, getUnitTerrainEffects, getSaveModifier, getRangeModifier, getCombatModifiers } from "../src/game.js";
 
 beforeEach(() => resetUID());
@@ -398,10 +398,12 @@ describe("fin de tour", () => {
     });
 
     it("computeEndTurn incrémente le round en fin de round", () => {
+        // Round 3 (impair) ouvert par J1 et clôturé par J2 ; le round 4 (pair)
+        // s'ouvre alors sur J2.
         const s = makeState({ currentPlayer: 2, round: 3 });
         const result = computeEndTurn(s);
         expect(result.round).toBe(4);
-        expect(result.currentPlayer).toBe(1);
+        expect(result.currentPlayer).toBe(2);
     });
 
     it("computeEndTurn n'incrémente pas le round en milieu de round", () => {
@@ -412,16 +414,19 @@ describe("fin de tour", () => {
     });
 
     it("computeEndTurn alimente scoreHistory en fin de round", () => {
+        // Round 2 (pair) ouvert par J2 et clôturé par J1 : la fin de round survient
+        // donc quand c'est J1 qui vient de jouer.
         const town = { q: 0, r: 0, s: 0 };
         const u1 = createUnit("warrior", 1, town);
-        const s = makeState({ units: [u1], towns: [town], currentPlayer: 2, round: 2, townOwnership: { [hexKey(town)]: 1 } });
+        const s = makeState({ units: [u1], towns: [town], currentPlayer: 1, round: 2, townOwnership: { [hexKey(town)]: 1 } });
         const result = computeEndTurn(s);
         expect(result.scoreHistory).toHaveLength(1);
         expect(result.scoreHistory[0]).toEqual({ round: 2, scores: { 1: 1, 2: 0 } });
     });
 
     it("computeEndTurn ne modifie pas scoreHistory en milieu de round", () => {
-        const s = makeState({ currentPlayer: 1, round: 2 });
+        // Round 2 ouvert par J2 : après le demi-tour de J2, J1 doit encore jouer.
+        const s = makeState({ currentPlayer: 2, round: 2 });
         const result = computeEndTurn(s);
         expect(result.scoreHistory).toEqual([]);
     });
@@ -984,30 +989,64 @@ describe("indicateurs de terrain", () => {
 });
 
 describe("fin de partie", () => {
-    it("computeEndTurn déclare un gagnant au round 7", () => {
+    it("computeEndTurn déclare un gagnant au round 8", () => {
+        // Round 8 (pair) clôturé par J1 : la fin de partie survient après son tour.
         const town = { q: 0, r: 0, s: 0 };
         const u1 = createUnit("warrior", 1, town);
         const enemy = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
         const s = makeState({
-            units: [u1, enemy], towns: [town], currentPlayer: 2,
-            round: 7, scores: { 1: 3, 2: 1 },
+            units: [u1, enemy], towns: [town], currentPlayer: 1,
+            round: 8, scores: { 1: 3, 2: 1 },
             townOwnership: { [hexKey(town)]: 1 },
         });
         const result = computeEndTurn(s);
         expect(result.winner).not.toBeNull();
     });
 
-    it("computeEndTurn ne déclare pas de gagnant avant le round 7", () => {
+    it("computeEndTurn ne déclare pas de gagnant avant le round 8", () => {
+        // Fin du round 4 (clôturé par J1) mais round < 8 → pas encore de vainqueur.
         const town = { q: 0, r: 0, s: 0 };
         const u1 = createUnit("warrior", 1, town);
         const enemy = createUnit("warrior", 2, { q: 3, r: -3, s: 0 });
         const s = makeState({
-            units: [u1, enemy], towns: [town], currentPlayer: 2,
+            units: [u1, enemy], towns: [town], currentPlayer: 1,
             round: 4, scores: { 1: 10, 2: 0 },
             townOwnership: { [hexKey(town)]: 1 },
         });
         const result = computeEndTurn(s);
         expect(result.winner).toBeNull();
+    });
+});
+
+describe("ordre de tour alterné (Thue-Morse)", () => {
+    it("firstPlayerOfRound alterne par parité du round", () => {
+        expect(firstPlayerOfRound(1)).toBe(1);
+        expect(firstPlayerOfRound(2)).toBe(2);
+        expect(firstPlayerOfRound(7)).toBe(1);
+        expect(firstPlayerOfRound(8)).toBe(2);
+    });
+
+    it("la séquence des demi-tours d'une partie suit 1 2 2 1 1 2 2 1…", () => {
+        let s = initState({ 1: ["warrior"], 2: ["warrior"] });
+        const seq = [];
+        while (!s.winner && seq.length < 16) {
+            seq.push(s.currentPlayer);
+            s = computeEndTurn(s);
+        }
+        expect(seq).toEqual([1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1]);
+    });
+
+    it("chaque joueur ouvre et clôt exactement 4 des 8 rounds", () => {
+        let s = initState({ 1: ["warrior"], 2: ["warrior"] });
+        const starters = [];
+        let prevRound = 0;
+        while (!s.winner) {
+            if (s.round !== prevRound) { starters.push(s.currentPlayer); prevRound = s.round; }
+            s = computeEndTurn(s);
+        }
+        expect(starters).toHaveLength(8);
+        expect(starters.filter(p => p === 1)).toHaveLength(4);
+        expect(starters.filter(p => p === 2)).toHaveLength(4);
     });
 });
 

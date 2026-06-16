@@ -1,6 +1,6 @@
 import { hexDistance, hexKey, reachableHexes, findPath, hasLineOfSight, hexesInRange } from "./hex.js";
 import { resolveAttack, findValidTargets } from "./combat.js";
-import { computeTownControl, checkWinner, ACTIVATIONS_PER_TURN } from "./units.js";
+import { computeTownControl, checkWinner, ACTIVATIONS_PER_TURN, firstPlayerOfRound } from "./units.js";
 
 export function getUnitTerrainEffects(unit, state) {
     const k = hexKey(unit.hex);
@@ -318,7 +318,10 @@ export function applyDamage(s, anim) {
 export function computeEndTurn(s) {
     if (s.winner) return s;
     const nextPlayer = s.currentPlayer === 1 ? 2 : 1;
-    const endOfRound = nextPlayer === 1;
+    // Un round = un demi-tour par joueur. Il se termine quand le prochain joueur
+    // redevient celui qui l'a ouvert (les deux ont joué), starter dérivé de la
+    // parité du round (cf. firstPlayerOfRound).
+    const endOfRound = nextPlayer === firstPlayerOfRound(s.round);
     const scores = { ...s.scores };
     if (endOfRound) {
         const control = computeTownControl(s.townOwnership || {});
@@ -328,10 +331,13 @@ export function computeEndTurn(s) {
     const scoreHistory = endOfRound ? [...s.scoreHistory, { round: s.round, scores: { 1: scores[1], 2: scores[2] } }] : s.scoreHistory;
     const winner = endOfRound ? checkWinner(scores, s.round) : null;
     const newRound = endOfRound && !winner ? s.round + 1 : s.round;
+    // En fin de round, on passe au joueur qui ouvre le round suivant (pas
+    // forcément l'autre camp, du fait de l'alternance).
+    const newCurrentPlayer = endOfRound ? firstPlayerOfRound(newRound) : nextPlayer;
     return {
         ...s, scores, scoreHistory,
         units: s.units.map(u => ({ ...u, hasMoved: false, hasAttacked: false })),
-        currentPlayer: nextPlayer, activeUnitId: null, activationsUsed: 0, activatedUnitIds: [],
+        currentPlayer: newCurrentPlayer, activeUnitId: null, activationsUsed: 0, activatedUnitIds: [],
         phase: "select", selectedUnit: null, validMoves: [], validTargets: [], attackRangeHexes: [], pendingAttack: null, pendingConsolidation: null,
         round: newRound, winner,
         autoEndTurn: false,

@@ -34,21 +34,21 @@ describe("système de points", () => {
         expect(control[2]).toBe(0);
     });
 
-    it("la partie ne se termine pas avant le tour 7", () => {
-        expect(checkWinner({ 1: 5, 2: 0 }, 6)).toBeNull();
+    it("la partie ne se termine pas avant le tour 8", () => {
+        expect(checkWinner({ 1: 5, 2: 0 }, 7)).toBeNull();
         expect(checkWinner({ 1: 5, 2: 0 }, 3)).toBeNull();
     });
 
-    it("le joueur avec le plus de points gagne au tour 7", () => {
-        expect(checkWinner({ 1: 7, 2: 3 }, 7)).toBe(1);
-        expect(checkWinner({ 1: 2, 2: 6 }, 7)).toBe(2);
+    it("le joueur avec le plus de points gagne au tour 8", () => {
+        expect(checkWinner({ 1: 7, 2: 3 }, 8)).toBe(1);
+        expect(checkWinner({ 1: 2, 2: 6 }, 8)).toBe(2);
     });
 
-    it("égalité de points au tour 7 donne un match nul", () => {
-        expect(checkWinner({ 1: 4, 2: 4 }, 7)).toBe("draw");
+    it("égalité de points au tour 8 donne un match nul", () => {
+        expect(checkWinner({ 1: 4, 2: 4 }, 8)).toBe("draw");
     });
 
-    it("la partie peut se terminer après le tour 7", () => {
+    it("la partie peut se terminer après le tour 8", () => {
         expect(checkWinner({ 1: 10, 2: 3 }, 9)).toBe(1);
         expect(checkWinner({ 1: 2, 2: 8 }, 8)).toBe(2);
     });

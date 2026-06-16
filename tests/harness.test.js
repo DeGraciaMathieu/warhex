@@ -13,7 +13,7 @@ describe("harness de simulation", () => {
         expect(aborted).toBe(false);
         expect(state.winner).not.toBeNull();
         expect([1, 2, "draw"]).toContain(state.winner);
-        expect(state.round).toBeGreaterThanOrEqual(7);
+        expect(state.round).toBeGreaterThanOrEqual(8);
     });
 
     it("l'adaptateur de perspective produit une action valide pour le joueur 1", () => {
