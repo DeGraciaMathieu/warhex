@@ -9,6 +9,30 @@ export const OY = CANVAS_H / 2;
 export const DEATH_ANIM_DURATION = 600;
 export const HIT_EFFECT_DURATION = 500;
 export const ATTACK_EFFECT_DURATION = 400;
+export const MOVE_ANIM_PER_HEX = 110;
+export const MOVE_ANIM_MAX = 700;
+
+// Durée totale de l'animation de déplacement (proportionnelle au nombre de
+// cases, plafonnée pour rester réactive).
+export function moveAnimDuration(path) {
+    return Math.min((path.length - 1) * MOVE_ANIM_PER_HEX, MOVE_ANIM_MAX);
+}
+
+// Position pixel (repère local hex) de l'unité en cours de déplacement le long
+// de son chemin, ou null si l'animation est terminée.
+function movingUnitPixel(movingUnit, now) {
+    const { path, time } = movingUnit;
+    const duration = moveAnimDuration(path);
+    const elapsed = Math.max(0, now - time);
+    if (elapsed >= duration) return null;
+    const segments = path.length - 1;
+    const pos = (elapsed / duration) * segments;
+    const i = Math.min(Math.floor(pos), segments - 1);
+    const t = pos - i;
+    const a = hexToPixel(path[i].q, path[i].r);
+    const b = hexToPixel(path[i + 1].q, path[i + 1].r);
+    return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+}
 
 export function drawScene(canvas, state, hoveredHex) {
     if (!canvas) return;
@@ -133,9 +157,13 @@ export function drawScene(canvas, state, hoveredHex) {
         if (elapsed < HIT_EFFECT_DURATION) activeShakes.set(hexKey(e.hex), elapsed);
     });
 
+    const movingUnit = state.movingUnit;
+    const movingPixel = movingUnit ? movingUnitPixel(movingUnit, now) : null;
+
     state.units.forEach(unit => {
         if (unit.currentWounds <= 0) return;
-        const { x, y } = hexToPixel(unit.hex.q, unit.hex.r);
+        const moving = movingPixel && movingUnit.id === unit.id;
+        const { x, y } = moving ? movingPixel : hexToPixel(unit.hex.q, unit.hex.r);
         const uk = hexKey(unit.hex);
         const shakeElapsed = activeShakes.get(uk);
         const shakeOx = shakeElapsed !== undefined ? Math.sin(shakeElapsed / 20) * 4 * (1 - shakeElapsed / HIT_EFFECT_DURATION) : 0;

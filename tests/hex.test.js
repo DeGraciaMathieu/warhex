@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { hexDistance, hexKey, hexToPixel, pixelToHex, isValidHex, hexNeighbors, hasLineOfSight, hexesInRange, pathDistance } from "../src/hex.js";
+import { hexDistance, hexKey, hexToPixel, pixelToHex, isValidHex, hexNeighbors, hasLineOfSight, hexesInRange, pathDistance, findPath, reachableHexes } from "../src/hex.js";
 
 describe("distance hexagonale", () => {
     it("la distance entre un hex et lui-même est 0", () => {
@@ -116,6 +116,66 @@ describe("pathDistance", () => {
         const costKeys = new Set([hexKey(forest)]);
         // Sans coût = 2, avec forêt au milieu = 3
         expect(pathDistance(a, b, new Set(), costKeys)).toBe(3);
+    });
+});
+
+describe("findPath", () => {
+    const empty = new Set();
+
+    it("renvoie [start] quand l'origine est la cible", () => {
+        const hex = { q: 0, r: 0, s: 0 };
+        expect(findPath(hex, hex, 5, empty)).toEqual([hex]);
+    });
+
+    it("renvoie une suite contiguë de cases de l'origine à la cible", () => {
+        const start = { q: 0, r: 0, s: 0 };
+        const target = { q: 3, r: 0, s: -3 };
+        const path = findPath(start, target, 5, empty);
+        expect(hexKey(path[0])).toBe(hexKey(start));
+        expect(hexKey(path[path.length - 1])).toBe(hexKey(target));
+        for (let i = 1; i < path.length; i++) {
+            expect(hexDistance(path[i - 1], path[i])).toBe(1);
+        }
+    });
+
+    it("ne traverse jamais un obstacle et contourne", () => {
+        const start = { q: 0, r: 0, s: 0 };
+        const target = { q: 2, r: 0, s: -2 };
+        const obstacle = { q: 1, r: 0, s: -1 };
+        const obsKeys = new Set([hexKey(obstacle)]);
+        const path = findPath(start, target, 5, empty, obsKeys);
+        expect(path.some(h => hexKey(h) === hexKey(obstacle))).toBe(false);
+        expect(path.length).toBeGreaterThan(hexDistance(start, target) + 1);
+    });
+
+    it("renvoie [] quand la cible n'est pas atteignable dans le mouvement", () => {
+        const start = { q: 0, r: 0, s: 0 };
+        const target = { q: 4, r: 0, s: -4 };
+        expect(findPath(start, target, 2, empty)).toEqual([]);
+    });
+
+    it("respecte le coût double des terrains (longueur ≤ mouvement en coût)", () => {
+        const start = { q: 0, r: 0, s: 0 };
+        const target = { q: 2, r: 0, s: -2 };
+        const forest = { q: 1, r: 0, s: -1 };
+        const costKeys = new Set([hexKey(forest)]);
+        // Coût direct = 1 (forêt=2) + 1 = 3, contournement = 3 aussi.
+        const path = findPath(start, target, 3, empty, empty, empty, costKeys);
+        expect(hexKey(path[path.length - 1])).toBe(hexKey(target));
+        // Au-delà du budget, inatteignable.
+        expect(findPath(start, target, 2, empty, empty, empty, costKeys)).toEqual([]);
+    });
+
+    it("n'atteint que des cases que reachableHexes considère atteignables", () => {
+        const start = { q: 0, r: 0, s: 0 };
+        const movement = 3;
+        const obsKeys = new Set([hexKey({ q: 1, r: 0, s: -1 })]);
+        const reachable = new Set(reachableHexes(start, movement, empty, obsKeys).map(hexKey));
+        const target = { q: 2, r: -1, s: -1 };
+        if (reachable.has(hexKey(target))) {
+            const path = findPath(start, target, movement, empty, obsKeys);
+            expect(hexKey(path[path.length - 1])).toBe(hexKey(target));
+        }
     });
 });
 

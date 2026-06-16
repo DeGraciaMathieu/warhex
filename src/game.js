@@ -1,4 +1,4 @@
-import { hexDistance, hexKey, reachableHexes, hasLineOfSight, hexesInRange } from "./hex.js";
+import { hexDistance, hexKey, reachableHexes, findPath, hasLineOfSight, hexesInRange } from "./hex.js";
 import { resolveAttack, findValidTargets } from "./combat.js";
 import { computeTownControl, checkWinner, ACTIVATIONS_PER_TURN } from "./units.js";
 
@@ -145,20 +145,24 @@ export function handleClick(s, hex) {
 
     if ((s.phase === "select" || s.phase === "move") && moveKeys.has(k)) {
         const hillKeys = new Set((s.hills || []).map(hexKey));
+        const occupied = new Set(s.units.filter(u => u.currentWounds > 0 && u.id !== s.selectedUnit.id).map(u => hexKey(u.hex)));
+        const { obsKeys, stopKeys, costKeys } = buildTerrainKeys(s);
+        const path = findPath(s.selectedUnit.hex, hex, s.selectedUnit.movement, occupied, obsKeys, stopKeys, costKeys);
+        const movingUnit = path.length > 1 ? { id: s.selectedUnit.id, path, time: Date.now() } : null;
         const { landed: poisoned, townOwnership } = applyArrivalEffects(s, { ...s.selectedUnit, hasMoved: true }, hex);
         const units = s.units.map(u => u.id === poisoned.id ? poisoned : u);
         if (poisoned.currentWounds <= 0) {
             const dyingUnits = [...(s.dyingUnits || []), { hex: poisoned.hex, symbol: poisoned.symbol, player: poisoned.player, deathTime: Date.now() }];
-            return { ...s, units, townOwnership, dyingUnits, ...finishActivation(s, poisoned.id, units) };
+            return { ...s, units, townOwnership, movingUnit, dyingUnits, ...finishActivation(s, poisoned.id, units) };
         }
         const losKeys = buildLosKeys(s);
         const enemies = units.filter(u => u.player !== s.currentPlayer && u.currentWounds > 0);
         const rangeBonus = hillKeys.has(hexKey(poisoned.hex)) ? 1 : 0;
         const validTargets = poisoned.hasAttacked ? [] : findValidTargets(poisoned, enemies, losKeys, rangeBonus);
         if (validTargets.length === 0) {
-            return { ...s, units, townOwnership, ...finishActivation(s, poisoned.id, units) };
+            return { ...s, units, townOwnership, movingUnit, ...finishActivation(s, poisoned.id, units) };
         }
-        return { ...s, units, townOwnership, selectedUnit: poisoned, activeUnitId: poisoned.id, phase: "select", validMoves: [], validTargets, attackRangeHexes: [], autoEndTurn: false };
+        return { ...s, units, townOwnership, movingUnit, selectedUnit: poisoned, activeUnitId: poisoned.id, phase: "select", validMoves: [], validTargets, attackRangeHexes: [], autoEndTurn: false };
     }
 
     if (unitOnHex && unitOnHex.player === s.currentPlayer) {

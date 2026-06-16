@@ -105,6 +105,42 @@ export function reachableHexes(start, movement, occupiedKeys, obstacleKeys = new
     return result;
 }
 
+// Reconstruit le trajet (origine incluse → cible) réellement emprunté, en
+// reproduisant la traversée de reachableHexes pour rester cohérent avec les
+// cases atteignables. Renvoie [] si la cible n'est pas atteignable.
+export function findPath(start, target, movement, occupiedKeys, obstacleKeys = new Set(), stopKeys = new Set(), costKeys = new Set()) {
+    const startKey = hexKey(start);
+    const targetKey = hexKey(target);
+    if (startKey === targetKey) return [start];
+    const visited = new Map([[startKey, 0]]);
+    const cameFrom = new Map([[startKey, null]]);
+    const queue = [start];
+    while (queue.length) {
+        const cur = queue.shift();
+        const curKey = hexKey(cur);
+        const dist = visited.get(curKey);
+        const isStopped = curKey !== startKey && stopKeys.has(curKey);
+        if (dist < movement && !isStopped) {
+            for (const n of hexNeighbors(cur)) {
+                const k = hexKey(n);
+                if (!visited.has(k) && !occupiedKeys.has(k) && !obstacleKeys.has(k) && isValidHex(n)) {
+                    const cost = costKeys.has(k) ? 2 : 1;
+                    const newDist = dist + cost;
+                    if (newDist <= movement) {
+                        visited.set(k, newDist);
+                        cameFrom.set(k, cur);
+                        queue.push(n);
+                    }
+                }
+            }
+        }
+    }
+    if (!cameFrom.has(targetKey)) return [];
+    const path = [];
+    for (let h = target; h; h = cameFrom.get(hexKey(h))) path.unshift(h);
+    return path;
+}
+
 function cubeLineDraw(a, b) {
     const n = hexDistance(a, b);
     if (n === 0) return [a];

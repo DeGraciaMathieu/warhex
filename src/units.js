@@ -299,5 +299,6 @@ export function initState(armies, options = {}) {
         scoreHistory: [],
         hitEffects: [],
         attackEffects: [],
+        movingUnit: null,
     };
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { hexKey, reachableHexes, isValidHex } from "../src/hex.js";
+import { hexKey, reachableHexes, isValidHex, hexDistance, findPath } from "../src/hex.js";
 import { createUnit, resetUID } from "../src/units.js";
 import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, getUnitTerrainEffects, getCombatModifiers } from "../src/game.js";
 
@@ -86,6 +86,50 @@ describe("sélection et déplacement", () => {
         const s = makeState({ units: [u1], selectedUnit: u1 });
         const result = computeMove(s);
         expect(result.validMoves).toHaveLength(0);
+    });
+});
+
+describe("animation de déplacement (movingUnit)", () => {
+    function selectAndPickFarMove(s) {
+        const selected = handleClick(s, s.units[0].hex);
+        const origin = s.units[0].hex;
+        const target = selected.validMoves.find(h => hexDistance(origin, h) >= 2) || selected.validMoves[0];
+        return { selected, origin, target };
+    }
+
+    it("renseigne movingUnit avec le chemin de l'origine à la destination", () => {
+        const s = makeState();
+        const { selected, origin, target } = selectAndPickFarMove(s);
+        const moved = handleClick(selected, target);
+        expect(moved.movingUnit).not.toBeNull();
+        expect(moved.movingUnit.id).toBe(s.units[0].id);
+        expect(hexKey(moved.movingUnit.path[0])).toBe(hexKey(origin));
+        expect(hexKey(moved.movingUnit.path.at(-1))).toBe(hexKey(target));
+        for (let i = 1; i < moved.movingUnit.path.length; i++) {
+            expect(hexDistance(moved.movingUnit.path[i - 1], moved.movingUnit.path[i])).toBe(1);
+        }
+    });
+
+    it("le chemin correspond à findPath avec les mêmes paramètres", () => {
+        const s = makeState();
+        const { selected, origin, target } = selectAndPickFarMove(s);
+        const moved = handleClick(selected, target);
+        const occupied = new Set(s.units.filter(u => u.id !== s.units[0].id).map(u => hexKey(u.hex)));
+        const expected = findPath(origin, target, s.units[0].movement, occupied);
+        expect(moved.movingUnit.path.map(hexKey)).toEqual(expected.map(hexKey));
+    });
+
+    it("l'état logique reste identique : position finale, hasMoved et fin d'activation", () => {
+        // Une seule unité (pas d'ennemi à portée) → le déplacement clôt l'activation.
+        const u1 = createUnit("warrior", 1, { q: -1, r: 0, s: 1 });
+        const s = makeState({ units: [u1] });
+        const { selected, target } = selectAndPickFarMove(s);
+        const moved = handleClick(selected, target);
+        const unit = moved.units.find(u => u.id === u1.id);
+        expect(unit.hex).toEqual(target);
+        expect(unit.hasMoved).toBe(true);
+        expect(moved.activatedUnitIds).toContain(u1.id);
+        expect(moved.movingUnit).not.toBeNull();
     });
 });
 

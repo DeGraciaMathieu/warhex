@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.js";
 import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, TERRAIN_DENSITY_LABELS, DEFAULT_TERRAIN_DENSITY, TERRAIN_PRESETS } from "./units.js";
-import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION, ATTACK_EFFECT_DURATION } from "./renderer.js";
+import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION, ATTACK_EFFECT_DURATION, moveAnimDuration } from "./renderer.js";
 import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, getCombatModifiers } from "./game.js";
 import { computeAIAction, buildAIPreview } from "./ai.js";
 import { hostGame, joinGame, generateCode, normalizeCode, isValidCode, onlinePlayerNumber, isNotMyTurn, shouldApplyDamage, applyOnlineMessage } from "./online.js";
@@ -239,7 +239,8 @@ export default function HexWarhammer() {
         const hasPreview = !!state?.aiPreview;
         const hasHitEffects = state?.hitEffects?.length > 0;
         const hasAttackEffects = state?.attackEffects?.length > 0;
-        if (!state || (!hasDying && !hasPreview && !hasHitEffects && !hasAttackEffects)) return;
+        const hasMoving = !!state?.movingUnit;
+        if (!state || (!hasDying && !hasPreview && !hasHitEffects && !hasAttackEffects && !hasMoving)) return;
         let frameId;
         const animate = () => {
             drawScene(canvasRef.current, state, hoveredHex);
@@ -247,15 +248,16 @@ export default function HexWarhammer() {
             const dyingDone = !hasDying || !state.dyingUnits.some(d => now - d.deathTime < DEATH_ANIM_DURATION);
             const hitDone = !hasHitEffects || !state.hitEffects.some(e => now - e.time < HIT_EFFECT_DURATION);
             const attackDone = !hasAttackEffects || !state.attackEffects.some(e => now - e.time < ATTACK_EFFECT_DURATION);
-            if (dyingDone && hitDone && attackDone && !hasPreview) {
-                setState(s => ({ ...s, dyingUnits: [], hitEffects: [], attackEffects: [] }));
+            const movingDone = !hasMoving || now - state.movingUnit.time >= moveAnimDuration(state.movingUnit.path);
+            if (dyingDone && hitDone && attackDone && movingDone && !hasPreview) {
+                setState(s => ({ ...s, dyingUnits: [], hitEffects: [], attackEffects: [], movingUnit: null }));
                 return;
             }
             frameId = requestAnimationFrame(animate);
         };
         frameId = requestAnimationFrame(animate);
         return () => cancelAnimationFrame(frameId);
-    }, [state?.dyingUnits, state?.aiPreview, state?.hitEffects, state?.attackEffects]);
+    }, [state?.dyingUnits, state?.aiPreview, state?.hitEffects, state?.attackEffects, state?.movingUnit]);
 
     function closeCombatModal() {
         if (!diceAnim) return;
@@ -289,6 +291,7 @@ export default function HexWarhammer() {
     useEffect(() => {
         if (!vsAI || !state || state.currentPlayer !== 2 || state.winner) return;
         if (state.autoEndTurn) return;
+        if (state.movingUnit) return;
         if (diceAnim && !diceAnim.done) return;
         const action = computeAIAction(state);
         if (!action) return;
@@ -312,6 +315,7 @@ export default function HexWarhammer() {
     function onCanvasClick(e) {
         if (vsAI && state?.currentPlayer === 2) return;
         if (notMyTurn) return;
+        if (state?.movingUnit) return;
         if (diceAnim && !diceAnim.done) return;
         if (diceAnim?.done) closeCombatModal();
         const rect = canvasRef.current.getBoundingClientRect();
@@ -699,13 +703,13 @@ export default function HexWarhammer() {
                         </>
                     ) : (
                         <>
-                            <button className="btn btn-blue" disabled={!sel || sel.hasMoved || state.phase === "attack" || (vsAI && state.currentPlayer === 2) || notMyTurn} onClick={startMove}>⟶ Déplacer</button>
-                            <button className="btn btn-red" disabled={!sel || sel.hasAttacked || (vsAI && state.currentPlayer === 2) || notMyTurn} onClick={startAttack}>⚔ Attaquer</button>
-                            {sel && <button className="btn btn-grey" disabled={notMyTurn} onClick={() => applyAction(computeDeselect)}>✕ Désélectionner</button>}
+                            <button className="btn btn-blue" disabled={!sel || sel.hasMoved || state.phase === "attack" || (vsAI && state.currentPlayer === 2) || notMyTurn || !!state.movingUnit} onClick={startMove}>⟶ Déplacer</button>
+                            <button className="btn btn-red" disabled={!sel || sel.hasAttacked || (vsAI && state.currentPlayer === 2) || notMyTurn || !!state.movingUnit} onClick={startAttack}>⚔ Attaquer</button>
+                            {sel && <button className="btn btn-grey" disabled={notMyTurn || !!state.movingUnit} onClick={() => applyAction(computeDeselect)}>✕ Désélectionner</button>}
                         </>
                     )}
                     <div style={{ borderTop: "1px solid #d5cbb8", marginTop: 6, paddingTop: 8 }}>
-                        <button className="btn btn-gold" disabled={!!state.winner || (vsAI && state.currentPlayer === 2) || notMyTurn} onClick={endTurn}>⏭ Fin de tour</button>
+                        <button className="btn btn-gold" disabled={!!state.winner || (vsAI && state.currentPlayer === 2) || notMyTurn || !!state.movingUnit} onClick={endTurn}>⏭ Fin de tour</button>
                     </div>
                 </div>
 
