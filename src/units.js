@@ -29,6 +29,16 @@ export function currentTurnIndex(round, currentPlayer) {
     return (round - 1) * 2 + (currentPlayer === firstPlayerOfRound(round) ? 0 : 1);
 }
 
+// Gain de points par round, dérivé d'un scoreHistory cumulé (`[{ round, scores }]`).
+// Pour chaque entrée, le gain est la différence avec le round précédent (base 0 au
+// premier). Renvoie `[{ round, gain: { 1, 2 } }]`. Donnée de jeu pure.
+export function roundGains(scoreHistory) {
+    return scoreHistory.map((h, i) => {
+        const prev = i > 0 ? scoreHistory[i - 1].scores : { 1: 0, 2: 0 };
+        return { round: h.round, gain: { 1: h.scores[1] - prev[1], 2: h.scores[2] - prev[2] } };
+    });
+}
+
 export const UNIT_TEMPLATES = {
     warrior: {
         name: "Warrior", symbol: "⚔",

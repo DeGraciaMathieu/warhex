@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { hexKey, isValidHex, hexNeighbors } from "../src/hex.js";
-import { createUnit, initState, resetUID, UNIT_TEMPLATES, SPAWN_POSITIONS, DEFAULT_TERRAIN_DENSITY, firstPlayerOfRound, turnSchedule, currentTurnIndex } from "../src/units.js";
+import { createUnit, initState, resetUID, UNIT_TEMPLATES, SPAWN_POSITIONS, DEFAULT_TERRAIN_DENSITY, firstPlayerOfRound, turnSchedule, currentTurnIndex, roundGains } from "../src/units.js";
 
 beforeEach(() => resetUID());
 
@@ -543,5 +543,35 @@ describe("calendrier des demi-tours", () => {
         expect(currentTurnIndex(2, 1)).toBe(3);
         // Round 8 (ouvert par J2) : dernier demi-tour = J1 → index 15
         expect(currentTurnIndex(8, 1)).toBe(15);
+    });
+});
+
+describe("gains de points par round", () => {
+    it("scoreHistory vide → tableau vide", () => {
+        expect(roundGains([])).toEqual([]);
+    });
+
+    it("1er round = score brut, rounds suivants = différence avec le précédent", () => {
+        const history = [
+            { round: 1, scores: { 1: 2, 2: 1 } },
+            { round: 2, scores: { 1: 3, 2: 3 } },
+            { round: 3, scores: { 1: 5, 2: 4 } },
+        ];
+        expect(roundGains(history)).toEqual([
+            { round: 1, gain: { 1: 2, 2: 1 } },
+            { round: 2, gain: { 1: 1, 2: 2 } },
+            { round: 3, gain: { 1: 2, 2: 1 } },
+        ]);
+    });
+
+    it("gère un round à gain nul et un round où seul un joueur marque", () => {
+        const history = [
+            { round: 1, scores: { 1: 0, 2: 0 } },
+            { round: 2, scores: { 1: 2, 2: 0 } },
+        ];
+        expect(roundGains(history)).toEqual([
+            { round: 1, gain: { 1: 0, 2: 0 } },
+            { round: 2, gain: { 1: 2, 2: 0 } },
+        ]);
     });
 });

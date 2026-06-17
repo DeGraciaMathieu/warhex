@@ -322,6 +322,32 @@ canvas { cursor: crosshair; display: block; }
     50% { opacity: 1; }
 }
 
+/* Frise des tours : flash/halo de la bulle qui clôt le round + « +N » flottant. */
+.frise-bubble.scored {
+    animation: friseScored .7s ease-out;
+}
+
+@keyframes friseScored {
+    0%   { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 var(--fx-color); }
+    25%  { transform: scale(1.5); opacity: 1; box-shadow: 0 0 10px 5px var(--fx-color); }
+    100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 var(--fx-color); }
+}
+
+.frise-float {
+    position: absolute; bottom: 100%; left: 50%;
+    margin-bottom: 4px;
+    display: flex; gap: 6px;
+    font-family: 'Cinzel', serif; font-size: 14px; font-weight: 700;
+    white-space: nowrap; pointer-events: none;
+    animation: friseFloat .9s ease-out forwards;
+}
+
+@keyframes friseFloat {
+    0%   { transform: translateX(-50%) translateY(0); opacity: 0; }
+    20%  { opacity: 1; }
+    100% { transform: translateX(-50%) translateY(-22px); opacity: 0; }
+}
+
 .combat-overlay {
     position: fixed; inset: 0; z-index: 100;
     background: rgba(0, 0, 0, .5);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex, HEX_SIZE } from "./hex.js";
-import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, ROUNDS_PER_GAME, turnSchedule, currentTurnIndex, TERRAIN_DENSITY_LABELS, DEFAULT_TERRAIN_DENSITY, TERRAIN_PRESETS, computeTownControl } from "./units.js";
+import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, ROUNDS_PER_GAME, turnSchedule, currentTurnIndex, roundGains, TERRAIN_DENSITY_LABELS, DEFAULT_TERRAIN_DENSITY, TERRAIN_PRESETS, computeTownControl } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION, ATTACK_EFFECT_DURATION, moveAnimDuration } from "./renderer.js";
 import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, computeCancelAttack, unitAt, getSaveModifier, getRangeModifier, getCombatModifiers } from "./game.js";
 import { computeAIAction, buildAIPreview } from "./ai.js";
@@ -19,6 +19,9 @@ const STEP_META = {
 
 const W = 260, H = 140, PAD_X = 30, PAD_Y = 20;
 const CHART_W = W - PAD_X * 2, CHART_H = H - PAD_Y * 2;
+
+// Réglages de la frise des tours (PRD 10).
+const BUBBLE_SIZE = 20, BUBBLE_GAP = 6, ROUND_GAP = 14, SCORE_FX_DURATION = 900;
 
 function ScoreChart({ scoreHistory }) {
     const maxScore = Math.max(...scoreHistory.map(h => Math.max(h.scores[1], h.scores[2])), 1);
@@ -131,6 +134,8 @@ export default function HexWarhammer() {
     const [tooltipUnitId, setTooltipUnitId] = useState(null);
     const [diceAnim, setDiceAnim] = useState(null);
     const [pendingDamage, setPendingDamage] = useState(null);
+    const [scoreFx, setScoreFx] = useState(null);
+    const prevScoreLen = useRef(0);
     const [online, setOnline] = useState(null);
     const [joinCode, setJoinCode] = useState("");
     const peerRef = useRef(null);
@@ -210,6 +215,23 @@ export default function HexWarhammer() {
     useEffect(() => {
         if (!armyPhase && state) drawScene(canvasRef.current, state, hoveredHex);
     }, [state, hoveredHex, armyPhase]);
+
+    // Animation de gain : déclenchée quand une nouvelle entrée apparaît dans
+    // scoreHistory (donc à chaque fin de round), pilotée par l'état — fonctionne
+    // donc aussi pour les tours IA / l'adversaire en ligne. On ignore les gains nuls.
+    const scoreHistory = state?.scoreHistory ?? [];
+    useEffect(() => {
+        const len = scoreHistory.length;
+        const grew = len > prevScoreLen.current;
+        prevScoreLen.current = len;
+        if (!grew) return;
+        const gains = roundGains(scoreHistory);
+        const last = gains[gains.length - 1];
+        if (last.gain[1] <= 0 && last.gain[2] <= 0) return;
+        setScoreFx(last);
+        const id = setTimeout(() => setScoreFx(null), SCORE_FX_DURATION);
+        return () => clearTimeout(id);
+    }, [scoreHistory]);
 
     // Hover intent : le tooltip n'apparaît qu'après un court délai passé sur la
     // même unité. La dépendance porte sur l'id de l'unité survolée (et non sur la
@@ -692,6 +714,12 @@ export default function HexWarhammer() {
     }[state.phase] || "";
     const turns = turnSchedule();
     const curTurnIdx = state.winner ? -1 : currentTurnIndex(state.round, state.currentPlayer);
+    // Regroupe les demi-tours par round (un round = 2 bulles) pour la frise.
+    const friseRounds = [];
+    for (let i = 0; i < turns.length; i += 2) friseRounds.push({ round: turns[i].round, halves: [turns[i], turns[i + 1]] });
+    // Score cumulé connu à l'issue de chaque round clôturé.
+    const scoreByRound = {};
+    state.scoreHistory.forEach(h => { scoreByRound[h.round] = h.scores; });
 
     return (
         <div style={{ display: "flex", height: "100vh", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif", overflow: "hidden" }}>
@@ -731,21 +759,48 @@ export default function HexWarhammer() {
                     </div>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", maxWidth: CANVAS_W, width: "100%", marginTop: 10, flexWrap: "wrap", rowGap: 8 }}>
-                    {turns.map((turn, i) => {
-                        const color = P[turn.player];
-                        const isPast = state.winner ? true : i < curTurnIdx;
-                        const isCurrent = i === curTurnIdx;
+                <div style={{ display: "flex", alignItems: "stretch", justifyContent: "center", maxWidth: CANVAS_W, width: "100%", marginTop: 12, flexWrap: "wrap", rowGap: 10, gap: ROUND_GAP }}>
+                    {friseRounds.map(({ round, halves }) => {
+                        const scores = scoreByRound[round];
+                        const showFx = scoreFx && scoreFx.round === round;
                         return (
-                            <div key={i} title={`Tour ${turn.round} — J${turn.player}`} style={{
-                                width: 16, height: 16, borderRadius: "50%",
-                                marginLeft: i > 0 && i % 2 === 0 ? 12 : 4,
-                                background: color,
-                                opacity: isPast ? 0.3 : 1,
-                                boxShadow: isCurrent ? `0 0 0 3px #f5f0e8, 0 0 0 5px ${color}` : "none",
-                                transform: isCurrent ? "scale(1.15)" : "none",
-                                transition: "opacity .2s, box-shadow .2s, transform .2s",
-                            }} />
+                            <Fragment key={round}>
+                                {round > 1 && <div style={{ width: 1, alignSelf: "center", height: BUBBLE_SIZE + 4, background: "#d5cbb8" }} />}
+                                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: ".1em", color: "#8a7a60" }}>R{round}</div>
+                                    <div style={{ display: "flex", gap: BUBBLE_GAP, position: "relative" }}>
+                                        {halves.map((turn, h) => {
+                                            const idx = (round - 1) * 2 + h;
+                                            const color = P[turn.player];
+                                            const isPast = state.winner ? true : idx < curTurnIdx;
+                                            const isCurrent = idx === curTurnIdx;
+                                            const justScored = showFx && scoreFx.gain[turn.player] > 0;
+                                            return (
+                                                <div key={h} className={justScored ? "frise-bubble scored" : "frise-bubble"} title={`Tour ${round} — J${turn.player}`} style={{
+                                                    width: BUBBLE_SIZE, height: BUBBLE_SIZE, borderRadius: "50%",
+                                                    background: color,
+                                                    opacity: isPast ? 0.3 : 1,
+                                                    boxShadow: isCurrent ? `0 0 0 3px #f5f0e8, 0 0 0 5px ${color}` : "none",
+                                                    transform: isCurrent ? "scale(1.15)" : "none",
+                                                    transition: "opacity .2s, box-shadow .2s, transform .2s",
+                                                    "--fx-color": color,
+                                                }} />
+                                            );
+                                        })}
+                                        {showFx && (
+                                            <div className="frise-float">
+                                                {scoreFx.gain[1] > 0 && <span style={{ color: P[1] }}>+{scoreFx.gain[1]}</span>}
+                                                {scoreFx.gain[2] > 0 && <span style={{ color: P[2] }}>+{scoreFx.gain[2]}</span>}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 11, fontWeight: 600, minHeight: 14 }}>
+                                        {scores
+                                            ? <><span style={{ color: P[1] }}>{scores[1]}</span><span style={{ color: "#8a7a60" }}> – </span><span style={{ color: P[2] }}>{scores[2]}</span></>
+                                            : <span style={{ color: "#c8b898" }}>–</span>}
+                                    </div>
+                                </div>
+                            </Fragment>
                         );
                     })}
                 </div>
