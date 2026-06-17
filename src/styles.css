@@ -198,6 +198,48 @@
     width: 230px;
 }
 
+/* Infobulle de terrain au survol (PRD 12) : compacte, pour ne pas surcharger. */
+.terrain-tooltip {
+    position: fixed;
+    pointer-events: none;
+    z-index: 100;
+    background: #fdfaf4;
+    border: 1px solid #c8b898;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: #2a2015;
+    box-shadow: 0 4px 14px rgba(42, 32, 21, 0.3);
+    max-width: 220px;
+}
+
+.terrain-tooltip-head {
+    font-family: 'Cinzel', serif;
+    font-weight: 600;
+    letter-spacing: .04em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.terrain-tooltip-icon { font-size: 15px; }
+
+.terrain-tooltip-effects {
+    margin: 6px 0 0;
+    padding: 0 0 0 4px;
+    list-style: none;
+}
+
+.terrain-tooltip-effects li {
+    color: #6a5a40;
+    line-height: 1.5;
+}
+
+.terrain-tooltip-effects li::before {
+    content: "• ";
+    color: #b8923a;
+}
+
 .unit-tooltip-head {
     display: flex; align-items: center; gap: 10px;
 }
@@ -296,6 +338,16 @@
 }
 
 canvas { cursor: crosshair; display: block; }
+
+/* Curseur épée sur le plateau de jeu : lame acier par défaut, lame rouge
+   « attaque » au survol d'un ennemi ciblable (cf. PRD 11). Pointe = hotspot (4,4). */
+.board-canvas {
+    cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><line x1='4' y1='4' x2='20' y2='20' stroke='%232a2015' stroke-width='5' stroke-linecap='round'/><line x1='15' y1='25' x2='25' y2='15' stroke='%232a2015' stroke-width='6' stroke-linecap='round'/><line x1='20' y1='20' x2='27' y2='27' stroke='%232a2015' stroke-width='6' stroke-linecap='round'/><line x1='4' y1='4' x2='20' y2='20' stroke='%23dcdce4' stroke-width='3' stroke-linecap='round'/><line x1='15' y1='25' x2='25' y2='15' stroke='%23c89a3a' stroke-width='3.5' stroke-linecap='round'/><line x1='20' y1='20' x2='26' y2='26' stroke='%237a5a2a' stroke-width='3.5' stroke-linecap='round'/><circle cx='27' cy='27' r='2.6' fill='%23c89a3a' stroke='%232a2015' stroke-width='1'/></svg>") 4 4, crosshair;
+}
+
+.board-canvas.targeting {
+    cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><line x1='4' y1='4' x2='20' y2='20' stroke='%232a2015' stroke-width='5' stroke-linecap='round'/><line x1='15' y1='25' x2='25' y2='15' stroke='%232a2015' stroke-width='6' stroke-linecap='round'/><line x1='20' y1='20' x2='27' y2='27' stroke='%232a2015' stroke-width='6' stroke-linecap='round'/><line x1='4' y1='4' x2='20' y2='20' stroke='%23ff4040' stroke-width='3' stroke-linecap='round'/><line x1='15' y1='25' x2='25' y2='15' stroke='%23c89a3a' stroke-width='3.5' stroke-linecap='round'/><line x1='20' y1='20' x2='26' y2='26' stroke='%237a5a2a' stroke-width='3.5' stroke-linecap='round'/><circle cx='27' cy='27' r='2.6' fill='%23ff4040' stroke='%232a2015' stroke-width='1'/></svg>") 4 4, pointer;
+}
 
 .roll-new { animation: diceReveal .35s ease-out; }
 .roll-spinning {

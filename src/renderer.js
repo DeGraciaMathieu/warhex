@@ -150,6 +150,36 @@ export function drawScene(canvas, state, hoveredHex) {
         }
     });
 
+    // Relief de la case survolée (PRD 12) : ombre portée + glaçage clair + liseré net.
+    // Dessiné après la grille pour ne pas être recouvert par les cases voisines, et
+    // sans déplacer la géométrie de l'hexagone (le contenu posé reste aligné).
+    if (hoveredHex) {
+        const { x, y } = hexToPixel(hoveredHex.q, hoveredHex.r);
+        const px = x + OX, py = y + OY;
+        const corners = hexCorners(px, py, HEX_SIZE);
+        const trace = () => {
+            ctx.beginPath();
+            corners.forEach((c, i) => (i === 0 ? ctx.moveTo(c.x, c.y) : ctx.lineTo(c.x, c.y)));
+            ctx.closePath();
+        };
+        ctx.save();
+        ctx.shadowColor = "rgba(0,0,0,0.4)";
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 4;
+        trace();
+        ctx.strokeStyle = "rgba(245,240,232,0.95)";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.restore();
+        trace();
+        ctx.fillStyle = "rgba(255,250,238,0.16)";
+        ctx.fill();
+        ctx.strokeStyle = "#fff6e0";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+
     const now = Date.now();
     const activeShakes = new Map();
     (state.hitEffects || []).forEach(e => {
@@ -189,6 +219,16 @@ export function drawScene(canvas, state, hoveredHex) {
         ctx.lineWidth = isSelected ? 2.5 : 1.5;
         ctx.stroke();
         ctx.shadowBlur = 0;
+
+        // Anneau rouge pulsé autour des ennemis ciblables (cf. PRD 11).
+        if (validTargetKeys.has(uk)) {
+            const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 150);
+            ctx.beginPath();
+            ctx.arc(px, py, r + 3 + pulse * 2, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(204, 51, 51, ${0.5 + pulse * 0.5})`;
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+        }
 
         ctx.font = `${HEX_SIZE * 0.52}px serif`;
         ctx.textAlign = "center";

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, Fragment } from "react";
 import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex, HEX_SIZE } from "./hex.js";
 import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, ROUNDS_PER_GAME, turnSchedule, currentTurnIndex, roundGains, TERRAIN_DENSITY_LABELS, DEFAULT_TERRAIN_DENSITY, TERRAIN_PRESETS, computeTownControl } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION, ATTACK_EFFECT_DURATION, moveAnimDuration } from "./renderer.js";
-import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, computeCancelAttack, unitAt, getSaveModifier, getRangeModifier, getCombatModifiers } from "./game.js";
+import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, computeCancelAttack, unitAt, getSaveModifier, getRangeModifier, getCombatModifiers, describeTerrain } from "./game.js";
 import { computeAIAction, buildAIPreview } from "./ai.js";
 import { hostGame, joinGame, generateCode, normalizeCode, isValidCode, onlinePlayerNumber, isNotMyTurn, shouldApplyDamage, applyOnlineMessage } from "./online.js";
 import { setupSteps, nextSetupStep, canAdvanceFromMode } from "./setup.js";
@@ -132,6 +132,7 @@ export default function HexWarhammer() {
     const [hoveredHex, setHoveredHex] = useState(null);
     const [tooltipPos, setTooltipPos] = useState(null);
     const [tooltipUnitId, setTooltipUnitId] = useState(null);
+    const [terrainTipKey, setTerrainTipKey] = useState(null);
     const [diceAnim, setDiceAnim] = useState(null);
     const [pendingDamage, setPendingDamage] = useState(null);
     const [scoreFx, setScoreFx] = useState(null);
@@ -243,6 +244,21 @@ export default function HexWarhammer() {
         return () => clearTimeout(timer);
     }, [hoveredUnitId]);
 
+    // Infobulle de terrain : même intention différée, mais uniquement sur une case
+    // sans unité (le tooltip d'unité prime). Évite la surcharge à la volée.
+    const hoverHexKey = (state && hoveredHex && hoveredUnitId == null) ? hexKey(hoveredHex) : null;
+    useEffect(() => {
+        if (hoverHexKey == null) { setTerrainTipKey(null); return; }
+        const timer = setTimeout(() => setTerrainTipKey(hoverHexKey), TOOLTIP_DELAY);
+        return () => clearTimeout(timer);
+    }, [hoverHexKey]);
+
+    // Curseur épée « attaque » au survol d'un ennemi ciblable (cf. PRD 11).
+    const overTarget = !!(state && hoveredHex && (state.validTargets || []).some(u => hexKey(u.hex) === hexKey(hoveredHex)));
+    useEffect(() => {
+        if (canvasRef.current) canvasRef.current.classList.toggle("targeting", overTarget);
+    }, [overTarget]);
+
     function regeneratePreview() {
         resetUID();
         const s = initState(selections, { fairTowns, terrainDensity });
@@ -291,7 +307,8 @@ export default function HexWarhammer() {
         const hasHitEffects = state?.hitEffects?.length > 0;
         const hasAttackEffects = state?.attackEffects?.length > 0;
         const hasMoving = !!state?.movingUnit;
-        if (!state || (!hasDying && !hasPreview && !hasHitEffects && !hasAttackEffects && !hasMoving)) return;
+        const hasTargets = state?.validTargets?.length > 0;
+        if (!state || (!hasDying && !hasPreview && !hasHitEffects && !hasAttackEffects && !hasMoving && !hasTargets)) return;
         let frameId;
         const animate = () => {
             drawScene(canvasRef.current, state, hoveredHex);
@@ -301,14 +318,21 @@ export default function HexWarhammer() {
             const attackDone = !hasAttackEffects || !state.attackEffects.some(e => now - e.time < ATTACK_EFFECT_DURATION);
             const movingDone = !hasMoving || now - state.movingUnit.time >= moveAnimDuration(state.movingUnit.path);
             if (dyingDone && hitDone && attackDone && movingDone && !hasPreview) {
-                setState(s => ({ ...s, dyingUnits: [], hitEffects: [], attackEffects: [], movingUnit: null }));
-                return;
+                // On purge les animations transitoires dès qu'elles sont finies, même
+                // si des cibles restent surlignées (sinon movingUnit ne serait jamais
+                // remis à null et bloquerait les clics).
+                if (hasDying || hasHitEffects || hasAttackEffects || hasMoving) {
+                    setState(s => ({ ...s, dyingUnits: [], hitEffects: [], attackEffects: [], movingUnit: null }));
+                    return;
+                }
+                // Rien à purger : on ne garde la boucle que pour la pulsation des cibles.
+                if (!hasTargets) return;
             }
             frameId = requestAnimationFrame(animate);
         };
         frameId = requestAnimationFrame(animate);
         return () => cancelAnimationFrame(frameId);
-    }, [state?.dyingUnits, state?.aiPreview, state?.hitEffects, state?.attackEffects, state?.movingUnit]);
+    }, [state?.dyingUnits, state?.aiPreview, state?.hitEffects, state?.attackEffects, state?.movingUnit, state?.validTargets]);
 
     function closeCombatModal() {
         if (!diceAnim) return;
@@ -736,6 +760,7 @@ export default function HexWarhammer() {
 
                 <canvas
                     ref={canvasRef}
+                    className="board-canvas"
                     width={CANVAS_W}
                     height={CANVAS_H}
                     style={{ border: "1px solid #c8b898", maxWidth: "100%" }}
@@ -925,6 +950,18 @@ export default function HexWarhammer() {
                                 );
                             })}
                         </div>
+                    </div>
+                );
+            })()}
+
+            {!hoveredUnit && hoveredHex && tooltipPos && terrainTipKey === hexKey(hoveredHex) && (() => {
+                const t = describeTerrain(hoveredHex, state);
+                return (
+                    <div className="terrain-tooltip" style={{ left: tooltipPos.x + 18, top: tooltipPos.y + 18 }}>
+                        <div className="terrain-tooltip-head"><span className="terrain-tooltip-icon">{t.icon}</span>{t.label}</div>
+                        <ul className="terrain-tooltip-effects">
+                            {t.effects.map((e, i) => <li key={i}>{e}</li>)}
+                        </ul>
                     </div>
                 );
             })()}
