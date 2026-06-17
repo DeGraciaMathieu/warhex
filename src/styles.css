@@ -757,4 +757,18 @@ canvas { cursor: crosshair; display: block; }
     .mode-card { width: 100% !important; }
     .setup-terrain-row { flex-direction: column !important; align-items: stretch !important; }
     .setup-terrain-col { width: 100% !important; }
+
+    /* Modale de combat compacte et quasi pleine largeur sur mobile. */
+    .combat-modal { width: 96vw; max-width: 96vw; max-height: 88dvh; }
+    .combat-modal-header { padding: 12px 12px 10px; }
+    .combat-modal-header h2 { font-size: 15px; letter-spacing: .12em; }
+    .combat-modal-body { padding: 12px 10px 14px; }
+    .combat-modal-footer { padding: 10px 12px 14px; }
+    .combat-columns { gap: 8px; }
+    .combat-col-banner { padding: 6px 6px; }
+    .combat-col-body { padding: 8px 6px; gap: 5px; }
+    .combat-col-name { font-size: 12px; letter-spacing: .04em; }
+    .combat-modifier { font-size: 10px; padding: 3px 6px; }
+    .combat-weapon-name { font-size: 12px; }
+    .combat-result-banner { font-size: 14px; padding: 10px 12px; }
 }

@@ -418,6 +418,9 @@ export default function HexWarhammer() {
     }
 
     function onMouseMove(e) {
+        // Sur tactile, le tap émule un mousemove : on l'ignore pour ne pas coller
+        // l'infobulle de survol à l'écran (l'inspection passe par le tiroir, cf. PRD 13).
+        if (isMobile) return;
         const rect = canvasRef.current.getBoundingClientRect();
         const sx = CANVAS_W / rect.width, sy = CANVAS_H / rect.height;
         const x = (e.clientX - rect.left) * sx - OX;
