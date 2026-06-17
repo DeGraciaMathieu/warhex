@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { hexKey, reachableHexes, isValidHex, hasLineOfSight, hexNeighbors } from "../src/hex.js";
+import { describeTerrain } from "../src/game.js";
 
 describe("obstacles", () => {
     it("une unité ne peut pas traverser un obstacle", () => {
@@ -243,5 +244,58 @@ describe("marais", () => {
         const reachableKeys = new Set(reachable.map(hexKey));
         expect(reachableKeys.has(hexKey(swamp))).toBe(true);
         expect(reachableKeys.has(hexKey(beyondSwamp))).toBe(false);
+    });
+});
+
+describe("describeTerrain (feedback de survol)", () => {
+    const hex = { q: 1, r: -1, s: 0 };
+    const emptyState = { obstacles: [], towns: [], forests: [], hills: [], rivers: [], swamps: [] };
+    const stateWith = (key) => ({ ...emptyState, [key]: [hex] });
+
+    it("case sans terrain → Plaine", () => {
+        const t = describeTerrain(hex, emptyState);
+        expect(t.type).toBe("plain");
+        expect(t.label).toBe("Plaine");
+    });
+
+    it("obstacle → infranchissable + bloque la LOS", () => {
+        const t = describeTerrain(hex, stateWith("obstacles"));
+        expect(t.type).toBe("obstacle");
+        expect(t.effects).toEqual(["Infranchissable", "Bloque la ligne de vue"]);
+    });
+
+    it("forêt → coût 2 PM, couvert et blocage LOS", () => {
+        const t = describeTerrain(hex, stateWith("forests"));
+        expect(t.type).toBe("forest");
+        expect(t.effects).toContain("Mouvement : 2 PM");
+        expect(t.effects).toContain("Couvert : sauvegarde −1");
+        expect(t.effects).toContain("Bloque la ligne de vue");
+    });
+
+    it("colline → coût 2 PM et portée +1", () => {
+        const t = describeTerrain(hex, stateWith("hills"));
+        expect(t.type).toBe("hill");
+        expect(t.effects).toContain("Mouvement : 2 PM");
+        expect(t.effects.some(e => e.includes("Portée +1"))).toBe(true);
+    });
+
+    it("rivière → arrêt du mouvement et malus de sauvegarde", () => {
+        const t = describeTerrain(hex, stateWith("rivers"));
+        expect(t.type).toBe("river");
+        expect(t.effects).toContain("Entrée : arrête le mouvement");
+        expect(t.effects).toContain("Sauvegarde +1 (malus)");
+    });
+
+    it("ville → arrêt, couvert, blocage LOS, point de contrôle", () => {
+        const t = describeTerrain(hex, stateWith("towns"));
+        expect(t.type).toBe("town");
+        expect(t.effects).toContain("Couvert : sauvegarde −1");
+        expect(t.effects).toContain("Point de contrôle");
+    });
+
+    it("marais → arrêt et poison", () => {
+        const t = describeTerrain(hex, stateWith("swamps"));
+        expect(t.type).toBe("swamp");
+        expect(t.effects.some(e => e.includes("poison"))).toBe(true);
     });
 });

@@ -15,6 +15,21 @@ export function getUnitTerrainEffects(unit, state) {
     return effects;
 }
 
+// Descripteur du terrain d'une case quelconque, pour le feedback de survol (PRD 12).
+// Fonction pure : renvoie { type, label, icon, effects } reflétant les règles de
+// mouvement / LOS / combat déjà en vigueur. Une case sans terrain renvoie « Plaine ».
+export function describeTerrain(hex, state) {
+    const k = hexKey(hex);
+    const has = (arr) => (arr || []).some(h => hexKey(h) === k);
+    if (has(state.obstacles)) return { type: "obstacle", label: "Obstacle", icon: "⛰️", effects: ["Infranchissable", "Bloque la ligne de vue"] };
+    if (has(state.towns)) return { type: "town", label: "Ville", icon: "🏰", effects: ["Entrée : arrête le mouvement", "Couvert : sauvegarde −1", "Bloque la ligne de vue", "Point de contrôle"] };
+    if (has(state.forests)) return { type: "forest", label: "Forêt", icon: "🌲", effects: ["Mouvement : 2 PM", "Couvert : sauvegarde −1", "Bloque la ligne de vue"] };
+    if (has(state.hills)) return { type: "hill", label: "Colline", icon: "⛰", effects: ["Mouvement : 2 PM", "Portée +1 pour le tir depuis la colline"] };
+    if (has(state.rivers)) return { type: "river", label: "Rivière", icon: "🏞", effects: ["Entrée : arrête le mouvement", "Sauvegarde +1 (malus)"] };
+    if (has(state.swamps)) return { type: "swamp", label: "Marais", icon: "☠", effects: ["Entrée : arrête le mouvement", "1 dégât de poison à l'entrée"] };
+    return { type: "plain", label: "Plaine", icon: "▦", effects: ["Terrain dégagé"] };
+}
+
 export function getCombatModifiers(attacker, target, state) {
     const k = hexKey;
     const townKeys = new Set((state.towns || []).map(k));
