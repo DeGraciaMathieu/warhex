@@ -15,7 +15,8 @@
       "Bash(git checkout:*)",
       "Bash(perl -pi -e 's/inset 0 1px 0 rgba\\\\\\(255, 255, 255, \\\\.8\\\\\\)/inset 0 1px 0 rgba\\(255, 255, 255, .07\\)/g' src/styles.css)",
       "Bash(git restore *)",
-      "Bash(git commit -q -m ' *)"
+      "Bash(git commit -q -m ' *)",
+      "Bash(/usr/bin/find . -path ./node_modules -prune -o \\\\\\( -name \"*.jsx\" -o -name \"*.js\" -o -name \"*.css\" \\\\\\) -print)"
     ]
   },
   "hooks": {
