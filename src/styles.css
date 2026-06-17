@@ -694,7 +694,7 @@ canvas { cursor: crosshair; display: block; }
 .inspect-stats { font-size: 12px; color: #5a4a30; margin-bottom: 4px; }
 .inspect-weapon { font-size: 12px; color: #6a5a40; line-height: 1.5; }
 
-@media (max-width: 768px) {
+@media (max-width: 768px), (max-height: 520px) {
     .app-root {
         flex-direction: column !important;
         height: auto !important;
@@ -727,7 +727,7 @@ canvas { cursor: crosshair; display: block; }
         background: #ece5d8;
         box-shadow: 0 -2px 10px rgba(42, 32, 21, .15);
     }
-    .panel-actions > div { display: contents; }          /* le bloc « Fin de tour » rejoint la rangée */
+    .panel-actions .endturn-wrap { display: contents; }   /* « Fin de tour » rejoint la rangée, sans toucher au message de consolidation */
     .panel-actions .btn {
         width: auto !important;
         flex: 1 1 30%;

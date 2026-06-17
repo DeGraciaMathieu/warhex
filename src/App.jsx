@@ -264,7 +264,7 @@ export default function HexWarhammer() {
 
     // Bascule la présentation mobile selon la largeur de viewport (PRD 13).
     useEffect(() => {
-        const mq = window.matchMedia("(max-width: 768px)");
+        const mq = window.matchMedia("(max-width: 768px), (max-height: 520px)");
         const update = () => setIsMobile(mq.matches);
         update();
         mq.addEventListener("change", update);
@@ -784,7 +784,7 @@ export default function HexWarhammer() {
                     onMouseLeave={() => { setHoveredHex(null); setTooltipPos(null); }}
                 />
 
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", maxWidth: CANVAS_W, width: "100%", marginTop: 6 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", maxWidth: CANVAS_W, width: "100%", marginTop: 6, flexWrap: "wrap", gap: 8, rowGap: 6 }}>
                     <div style={{
                         background: "#ece5d8", border: `1px solid ${P[state.currentPlayer]}`,
                         padding: "6px 14px", fontFamily: "'Cinzel', serif", fontSize: 13, letterSpacing: ".1em",
@@ -935,7 +935,7 @@ export default function HexWarhammer() {
                             {sel && <button className="btn btn-grey" disabled={notMyTurn || !!state.movingUnit} onClick={() => applyAction(computeDeselect)}>✕ Désélectionner</button>}
                         </>
                     )}
-                    <div style={{ borderTop: "1px solid #d5cbb8", marginTop: 6, paddingTop: 8 }}>
+                    <div className="endturn-wrap" style={{ borderTop: "1px solid #d5cbb8", marginTop: 6, paddingTop: 8 }}>
                         <button className="btn btn-gold" disabled={!!state.winner || (vsAI && state.currentPlayer === 2) || notMyTurn || !!state.movingUnit} onClick={endTurn}>⏭ Fin de tour</button>
                     </div>
                 </div>
