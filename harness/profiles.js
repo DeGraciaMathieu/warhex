@@ -7,35 +7,22 @@ import { TERRAIN_PRESETS } from "../src/units.js";
 
 const density = id => TERRAIN_PRESETS.find(p => p.id === id).density;
 
-const STANDARD = ["warrior", "warrior", "knight", "sniper", "berserker"];
-const SHOOTERS = ["sniper", "sniper", "warrior", "warrior", "warrior"];
-const MELEE = ["berserker", "berserker", "knight", "knight", "knight"];
+const ARMIES = {
+    standard: ["warrior", "warrior", "knight", "sniper", "berserker"],
+    tir: ["sniper", "sniper", "warrior", "warrior", "warrior"],
+    mêlée: ["berserker", "berserker", "knight", "knight", "knight"],
+};
 
-export const MATCHUPS = [
-    {
-        name: "Miroir standard — terrain par défaut",
-        armies: { 1: STANDARD, 2: STANDARD },
+const ARMY_LABELS = { standard: "Standard", tir: "Tir", mêlée: "Mêlée" };
+
+// Toutes les combinaisons possibles entre les types d'armée (avec répétition),
+// jouées sur le terrain par défaut.
+const ARMY_KEYS = Object.keys(ARMIES);
+
+export const MATCHUPS = ARMY_KEYS.flatMap((a, i) =>
+    ARMY_KEYS.slice(i).map(b => ({
+        name: `${ARMY_LABELS[a]} (J1) vs ${ARMY_LABELS[b]} (J2) — terrain par défaut`,
+        armies: { 1: ARMIES[a], 2: ARMIES[b] },
         options: { terrainDensity: density("default") },
-    },
-    {
-        name: "Tir (J1) vs Mêlée (J2) — terrain par défaut",
-        armies: { 1: SHOOTERS, 2: MELEE },
-        options: { terrainDensity: density("default") },
-    },
-    {
-        name: "Miroir standard — plaine ouverte",
-        armies: { 1: STANDARD, 2: STANDARD },
-        options: { terrainDensity: density("open") },
-    },
-    {
-        name: "Miroir standard — forêt dense",
-        armies: { 1: STANDARD, 2: STANDARD },
-        options: { terrainDensity: density("forest") },
-    },
-    {
-        name: "IA poussée vers les villes (J2) vs standard (J1)",
-        armies: { 1: STANDARD, 2: STANDARD },
-        options: { terrainDensity: density("siege") },
-        weights: { 2: { captureTown: 90, towardTown: 45 } },
-    },
-];
+    }))
+);

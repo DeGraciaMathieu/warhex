@@ -55,7 +55,7 @@ describe("création d'unités", () => {
         const sniper = unit.weapons.find(w => w.id === "sniper_rifle");
         expect(sniper.range).toBe(3);
         expect(sniper.attacks).toBe(2);
-        expect(sniper.damage).toBe(1);
+        expect(sniper.damage).toBe(2);
         expect(sniper.ap).toBe(-2);
     });
 

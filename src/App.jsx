@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, Fragment } from "react";
-import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.js";
+import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex, HEX_SIZE } from "./hex.js";
 import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, ROUNDS_PER_GAME, turnSchedule, currentTurnIndex, TERRAIN_DENSITY_LABELS, DEFAULT_TERRAIN_DENSITY, TERRAIN_PRESETS, computeTownControl } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION, ATTACK_EFFECT_DURATION, moveAnimDuration } from "./renderer.js";
 import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, computeCancelAttack, unitAt, getSaveModifier, getRangeModifier, getCombatModifiers } from "./game.js";
@@ -364,6 +364,17 @@ export default function HexWarhammer() {
         const hex = pixelToHex(x, y);
         setHoveredHex(isValidHex(hex) ? hex : null);
         setTooltipPos({ x: e.clientX, y: e.clientY });
+    }
+
+    // Position écran (viewport) du centre d'un hexe, en tenant compte de
+    // l'échelle d'affichage du canvas (maxWidth 100%).
+    function hexScreenPos(hex) {
+        const canvas = canvasRef.current;
+        if (!canvas) return null;
+        const rect = canvas.getBoundingClientRect();
+        const scale = rect.width / CANVAS_W;
+        const px = hexToPixel(hex.q, hex.r);
+        return { x: rect.left + (OX + px.x) * scale, y: rect.top + (OY + px.y) * scale, scale };
     }
 
     function startMove() { applyAction(computeMove); }
@@ -858,6 +869,21 @@ export default function HexWarhammer() {
                                     </div>
                                 );
                             })}
+                        </div>
+                    </div>
+                );
+            })()}
+
+            {state && !state.winner && state.phase === "consolidate" && state.pendingConsolidation
+                && !((vsAI && state.currentPlayer === 2) || notMyTurn) && (() => {
+                const pos = hexScreenPos(state.pendingConsolidation.hex);
+                if (!pos) return null;
+                return (
+                    <div className="consolidate-tooltip" style={{ left: pos.x, top: pos.y - HEX_SIZE * pos.scale - 8 }}>
+                        <div className="consolidate-tooltip-label">Prendre la place ?</div>
+                        <div className="consolidate-tooltip-actions">
+                            <button className="consolidate-btn consolidate-btn-yes" onClick={() => applyAction(s => computeConsolidate(s, true))}>✓ Oui</button>
+                            <button className="consolidate-btn consolidate-btn-no" onClick={() => applyAction(s => computeConsolidate(s, false))}>✕ Non</button>
                         </div>
                     </div>
                 );
