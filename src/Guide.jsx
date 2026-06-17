@@ -1,6 +1,5 @@
-import { useEffect, useRef } from "react";
-import { UNIT_TEMPLATES } from "./units.js";
-import { hexToPixel, hexCorners } from "./hex.js";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { UNIT_TEMPLATES, ROUNDS_PER_GAME, ACTIVATIONS_PER_TURN, turnSchedule } from "./units.js";
 
 const MINI_HEX = 22;
 const P = { 1: "#2a6fa8", 2: "#a03030" };
@@ -194,33 +193,6 @@ function SceneForestCost() {
     );
 }
 
-function SceneForestCover() {
-    return (
-        <MiniCanvas width={200} height={80} draw={(ctx) => {
-            const ox = 100, oy = 40;
-            const hexes = [{ q: -1, r: 0 }, { q: 0, r: 0 }, { q: 1, r: 0 }];
-            hexes.forEach(h => {
-                const { x, y } = miniHexToPixel(h.q, h.r);
-                const isForest = h.q === 0;
-                drawMiniHex(ctx, x + ox, y + oy,
-                    isForest ? "#b8d4a0" : "#e8e0d0",
-                    isForest ? "#5a8a40" : "#c8b898",
-                    isForest ? "🌲" : null
-                );
-            });
-            const forestPos = miniHexToPixel(0, 0);
-            drawUnit(ctx, forestPos.x + ox, forestPos.y + oy, 2, "⚔");
-            ctx.font = "bold 10px 'Cinzel', serif";
-            ctx.textAlign = "center";
-            ctx.fillStyle = "#2e7d32";
-            ctx.fillText("🛡 -1 save", forestPos.x + ox, forestPos.y + oy + MINI_HEX + 8);
-            const attPos = miniHexToPixel(-1, 0);
-            drawUnit(ctx, attPos.x + ox, attPos.y + oy, 1, "🎯");
-            drawDashedLine(ctx, attPos.x + ox + 12, attPos.y + oy, forestPos.x + ox - 12, forestPos.y + oy, "#2a6fa8");
-        }} />
-    );
-}
-
 function SceneForestShoot() {
     return (
         <MiniCanvas width={280} height={110} draw={(ctx) => {
@@ -359,59 +331,6 @@ function SceneTownLos() {
     );
 }
 
-function SceneTownCover() {
-    return (
-        <MiniCanvas width={200} height={80} draw={(ctx) => {
-            const ox = 100, oy = 40;
-            const hexes = [{ q: -1, r: 0 }, { q: 0, r: 0 }, { q: 1, r: 0 }];
-            hexes.forEach(h => {
-                const { x, y } = miniHexToPixel(h.q, h.r);
-                const isTown = h.q === 0;
-                drawMiniHex(ctx, x + ox, y + oy,
-                    isTown ? "#d4c4a0" : "#e8e0d0",
-                    isTown ? "#8a7040" : "#c8b898",
-                    null
-                );
-            });
-            const townPos = miniHexToPixel(0, 0);
-            drawUnit(ctx, townPos.x + ox, townPos.y + oy, 2, "⚔");
-            ctx.font = "bold 10px 'Cinzel', serif";
-            ctx.textAlign = "center";
-            ctx.fillStyle = "#2e7d32";
-            ctx.fillText("🛡 -1 save", townPos.x + ox, townPos.y + oy + MINI_HEX + 8);
-            const attPos = miniHexToPixel(-1, 0);
-            drawUnit(ctx, attPos.x + ox, attPos.y + oy, 1, "🎯");
-            drawDashedLine(ctx, attPos.x + ox + 12, attPos.y + oy, townPos.x + ox - 12, townPos.y + oy, "#2a6fa8");
-        }} />
-    );
-}
-
-function SceneHillCost() {
-    return (
-        <MiniCanvas width={200} height={80} draw={(ctx) => {
-            const ox = 100, oy = 40;
-            const hexes = [{ q: -2, r: 0 }, { q: -1, r: 0 }, { q: 0, r: 0 }, { q: 1, r: 0 }];
-            hexes.forEach(h => {
-                const { x, y } = miniHexToPixel(h.q, h.r);
-                const isHill = h.q === 0;
-                drawMiniHex(ctx, x + ox, y + oy,
-                    isHill ? "#d4c8a0" : "#e8e0d0",
-                    isHill ? "#8a7a40" : "#c8b898",
-                    null
-                );
-            });
-            const p1 = miniHexToPixel(-2, 0);
-            drawUnit(ctx, p1.x + ox, p1.y + oy, 1, "⚔");
-            const hillPos = miniHexToPixel(0, 0);
-            ctx.font = "bold 10px 'Cinzel', serif";
-            ctx.textAlign = "center";
-            ctx.fillStyle = "#2a6fa8";
-            ctx.fillText("×2", hillPos.x + ox, hillPos.y + oy + MINI_HEX + 8);
-            drawDashedLine(ctx, p1.x + ox + 12, p1.y + oy, hillPos.x + ox, hillPos.y + oy, "#2a6fa8");
-        }} />
-    );
-}
-
 function SceneHillLos() {
     return (
         <MiniCanvas width={200} height={80} draw={(ctx) => {
@@ -491,32 +410,6 @@ function SceneSwampPoison() {
     );
 }
 
-function SceneSwampStop() {
-    return (
-        <MiniCanvas width={200} height={80} draw={(ctx) => {
-            const ox = 100, oy = 40;
-            const hexes = [{ q: -2, r: 0 }, { q: -1, r: 0 }, { q: 0, r: 0 }, { q: 1, r: 0 }];
-            hexes.forEach(h => {
-                const { x, y } = miniHexToPixel(h.q, h.r);
-                const isSwamp = h.q === 0;
-                drawMiniHex(ctx, x + ox, y + oy,
-                    isSwamp ? "#8aaa78" : "#e8e0d0",
-                    isSwamp ? "#5a7a40" : "#c8b898",
-                    isSwamp ? "☠" : null
-                );
-            });
-            const p1 = miniHexToPixel(-2, 0);
-            drawUnit(ctx, p1.x + ox, p1.y + oy, 1, "🐴");
-            const swampPos = miniHexToPixel(0, 0);
-            ctx.font = "bold 10px 'Cinzel', serif";
-            ctx.textAlign = "center";
-            ctx.fillStyle = "#a03030";
-            ctx.fillText("STOP", swampPos.x + ox, swampPos.y + oy + MINI_HEX + 8);
-            drawDashedLine(ctx, p1.x + ox + 12, p1.y + oy, swampPos.x + ox, swampPos.y + oy, "#8a7a60");
-        }} />
-    );
-}
-
 function SceneTownControl() {
     return (
         <MiniCanvas width={200} height={100} draw={(ctx) => {
@@ -582,228 +475,288 @@ function IndicatorIcon({ type }) {
     return <canvas ref={ref} width={20} height={20} style={{ display: "inline-block", verticalAlign: "middle" }} />;
 }
 
-const SECTION_STYLE = {
-    background: "#ece5d8", border: "1px solid #d5cbb8", borderRadius: 4, padding: 16, marginBottom: 16,
-};
-const TITLE_STYLE = {
-    fontFamily: "'Cinzel', serif", fontSize: 13, fontWeight: 700, letterSpacing: ".12em", color: "#8a6a08", marginBottom: 10,
-};
-const TEXT_STYLE = { fontSize: 13, lineHeight: 1.6, color: "#2a2015" };
-
-const NAV_ITEMS = [
+const TABS = [
     { id: "objectif", label: "Objectif" },
+    { id: "tour", label: "Tour & activation" },
     { id: "unites", label: "Unités" },
     { id: "combat", label: "Combat" },
+    { id: "los", label: "Ligne de vue" },
     { id: "terrains", label: "Terrains" },
 ];
 
-const TERRAIN_CELL = { padding: "6px 10px", fontSize: 12, borderBottom: "1px solid #d5cbb8", textAlign: "center" };
+const TERRAIN_CELL = { padding: "8px 10px", fontSize: 12, borderBottom: "1px solid #ddd2bf", textAlign: "center", color: "#3a3020" };
 const TERRAIN_HEADER = { ...TERRAIN_CELL, fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: ".1em", color: "#8a7a60", fontWeight: 700, background: "#e5ddd0" };
 
-const TERRAIN_SECTION = {
-    background: "#f5f0e8", border: "1px solid #d5cbb8", borderRadius: 4, padding: 14, marginBottom: 10,
+function Scene({ children }) {
+    return <div className="guide-scene">{children}</div>;
+}
+
+function ObjectifTab() {
+    return (
+        <div className="guide-section">
+            <div className="guide-section-title">OBJECTIF</div>
+            <div className="guide-text">
+                <p>Warhex est un jeu tactique au tour par tour sur grille hexagonale. Deux joueurs s'affrontent pendant <strong>{ROUNDS_PER_GAME} rounds</strong>.</p>
+            </div>
+            <div className="guide-callout">
+                Les <strong>villes</strong> (🏰) rapportent des points. Quand une unité s'y déplace, la ville devient la propriété de son joueur (la case change de couleur) et le reste tant qu'un adversaire ne s'y déplace pas. Chaque ville possédée rapporte <strong>1 point</strong> en fin de round.
+            </div>
+            <div className="guide-text">
+                <p>Après {ROUNDS_PER_GAME} rounds, le joueur avec le plus de points l'emporte.</p>
+            </div>
+            <div className="guide-scenes"><Scene><SceneTownControl /></Scene></div>
+        </div>
+    );
+}
+
+function TourTab() {
+    const schedule = turnSchedule();
+    return (
+        <div className="guide-section">
+            <div className="guide-section-title">TOUR & ACTIVATION</div>
+            <div className="guide-text">
+                <p>Un <strong>round</strong> comporte un demi-tour par joueur. Le joueur 1 ouvre le round 1, puis le joueur qui commence <strong>alterne à chaque round</strong> pour l'équité — personne ne joue toujours en dernier.</p>
+            </div>
+            <div className="guide-callout">
+                <div className="guide-subsection-title" style={{ marginBottom: 8 }}>Ordre des demi-tours sur la partie</div>
+                <div className="guide-badges">
+                    {schedule.map((t, i) => (
+                        <Fragment key={i}>
+                            {i > 0 && schedule[i - 1].round !== t.round && <span className="guide-badge-sep" />}
+                            <span className="guide-badge" style={{ background: P[t.player] }}>{t.player}</span>
+                        </Fragment>
+                    ))}
+                </div>
+            </div>
+            <div className="guide-text">
+                <p>À son demi-tour, le joueur actif <strong>active {ACTIVATIONS_PER_TURN} unités</strong>, une à la fois.</p>
+                <p>Chaque activation se déroule en deux temps : <strong>déplacement</strong> (selon la valeur de mouvement de l'unité) puis <strong>attaque</strong> optionnelle. Une fois l'action engagée, elle ne s'annule pas.</p>
+                <p>Quand les deux joueurs ont joué leur demi-tour, le round se termine : on compte alors les villes possédées (1 point chacune).</p>
+            </div>
+        </div>
+    );
+}
+
+function UnitesTab() {
+    const unitTypes = Object.entries(UNIT_TEMPLATES);
+    const STATS = (t) => [
+        { label: "MVT", value: t.movement },
+        { label: "PV", value: t.wounds },
+        { label: "SVG", value: `${t.save}+` },
+        { label: "CC", value: `${t.weaponSkill}+` },
+        { label: "CT", value: `${t.ballisticSkill}+` },
+    ];
+    return (
+        <div className="guide-section">
+            <div className="guide-section-title">UNITÉS</div>
+            <div className="guide-units">
+                {unitTypes.map(([key, t]) => (
+                    <div key={key} className="guide-unit">
+                        <div className="guide-unit-head">
+                            <div className="combat-medallion guide-unit-medallion">{t.symbol}</div>
+                            <div className="guide-unit-name">{t.name}</div>
+                        </div>
+                        <div className="weapon-stats" style={{ justifyContent: "flex-start", flexWrap: "wrap" }}>
+                            {STATS(t).map(s => (
+                                <div key={s.label} className="weapon-stat">
+                                    <div className="weapon-stat-label">{s.label}</div>
+                                    <div className="weapon-stat-value">{s.value}</div>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="guide-unit-weapons">
+                            {t.weapons.map(w => (
+                                <div key={w.id} className="guide-weapon">
+                                    <span>{w.type === "ranged" ? "🏹" : "🗡"}</span>
+                                    <span className="guide-weapon-name">{w.name}</span>
+                                    <span className="combat-weapon-chip">{w.type === "ranged" ? `Portée ${w.minRange ? `${w.minRange}-` : ""}${w.range}` : "Mêlée"}</span>
+                                    <span className="combat-weapon-chip">{w.attacks} att.</span>
+                                    <span className="combat-weapon-chip">{w.damage} dég.</span>
+                                    <span className="combat-weapon-chip">PA {Math.abs(w.ap)}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+const COMBAT_STEPS = [
+    { title: "To Hit", body: "Lancez autant de D6 que l'arme a d'attaques. Chaque dé supérieur ou égal à la compétence (CC au corps à corps, CT à distance) est une touche." },
+    { title: "Sauvegarde", body: "Le défenseur lance 3 D6. Chaque dé supérieur ou égal à (sauvegarde + |PA|) annule une touche. Si le seuil dépasse 6, la sauvegarde est impossible." },
+    { title: "Dégâts", body: "Chaque touche non sauvée inflige les dégâts de l'arme." },
+    { title: "Consolidation", body: "Si une unité tue un ennemi adjacent au corps à corps, elle peut prendre la place de l'unité éliminée. Les effets du terrain d'arrivée s'appliquent (capture de ville, poison du marais)." },
+];
+
+function CombatTab() {
+    return (
+        <div className="guide-section">
+            <div className="guide-section-title">COMBAT</div>
+            <div className="guide-steps">
+                {COMBAT_STEPS.map((s, i) => (
+                    <div key={s.title} className="guide-step">
+                        <div className="guide-step-num">{i + 1}</div>
+                        <div className="guide-step-body"><strong>{s.title}</strong> — {s.body}</div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function LosTab() {
+    return (
+        <div className="guide-section">
+            <div className="guide-section-title">LIGNE DE VUE</div>
+            <div className="guide-text">
+                <p>Pour tirer sur une cible, l'unité doit avoir une <strong>ligne de vue</strong> (LOS) dégagée jusqu'à elle.</p>
+            </div>
+            <div className="guide-callout">
+                <strong>Bloquent</strong> la ligne de vue : obstacles (▲), villes (🏰), forêts (🌲).<br />
+                <strong>Ne la bloquent pas</strong> : rivières (〰), collines (⛰), marais (☠).
+            </div>
+            <div className="guide-text">
+                <p>Certaines armes ont une <strong>portée minimale</strong> : elles ne peuvent pas tirer sur une cible trop proche.</p>
+                <p>Cas de la forêt : on peut tirer <strong>depuis</strong> ou <strong>vers</strong> une forêt, mais pas <strong>à travers</strong>.</p>
+            </div>
+
+            <div className="guide-subsection">
+                <div className="guide-subsection-title">Obstacles, villes et forêts bloquent</div>
+                <div className="guide-scenes">
+                    <Scene><SceneLosBlocked /></Scene>
+                    <Scene><SceneTownLos /></Scene>
+                    <Scene><SceneForestLos /></Scene>
+                </div>
+            </div>
+
+            <div className="guide-subsection">
+                <div className="guide-subsection-title">Rivières et collines laissent passer</div>
+                <div className="guide-scenes">
+                    <Scene><SceneRiverLos /></Scene>
+                    <Scene><SceneHillLos /></Scene>
+                </div>
+            </div>
+
+            <div className="guide-subsection">
+                <div className="guide-subsection-title">Tir depuis une forêt</div>
+                <div className="guide-scenes">
+                    <Scene><SceneForestShoot /></Scene>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+const TERRAIN_ROWS = [
+    { name: "▲ Obstacles", move: "Bloqué", los: "Bloquée", combat: "—", combatColor: null, indicator: null },
+    { name: "〰 Rivières", move: "Stop", los: "Libre", combat: "+1 save", combatColor: "#e53935", indicator: "river" },
+    { name: "🏰 Villes", move: "Stop", los: "Bloquée", combat: "−1 save", combatColor: "#4caf50", indicator: "cover" },
+    { name: "🌲 Forêts", move: "Coût ×2", los: "Bloquée*", combat: "−1 save", combatColor: "#4caf50", indicator: "cover" },
+    { name: "⛰ Collines", move: "Coût ×2", los: "Libre", combat: "+1 portée", combatColor: "#1e88e5", indicator: "hill" },
+    { name: "☠ Marais", move: "Stop", los: "Libre", combat: "−1 PV", combatColor: "#e53935", indicator: null },
+];
+
+const TERRAIN_DETAILS = [
+    { title: "▲ Obstacles", text: "Infranchissables. Bloquent la ligne de vue.", scene: SceneObstacleMove },
+    { title: "〰 Rivières", text: "L'unité s'arrête immédiatement en entrant. Malus défensif : +1 au seuil de sauvegarde. Ne bloque pas la ligne de vue.", scene: SceneRiverCost },
+    { title: "🏰 Villes", text: "L'unité s'arrête immédiatement en entrant. Chaque ville possédée rapporte 1 point en fin de round. Bonus de couvert (−1 au seuil de sauvegarde). Bloquent la ligne de vue.", scene: SceneTownStop },
+    { title: "🌲 Forêts", text: "Coûtent 2 points de mouvement. Bonus de couvert (−1 au seuil de sauvegarde). Bloquent la ligne de vue.", scene: SceneForestCost },
+    { title: "⛰ Collines", text: "Coûtent 2 points de mouvement. Ne bloquent pas la ligne de vue. Les unités à distance gagnent +1 de portée.", scene: SceneHillRange },
+    { title: "☠ Marais", text: "L'unité s'arrête immédiatement en entrant. Inflige 1 dégât à l'unité qui entre.", scene: SceneSwampPoison },
+];
+
+function TerrainsTab() {
+    return (
+        <div className="guide-section">
+            <div className="guide-section-title">TERRAINS — RÉCAPITULATIF</div>
+            <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #ddd2bf", borderRadius: 3, fontSize: 12, overflow: "hidden" }}>
+                <thead>
+                    <tr>
+                        <td style={TERRAIN_HEADER}>Terrain</td>
+                        <td style={TERRAIN_HEADER}>Mouvement</td>
+                        <td style={TERRAIN_HEADER}>LOS</td>
+                        <td style={TERRAIN_HEADER}>Combat</td>
+                        <td style={TERRAIN_HEADER}>Indicateur</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    {TERRAIN_ROWS.map((row, i) => {
+                        const last = i === TERRAIN_ROWS.length - 1;
+                        const cell = last ? { ...TERRAIN_CELL, borderBottom: "none" } : TERRAIN_CELL;
+                        return (
+                            <tr key={row.name}>
+                                <td style={{ ...cell, fontWeight: 600, textAlign: "left" }}>{row.name}</td>
+                                <td style={cell}>{row.move}</td>
+                                <td style={cell}>{row.los}</td>
+                                <td style={{ ...cell, color: row.combatColor || cell.color }}>{row.combat}</td>
+                                <td style={cell}>{row.indicator ? <IndicatorIcon type={row.indicator} /> : "—"}</td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+            <div style={{ fontSize: 11, color: "#8a7a60", marginTop: 8 }}>* Détail de la ligne de vue dans l'onglet « Ligne de vue ».</div>
+
+            {TERRAIN_DETAILS.map(({ title, text, scene: SceneComp }) => (
+                <div key={title} className="guide-subsection">
+                    <div className="guide-subsection-title">{title}</div>
+                    <div className="guide-text"><p>{text}</p></div>
+                    <div className="guide-scenes"><Scene><SceneComp /></Scene></div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+const TAB_CONTENT = {
+    objectif: ObjectifTab,
+    tour: TourTab,
+    unites: UnitesTab,
+    combat: CombatTab,
+    los: LosTab,
+    terrains: TerrainsTab,
 };
 
 export default function Guide({ onBack }) {
-    const unitTypes = Object.entries(UNIT_TEMPLATES);
+    const [activeTab, setActiveTab] = useState("objectif");
+    const topRef = useRef(null);
 
-    const scrollTo = (id) => {
-        document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    };
+    useEffect(() => {
+        topRef.current?.scrollIntoView({ block: "start" });
+    }, [activeTab]);
+
+    const ActiveContent = TAB_CONTENT[activeTab];
 
     return (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minHeight: "100vh", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif", padding: "30px 20px" }}>
-            <div style={{ maxWidth: 680, width: "100%" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 22, fontWeight: 700, letterSpacing: ".2em", color: "#8a6a08" }}>
-                        GUIDE DE JEU
+            <div ref={topRef} style={{ maxWidth: 680, width: "100%" }}>
+                <div className="guide-header">
+                    <div className="home-title">
+                        <div className="home-title-line" />
+                        <div>
+                            <div className="home-title-text" style={{ fontSize: 26, letterSpacing: ".3em" }}>GUIDE</div>
+                            <div className="home-title-sub">Règles du jeu</div>
+                        </div>
+                        <div className="home-title-line" />
                     </div>
-                    <button className="btn btn-grey" onClick={onBack} style={{ width: "auto", padding: "6px 16px" }}>
-                        Retour
-                    </button>
+                    <button className="btn btn-grey guide-back" onClick={onBack}>Retour</button>
                 </div>
 
-                <div style={{ ...SECTION_STYLE, display: "flex", gap: 8, flexWrap: "wrap", padding: "10px 16px" }}>
-                    {NAV_ITEMS.map(item => (
-                        <button key={item.id} onClick={() => scrollTo(item.id)} style={{
-                            background: "none", border: "1px solid #c8b898", borderRadius: 3, padding: "4px 14px",
-                            fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: ".1em", color: "#8a6a08",
-                            cursor: "pointer",
-                        }}>
+                <div className="guide-tabs">
+                    {TABS.map(item => (
+                        <button
+                            key={item.id}
+                            className={`guide-tab${item.id === activeTab ? " active" : ""}`}
+                            onClick={() => setActiveTab(item.id)}
+                        >
                             {item.label}
                         </button>
                     ))}
                 </div>
 
-                <div id="objectif" style={SECTION_STYLE}>
-                    <div style={TITLE_STYLE}>OBJECTIF</div>
-                    <div style={TEXT_STYLE}>
-                        <p style={{ margin: "0 0 8px" }}>Warhex est un jeu tactique au tour par tour sur grille hexagonale. Deux joueurs s'affrontent pendant <strong>7 tours</strong>.</p>
-                        <p style={{ margin: "0 0 8px" }}>Chaque tour, vous activez <strong>deux unités</strong> (une à la fois) : déplacement et/ou attaque pour chacune, puis le tour passe automatiquement à l'adversaire.</p>
-                        <p style={{ margin: "0 0 8px" }}>Les <strong>villes</strong> (🏰) rapportent des points : quand une unité se déplace sur une ville, celle-ci devient la propriété de son joueur (la case change de couleur). La ville reste au joueur tant qu'un adversaire ne s'y déplace pas. Chaque ville possédée rapporte <strong>1 point</strong> en fin de tour. Après 7 tours, le joueur avec le plus de points gagne.</p>
-                    </div>
-                    <SceneTownControl />
-                </div>
-
-                <div id="unites" style={SECTION_STYLE}>
-                    <div style={TITLE_STYLE}>UNITÉS</div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                        {unitTypes.map(([key, t]) => (
-                            <div key={key} style={{ background: "#f5f0e8", border: "1px solid #d5cbb8", borderRadius: 3, padding: 12 }}>
-                                <div style={{ fontSize: 15, fontWeight: 600, color: "#2a2015", marginBottom: 6 }}>
-                                    {t.symbol} {t.name}
-                                </div>
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: "0 20px", fontSize: 12, color: "#6a5a40", marginBottom: 8 }}>
-                                    <span>Mouvement : <strong>{t.movement}</strong></span>
-                                    <span>PV : <strong>{t.wounds}</strong></span>
-                                    <span>Sauvegarde : <strong>{t.save}+</strong></span>
-                                    <span>CC : <strong>{t.weaponSkill}+</strong></span>
-                                    <span>CT : <strong>{t.ballisticSkill}+</strong></span>
-                                </div>
-                                <div style={{ fontSize: 12, color: "#6a5a40" }}>
-                                    {t.weapons.map(w => (
-                                        <div key={w.id} style={{ marginBottom: 2 }}>
-                                            {w.type === "ranged" ? "🏹" : "🗡"} <strong>{w.name}</strong> — {w.type === "ranged" ? `Portée ${w.minRange ? `${w.minRange}-` : ""}${w.range}` : "Mêlée"} · {w.attacks} att. · {w.damage} dég. · PA {Math.abs(w.ap)}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div id="combat" style={SECTION_STYLE}>
-                    <div style={TITLE_STYLE}>COMBAT</div>
-                    <div style={TEXT_STYLE}>
-                        <p style={{ margin: "0 0 6px" }}><strong>1. To Hit</strong> — Lancez autant de D6 que l'arme a d'attaques. Chaque dé supérieur ou égal à la compétence (CC au corps à corps, CT à distance) est une touche.</p>
-                        <p style={{ margin: "0 0 6px" }}><strong>2. Sauvegarde</strong> — Le défenseur lance 3 D6. Chaque dé supérieur ou égal à (sauvegarde + |PA|) annule une touche. Si le seuil dépasse 6, la sauvegarde est impossible.</p>
-                        <p style={{ margin: "0 0 6px" }}><strong>3. Dégâts</strong> — Chaque touche non sauvée inflige les dégâts de l'arme.</p>
-                        <p style={{ margin: 0 }}><strong>4. Consolidation</strong> — Si une unité tue un ennemi adjacent au corps à corps, elle peut prendre la place de l'unité éliminée. Les effets du terrain d'arrivée s'appliquent (capture de ville, poison du marais).</p>
-                    </div>
-                </div>
-
-                <div id="terrains" style={SECTION_STYLE}>
-                    <div style={TITLE_STYLE}>TERRAINS — RÉCAPITULATIF</div>
-                    <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #d5cbb8", borderRadius: 3, fontSize: 12 }}>
-                        <thead>
-                            <tr>
-                                <td style={TERRAIN_HEADER}>Terrain</td>
-                                <td style={TERRAIN_HEADER}>Mouvement</td>
-                                <td style={TERRAIN_HEADER}>LOS</td>
-                                <td style={TERRAIN_HEADER}>Combat</td>
-                                <td style={TERRAIN_HEADER}>Indicateur</td>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td style={{ ...TERRAIN_CELL, fontWeight: 600, textAlign: "left" }}>▲ Obstacles</td>
-                                <td style={TERRAIN_CELL}>Bloqué</td>
-                                <td style={TERRAIN_CELL}>Bloquée</td>
-                                <td style={TERRAIN_CELL}>—</td>
-                                <td style={TERRAIN_CELL}>—</td>
-                            </tr>
-                            <tr>
-                                <td style={{ ...TERRAIN_CELL, fontWeight: 600, textAlign: "left" }}>〰 Rivières</td>
-                                <td style={TERRAIN_CELL}>Stop</td>
-                                <td style={TERRAIN_CELL}>Libre</td>
-                                <td style={{ ...TERRAIN_CELL, color: "#e53935" }}>+1 save</td>
-                                <td style={TERRAIN_CELL}><IndicatorIcon type="river" /></td>
-                            </tr>
-                            <tr>
-                                <td style={{ ...TERRAIN_CELL, fontWeight: 600, textAlign: "left" }}>🏰 Villes</td>
-                                <td style={TERRAIN_CELL}>Stop</td>
-                                <td style={TERRAIN_CELL}>Bloquée</td>
-                                <td style={{ ...TERRAIN_CELL, color: "#4caf50" }}>−1 save</td>
-                                <td style={TERRAIN_CELL}><IndicatorIcon type="cover" /></td>
-                            </tr>
-                            <tr>
-                                <td style={{ ...TERRAIN_CELL, fontWeight: 600, textAlign: "left" }}>🌲 Forêts</td>
-                                <td style={TERRAIN_CELL}>Coût ×2</td>
-                                <td style={TERRAIN_CELL}>Bloquée*</td>
-                                <td style={{ ...TERRAIN_CELL, color: "#4caf50" }}>−1 save</td>
-                                <td style={TERRAIN_CELL}><IndicatorIcon type="cover" /></td>
-                            </tr>
-                            <tr>
-                                <td style={{ ...TERRAIN_CELL, fontWeight: 600, textAlign: "left" }}>⛰ Collines</td>
-                                <td style={TERRAIN_CELL}>Coût ×2</td>
-                                <td style={TERRAIN_CELL}>Libre</td>
-                                <td style={{ ...TERRAIN_CELL, color: "#1e88e5" }}>+1 portée</td>
-                                <td style={TERRAIN_CELL}><IndicatorIcon type="hill" /></td>
-                            </tr>
-                            <tr>
-                                <td style={{ ...TERRAIN_CELL, fontWeight: 600, textAlign: "left", borderBottom: "none" }}>☠ Marais</td>
-                                <td style={{ ...TERRAIN_CELL, borderBottom: "none" }}>Stop</td>
-                                <td style={{ ...TERRAIN_CELL, borderBottom: "none" }}>Libre</td>
-                                <td style={{ ...TERRAIN_CELL, borderBottom: "none", color: "#e53935" }}>−1 PV</td>
-                                <td style={{ ...TERRAIN_CELL, borderBottom: "none" }}>—</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <div style={{ fontSize: 11, color: "#8a7a60", marginTop: 6 }}>* On peut tirer depuis ou vers une forêt, mais pas à travers.</div>
-                </div>
-
-                <div style={TERRAIN_SECTION}>
-                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>▲ Obstacles</div>
-                    <div style={TEXT_STYLE}>Infranchissables. Bloquent la ligne de vue.</div>
-                    <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
-                        <SceneObstacleMove />
-                        <SceneLosBlocked />
-                    </div>
-                </div>
-
-                <div style={TERRAIN_SECTION}>
-                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>〰 Rivières</div>
-                    <div style={TEXT_STYLE}>L'unité s'arrête immédiatement en entrant. Malus défensif : +1 au seuil de sauvegarde. Ne bloque pas la ligne de vue.</div>
-                    <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
-                        <SceneRiverCost />
-                        <SceneRiverLos />
-                    </div>
-                </div>
-
-                <div style={TERRAIN_SECTION}>
-                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>🏰 Villes</div>
-                    <div style={TEXT_STYLE}>L'unité s'arrête immédiatement en entrant. Chaque ville possédée rapporte 1 point en fin de tour. Bonus de couvert (−1 au seuil de sauvegarde). Bloquent la ligne de vue.</div>
-                    <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
-                        <SceneTownStop />
-                        <SceneTownControl />
-                    </div>
-                    <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
-                        <SceneTownCover />
-                        <SceneTownLos />
-                    </div>
-                </div>
-
-                <div style={TERRAIN_SECTION}>
-                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>🌲 Forêts</div>
-                    <div style={TEXT_STYLE}>Coûtent 2 points de mouvement. Bonus de couvert (−1 au seuil de sauvegarde). Bloquent la LOS entre deux cases, mais on peut tirer depuis ou vers une forêt.</div>
-                    <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
-                        <SceneForestCost />
-                        <SceneForestCover />
-                    </div>
-                    <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
-                        <SceneForestLos />
-                        <SceneForestShoot />
-                    </div>
-                </div>
-
-                <div style={TERRAIN_SECTION}>
-                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>⛰ Collines</div>
-                    <div style={TEXT_STYLE}>Coûtent 2 points de mouvement. Ne bloquent pas la ligne de vue. Les unités à distance gagnent +1 de portée.</div>
-                    <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
-                        <SceneHillCost />
-                        <SceneHillLos />
-                        <SceneHillRange />
-                    </div>
-                </div>
-
-                <div style={TERRAIN_SECTION}>
-                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>☠ Marais</div>
-                    <div style={TEXT_STYLE}>L'unité s'arrête immédiatement en entrant. Inflige 1 dégât à l'unité qui entre.</div>
-                    <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
-                        <SceneSwampStop />
-                        <SceneSwampPoison />
-                    </div>
-                </div>
+                <ActiveContent />
 
                 <div style={{ textAlign: "center", marginTop: 8, marginBottom: 20 }}>
                     <button className="btn btn-grey" onClick={onBack} style={{ width: "auto", padding: "6px 16px" }}>

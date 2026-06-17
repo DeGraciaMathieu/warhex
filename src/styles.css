@@ -45,6 +45,109 @@
     margin-bottom: 12px;
 }
 
+/* ---- Guide de jeu ---- */
+.guide-header {
+    position: relative; display: flex; align-items: center; justify-content: center;
+    margin-bottom: 24px;
+}
+.guide-back {
+    position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+    width: auto; margin: 0; padding: 6px 16px;
+}
+.guide-tabs {
+    display: flex; flex-wrap: wrap; gap: 2px;
+    border-bottom: 1px solid #d5cbb8; margin-bottom: 18px;
+}
+.guide-tab {
+    background: none; border: none; cursor: pointer;
+    padding: 8px 14px; margin-bottom: -1px;
+    font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: .1em;
+    text-transform: uppercase; color: #b0a080;
+    border-bottom: 2px solid transparent;
+    transition: color .15s, border-color .15s;
+}
+.guide-tab:hover { color: #8a6a08; }
+.guide-tab.active { color: #8a6a08; font-weight: 700; border-bottom-color: #8a6a08; }
+
+.guide-section {
+    background: #ece5d8; border: 1px solid #d5cbb8; border-radius: 6px;
+    padding: 22px 24px; margin-bottom: 16px;
+    box-shadow: 0 2px 14px rgba(42, 32, 21, .06);
+}
+.guide-section-title {
+    font-family: 'Cinzel', serif; font-size: 13px; font-weight: 700;
+    letter-spacing: .18em; color: #8a6a08;
+    margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #ddd2bf;
+}
+.guide-text { font-size: 14px; line-height: 1.65; color: #3a3020; }
+.guide-text p { margin: 0 0 10px; }
+.guide-text p:last-child { margin-bottom: 0; }
+.guide-text strong { color: #2a2015; }
+
+.guide-callout {
+    background: rgba(138, 106, 8, .06);
+    border: 1px solid #e2d4b0; border-left: 3px solid #8a6a08;
+    border-radius: 4px; padding: 12px 16px; margin: 14px 0;
+    font-size: 14px; line-height: 1.6; color: #3a3020;
+}
+.guide-callout strong { color: #2a2015; }
+
+.guide-scenes { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
+.guide-scene {
+    background: #fdfaf4; border: 1px solid #e6dcc8; border-radius: 8px;
+    padding: 6px 8px; box-shadow: 0 1px 4px rgba(42, 32, 21, .05);
+}
+
+.guide-subsection {
+    background: #f5f0e8; border: 1px solid #e0d6c4; border-radius: 6px;
+    padding: 14px 16px; margin-top: 14px;
+}
+.guide-subsection-title {
+    font-family: 'Cinzel', serif; font-size: 12px; font-weight: 700;
+    letter-spacing: .06em; color: #5a4a30; margin-bottom: 6px;
+}
+
+.guide-steps { display: flex; flex-direction: column; gap: 14px; }
+.guide-step { display: flex; gap: 12px; align-items: flex-start; }
+.guide-step-num {
+    flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: #8a6a08; color: #f5f0e8;
+    font-family: 'Cinzel', serif; font-size: 13px; font-weight: 700;
+    box-shadow: 0 1px 3px rgba(42, 32, 21, .2);
+}
+.guide-step-body { font-size: 14px; line-height: 1.55; color: #3a3020; padding-top: 2px; }
+.guide-step-body strong { color: #2a2015; }
+
+.guide-units { display: flex; flex-direction: column; gap: 12px; }
+.guide-unit {
+    background: #fdfaf4; border: 1px solid #e6dcc8; border-radius: 8px;
+    padding: 14px 16px; box-shadow: 0 1px 4px rgba(42, 32, 21, .05);
+}
+.guide-unit-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.guide-unit-medallion { border-color: #c8a83a !important; }
+.guide-unit-name {
+    font-family: 'Cinzel', serif; font-size: 16px; font-weight: 700;
+    letter-spacing: .04em; color: #2a2015;
+}
+.guide-unit-weapons {
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid #efe7d6;
+    display: flex; flex-direction: column; gap: 6px;
+}
+.guide-weapon { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.guide-weapon-name { font-weight: 700; color: #3a3020; letter-spacing: .03em; }
+
+.guide-badges {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+}
+.guide-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 50%;
+    font-family: 'Cinzel', serif; font-size: 12px; font-weight: 700; color: #f5f0e8;
+    box-shadow: 0 1px 3px rgba(42, 32, 21, .18);
+}
+.guide-badge-sep { width: 1px; height: 18px; background: #d5cbb8; margin: 0 2px; }
+
 .steps {
     display: flex; align-items: flex-start; gap: 0;
 }
