@@ -2,6 +2,14 @@ import { hexKey } from "./hex.js";
 
 export const ACTIVATIONS_PER_TURN = 2;
 
+export const ROUNDS_PER_GAME = 8;
+
+// Joueur qui ouvre un round donné : alternance par parité (round impair → J1,
+// round pair → J2). Sur une partie de 8 rounds, chaque camp commence et clôt
+// exactement 4 rounds, ce qui équilibre l'avantage du dernier coup avant le
+// décompte du score. Séquence des demi-tours : 1 2 2 1 1 2 2 1…
+export const firstPlayerOfRound = round => (round % 2 === 1 ? 1 : 2);
+
 export const UNIT_TEMPLATES = {
     warrior: {
         name: "Warrior", symbol: "⚔",
@@ -148,7 +156,7 @@ export function computeTownControl(townOwnership) {
 }
 
 export function checkWinner(scores, round) {
-    if (round < 7) return null;
+    if (round < ROUNDS_PER_GAME) return null;
     if (scores[1] > scores[2]) return 1;
     if (scores[2] > scores[1]) return 2;
     return "draw";
