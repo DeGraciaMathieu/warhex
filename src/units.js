@@ -270,7 +270,11 @@ export const TERRAIN_PRESETS = [
 export function generateTerrain(units, options = {}) {
     const { fairTowns = true, terrainDensity = DEFAULT_TERRAIN_DENSITY } = options;
     const centerHex = { q: 0, r: 0, s: 0 };
-    const reservedKeys = new Set([...units.map(u => `${u.hex.q},${u.hex.r},${u.hex.s}`), `0,0,0`]);
+    // Réserve toujours toutes les positions de spawn, même si l'armée n'est pas
+    // encore complète au moment de la preview : sinon le terrain réutilisé au
+    // lancement pourrait recouvrir un hex de spawn et y faire apparaître une unité.
+    const spawnKeys = [...SPAWN_POSITIONS[1], ...SPAWN_POSITIONS[2]].map(h => `${h.q},${h.r},${h.s}`);
+    const reservedKeys = new Set([...units.map(u => `${u.hex.q},${u.hex.r},${u.hex.s}`), ...spawnKeys, `0,0,0`]);
     const obstacleCount = TERRAIN_COUNTS.obstacles[terrainDensity.obstacles];
     const obstacles = randomAvailableHexes(obstacleCount, reservedKeys);
     const obstacleKeys = new Set(obstacles.map(o => `${o.q},${o.r},${o.s}`));
