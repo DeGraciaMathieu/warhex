@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { hexToPixel, pixelToHex, hexDistance, hexKey, isValidHex } from "./hex.js";
-import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, ROUNDS_PER_GAME, TERRAIN_DENSITY_LABELS, DEFAULT_TERRAIN_DENSITY, TERRAIN_PRESETS, computeTownControl } from "./units.js";
+import { initState, resetUID, UNIT_TEMPLATES, ACTIVATIONS_PER_TURN, ROUNDS_PER_GAME, turnSchedule, currentTurnIndex, TERRAIN_DENSITY_LABELS, DEFAULT_TERRAIN_DENSITY, TERRAIN_PRESETS, computeTownControl } from "./units.js";
 import { drawScene, CANVAS_W, CANVAS_H, OX, OY, DEATH_ANIM_DURATION, HIT_EFFECT_DURATION, ATTACK_EFFECT_DURATION, moveAnimDuration } from "./renderer.js";
 import { handleClick, computeMove, computeAttack, computeWeaponSelect, applyDamage, computeEndTurn, computeDeselect, computeConsolidate, computeCancelAttack, unitAt, getSaveModifier, getRangeModifier, getCombatModifiers } from "./game.js";
 import { computeAIAction, buildAIPreview } from "./ai.js";
@@ -679,6 +679,8 @@ export default function HexWarhammer() {
     const phaseLabel = {
         select: "SÉLECTION", move: "MOUVEMENT", attack: "ATTAQUE", weapon_select: "CHOIX D'ARME", resolving: "RÉSOLUTION", consolidate: "CONSOLIDATION",
     }[state.phase] || "";
+    const turns = turnSchedule();
+    const curTurnIdx = state.winner ? -1 : currentTurnIndex(state.round, state.currentPlayer);
 
     return (
         <div style={{ display: "flex", height: "100vh", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif", overflow: "hidden" }}>
@@ -716,6 +718,25 @@ export default function HexWarhammer() {
                         <span>TOUR {state.round}/{ROUNDS_PER_GAME}</span>
                         <span style={{ color: "#a03030" }}>{state.scores[2]} pts</span>
                     </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", maxWidth: CANVAS_W, width: "100%", marginTop: 10, flexWrap: "wrap", rowGap: 8 }}>
+                    {turns.map((turn, i) => {
+                        const color = P[turn.player];
+                        const isPast = state.winner ? true : i < curTurnIdx;
+                        const isCurrent = i === curTurnIdx;
+                        return (
+                            <div key={i} title={`Tour ${turn.round} — J${turn.player}`} style={{
+                                width: 16, height: 16, borderRadius: "50%",
+                                marginLeft: i > 0 && i % 2 === 0 ? 12 : 4,
+                                background: color,
+                                opacity: isPast ? 0.3 : 1,
+                                boxShadow: isCurrent ? `0 0 0 3px #f5f0e8, 0 0 0 5px ${color}` : "none",
+                                transform: isCurrent ? "scale(1.15)" : "none",
+                                transition: "opacity .2s, box-shadow .2s, transform .2s",
+                            }} />
+                        );
+                    })}
                 </div>
             </div>
 

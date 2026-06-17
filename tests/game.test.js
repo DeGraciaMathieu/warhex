@@ -1029,14 +1029,14 @@ describe("ordre de tour alterné (Thue-Morse)", () => {
     it("la séquence des demi-tours d'une partie suit 1 2 2 1 1 2 2 1…", () => {
         let s = initState({ 1: ["warrior"], 2: ["warrior"] });
         const seq = [];
-        while (!s.winner && seq.length < 16) {
+        while (!s.winner && seq.length < 12) {
             seq.push(s.currentPlayer);
             s = computeEndTurn(s);
         }
-        expect(seq).toEqual([1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1]);
+        expect(seq).toEqual([1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1]);
     });
 
-    it("chaque joueur ouvre et clôt exactement 4 des 8 rounds", () => {
+    it("chaque joueur ouvre et clôt exactement 3 des 6 rounds", () => {
         let s = initState({ 1: ["warrior"], 2: ["warrior"] });
         const starters = [];
         let prevRound = 0;
@@ -1044,9 +1044,9 @@ describe("ordre de tour alterné (Thue-Morse)", () => {
             if (s.round !== prevRound) { starters.push(s.currentPlayer); prevRound = s.round; }
             s = computeEndTurn(s);
         }
-        expect(starters).toHaveLength(8);
-        expect(starters.filter(p => p === 1)).toHaveLength(4);
-        expect(starters.filter(p => p === 2)).toHaveLength(4);
+        expect(starters).toHaveLength(6);
+        expect(starters.filter(p => p === 1)).toHaveLength(3);
+        expect(starters.filter(p => p === 2)).toHaveLength(3);
     });
 });
 

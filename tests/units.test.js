@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { hexKey, isValidHex, hexNeighbors } from "../src/hex.js";
-import { createUnit, initState, resetUID, UNIT_TEMPLATES, SPAWN_POSITIONS, DEFAULT_TERRAIN_DENSITY } from "../src/units.js";
+import { createUnit, initState, resetUID, UNIT_TEMPLATES, SPAWN_POSITIONS, DEFAULT_TERRAIN_DENSITY, firstPlayerOfRound, turnSchedule, currentTurnIndex } from "../src/units.js";
 
 beforeEach(() => resetUID());
 
@@ -511,5 +511,37 @@ describe("densité des terrains", () => {
             ];
             expect(new Set(allKeys).size).toBe(allKeys.length);
         }
+    });
+});
+
+describe("calendrier des demi-tours", () => {
+    it("turnSchedule(8) produit 16 demi-tours dans l'ordre 1 2 2 1…", () => {
+        const players = turnSchedule(8).map(t => t.player);
+        expect(players).toEqual([1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1]);
+    });
+
+    it("chaque joueur totalise 8 demi-tours sur 8 rounds", () => {
+        const players = turnSchedule(8).map(t => t.player);
+        expect(players.filter(p => p === 1)).toHaveLength(8);
+        expect(players.filter(p => p === 2)).toHaveLength(8);
+    });
+
+    it("le 1er demi-tour de chaque round revient à firstPlayerOfRound", () => {
+        const schedule = turnSchedule(8);
+        for (let round = 1; round <= 8; round++) {
+            const firstOfRound = schedule.find(t => t.round === round);
+            expect(firstOfRound.player).toBe(firstPlayerOfRound(round));
+        }
+    });
+
+    it("currentTurnIndex situe le bon demi-tour selon le joueur actif", () => {
+        // Round 1 (ouvert par J1) : J1 → index 0, J2 → index 1
+        expect(currentTurnIndex(1, 1)).toBe(0);
+        expect(currentTurnIndex(1, 2)).toBe(1);
+        // Round 2 (ouvert par J2) : J2 → index 2, J1 → index 3
+        expect(currentTurnIndex(2, 2)).toBe(2);
+        expect(currentTurnIndex(2, 1)).toBe(3);
+        // Round 8 (ouvert par J2) : dernier demi-tour = J1 → index 15
+        expect(currentTurnIndex(8, 1)).toBe(15);
     });
 });

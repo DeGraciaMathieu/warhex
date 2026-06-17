@@ -2,13 +2,32 @@ import { hexKey } from "./hex.js";
 
 export const ACTIVATIONS_PER_TURN = 2;
 
-export const ROUNDS_PER_GAME = 8;
+export const ROUNDS_PER_GAME = 6;
 
 // Joueur qui ouvre un round donné : alternance par parité (round impair → J1,
-// round pair → J2). Sur une partie de 8 rounds, chaque camp commence et clôt
-// exactement 4 rounds, ce qui équilibre l'avantage du dernier coup avant le
+// round pair → J2). Sur une partie de 6 rounds, chaque camp commence et clôt
+// exactement 3 rounds, ce qui équilibre l'avantage du dernier coup avant le
 // décompte du score. Séquence des demi-tours : 1 2 2 1 1 2 2 1…
 export const firstPlayerOfRound = round => (round % 2 === 1 ? 1 : 2);
+
+// Calendrier chronologique des demi-tours d'une partie : un élément { round,
+// player } par demi-tour, dans l'ordre de jeu. Pour chaque round, le joueur qui
+// l'ouvre (firstPlayerOfRound) joue avant l'autre → séquence 1 2 2 1 1 2 2 1…
+export function turnSchedule(rounds = ROUNDS_PER_GAME) {
+    const schedule = [];
+    for (let round = 1; round <= rounds; round++) {
+        const first = firstPlayerOfRound(round);
+        schedule.push({ round, player: first });
+        schedule.push({ round, player: first === 1 ? 2 : 1 });
+    }
+    return schedule;
+}
+
+// Index (0-based) du demi-tour courant dans turnSchedule(), à partir du round et
+// du joueur actif : 0 pour le 1er demi-tour du round, 1 pour le 2e.
+export function currentTurnIndex(round, currentPlayer) {
+    return (round - 1) * 2 + (currentPlayer === firstPlayerOfRound(round) ? 0 : 1);
+}
 
 export const UNIT_TEMPLATES = {
     warrior: {
