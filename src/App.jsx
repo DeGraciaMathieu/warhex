@@ -133,6 +133,9 @@ export default function HexWarhammer() {
     const [tooltipPos, setTooltipPos] = useState(null);
     const [tooltipUnitId, setTooltipUnitId] = useState(null);
     const [terrainTipKey, setTerrainTipKey] = useState(null);
+    const [isMobile, setIsMobile] = useState(false);
+    const [infoOpen, setInfoOpen] = useState(false);
+    const [inspectHex, setInspectHex] = useState(null);
     const [diceAnim, setDiceAnim] = useState(null);
     const [pendingDamage, setPendingDamage] = useState(null);
     const [scoreFx, setScoreFx] = useState(null);
@@ -258,6 +261,15 @@ export default function HexWarhammer() {
     useEffect(() => {
         if (canvasRef.current) canvasRef.current.classList.toggle("targeting", overTarget);
     }, [overTarget]);
+
+    // Bascule la présentation mobile selon la largeur de viewport (PRD 13).
+    useEffect(() => {
+        const mq = window.matchMedia("(max-width: 768px)");
+        const update = () => setIsMobile(mq.matches);
+        update();
+        mq.addEventListener("change", update);
+        return () => mq.removeEventListener("change", update);
+    }, []);
 
     function regeneratePreview() {
         resetUID();
@@ -388,16 +400,19 @@ export default function HexWarhammer() {
     }, [state, vsAI, diceAnim]);
 
     function onCanvasClick(e) {
-        if (vsAI && state?.currentPlayer === 2) return;
-        if (notMyTurn) return;
-        if (state?.movingUnit) return;
-        if (diceAnim && !diceAnim.done) return;
-        if (diceAnim?.done) closeCombatModal();
         const rect = canvasRef.current.getBoundingClientRect();
         const sx = CANVAS_W / rect.width, sy = CANVAS_H / rect.height;
         const x = (e.clientX - rect.left) * sx - OX;
         const y = (e.clientY - rect.top) * sy - OY;
         const hex = pixelToHex(x, y);
+        // Inspection tactile : mémorise la case tapée pour afficher ses infos dans le
+        // panneau, indépendamment du tour de jeu (cf. PRD 13).
+        if (isValidHex(hex)) setInspectHex(hex);
+        if (vsAI && state?.currentPlayer === 2) return;
+        if (notMyTurn) return;
+        if (state?.movingUnit) return;
+        if (diceAnim && !diceAnim.done) return;
+        if (diceAnim?.done) closeCombatModal();
         if (!isValidHex(hex)) return;
         applyAction(prev => handleClick(prev, hex));
     }
@@ -541,7 +556,7 @@ export default function HexWarhammer() {
         );
 
         return (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif", gap: 20, padding: "24px 0" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100dvh", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif", gap: 20, padding: "24px 0" }}>
                 <div className="home-title">
                     <div className="home-title-line" />
                     <div>
@@ -639,8 +654,8 @@ export default function HexWarhammer() {
                 </>}
 
                 {setupStep === "terrain" && <>
-                    <div style={{ display: "flex", alignItems: "stretch", gap: 24 }}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 16, width: 460 }}>
+                    <div className="setup-terrain-row" style={{ display: "flex", alignItems: "stretch", gap: 24 }}>
+                        <div className="setup-terrain-col" style={{ display: "flex", flexDirection: "column", gap: 16, width: 460 }}>
                             <div className="panel">
                                 <div className="section-title">Villes</div>
                                 <div style={{ display: "flex", gap: 8 }}>
@@ -697,7 +712,7 @@ export default function HexWarhammer() {
                                 </button>
                             </div>
                             <div style={{ border: "1px solid #d5cbb8", borderRadius: 6, overflow: "hidden", flex: 1 }}>
-                                <canvas ref={previewCanvasRef} width={CANVAS_W} height={CANVAS_H} style={{ display: "block", width: 460, height: 405 }} />
+                                <canvas ref={previewCanvasRef} width={CANVAS_W} height={CANVAS_H} style={{ display: "block", width: "100%", maxWidth: 460, height: "auto" }} />
                             </div>
                         </div>
                     </div>
@@ -710,7 +725,7 @@ export default function HexWarhammer() {
                 </>}
 
                 {setupStep === "armies" && <>
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: 24 }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 24, flexWrap: "wrap", justifyContent: "center" }}>
                         {renderArmyPanel(1)}
                         {renderArmyPanel(2)}
                     </div>
@@ -746,8 +761,8 @@ export default function HexWarhammer() {
     state.scoreHistory.forEach(h => { scoreByRound[h.round] = h.scores; });
 
     return (
-        <div style={{ display: "flex", height: "100vh", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif", overflow: "hidden" }}>
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: 20 }}>
+        <div className="app-root" style={{ display: "flex", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif" }}>
+            <div className="board-col" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: 20 }}>
                 <div style={{ fontFamily: "'Cinzel', serif", fontSize: 24, fontWeight: 700, letterSpacing: ".2em", color: "#8a6a08", textShadow: "0 0 30px rgba(138,106,8,.2)" }}>
                     ⚔ WARHEX ⚔
                 </div>
@@ -831,7 +846,7 @@ export default function HexWarhammer() {
                 </div>
             </div>
 
-            <div style={{ width: 320, borderLeft: "1px solid #d5cbb8", background: "#ece5d8", display: "flex", flexDirection: "column", flexShrink: 0 }}>
+            <div className="side-panel" style={{ width: 320, borderLeft: "1px solid #d5cbb8", background: "#ece5d8", display: "flex", flexDirection: "column", flexShrink: 0 }}>
                 {state.winner ? (
                     <div style={{ padding: "20px", flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
                         <div style={{ fontFamily: "'Cinzel', serif", fontSize: 16, letterSpacing: ".1em", color: "#2a2015", textAlign: "center" }}>
@@ -859,7 +874,31 @@ export default function HexWarhammer() {
                         <button className="btn btn-grey" onClick={restart}>↺ Nouvelle partie</button>
                     </div>
                 ) : <>
-                <div style={{ padding: "16px 20px", borderBottom: "1px solid #d5cbb8" }}>
+                <div className={`panel-infos${infoOpen ? " open" : ""}`} style={{ padding: "16px 20px", borderBottom: "1px solid #d5cbb8" }}>
+                    {isMobile && inspectHex && (() => {
+                        const u = unitAt(state.units, inspectHex);
+                        if (u) {
+                            const saveMod = getSaveModifier(u, state);
+                            return (
+                                <div className="inspect-block">
+                                    <div className="inspect-head" style={{ color: P[u.player] }}>{u.symbol} {u.name}</div>
+                                    <div className="inspect-stats">MVT {u.movement} · SVG {u.save + saveMod}+ · PV {u.currentWounds}/{u.wounds}</div>
+                                    {u.weapons.map(w => (
+                                        <div key={w.id} className="inspect-weapon">
+                                            {w.type === "ranged" ? "🏹" : "⚔"} {w.name} — Portée {w.minRange ? `${w.minRange}-` : ""}{w.range + getRangeModifier(u, w, state)} · D{w.damage}
+                                        </div>
+                                    ))}
+                                </div>
+                            );
+                        }
+                        const t = describeTerrain(inspectHex, state);
+                        return (
+                            <div className="inspect-block">
+                                <div className="inspect-head">{t.icon} {t.label}</div>
+                                <ul className="terrain-tooltip-effects">{t.effects.map((e, i) => <li key={i}>{e}</li>)}</ul>
+                            </div>
+                        );
+                    })()}
                     <div style={{ fontFamily: "'Cinzel', serif", fontSize: 12, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 12 }}>INFOS DE PARTIE</div>
                     {(() => {
                         const control = computeTownControl(state.townOwnership || {});
@@ -879,8 +918,9 @@ export default function HexWarhammer() {
                     })()}
                 </div>
 
-                <div style={{ padding: "16px 20px", borderBottom: "1px solid #d5cbb8" }}>
-                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 12, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 12 }}>ACTIONS</div>
+                <div className="panel-actions" style={{ padding: "16px 20px", borderBottom: "1px solid #d5cbb8" }}>
+                    {isMobile && <button className="btn btn-grey panel-info-toggle" onClick={() => setInfoOpen(o => !o)}>{infoOpen ? "▾ Infos" : "ℹ Infos"}</button>}
+                    <div className="panel-actions-title" style={{ fontFamily: "'Cinzel', serif", fontSize: 12, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 12 }}>ACTIONS</div>
 
                     {state.phase === "consolidate" && state.pendingConsolidation ? (
                         <>

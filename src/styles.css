@@ -672,3 +672,89 @@ canvas { cursor: crosshair; display: block; }
     from { opacity: 0; transform: scale(.6); }
     to { opacity: 1; transform: scale(1); }
 }
+
+/* ============================================================
+   Mobile / tactile (PRD 13)
+   ============================================================ */
+
+/* Hauteur de l'app extraite en classe pour pouvoir être surchargée. */
+.app-root { height: 100dvh; overflow: hidden; }
+
+/* Pas de feedback de survol sur appareil tactile (curseurs custom inutiles). */
+@media (hover: none), (pointer: coarse) {
+    .board-canvas, .board-canvas.targeting { cursor: default; }
+}
+
+/* Bloc d'inspection (unité/terrain) affiché dans le tiroir d'infos sur mobile. */
+.inspect-block {
+    background: #f5f0e8; border: 1px solid #d5cbb8; border-radius: 6px;
+    padding: 8px 10px; margin-bottom: 12px;
+}
+.inspect-head { font-family: 'Cinzel', serif; font-weight: 600; margin-bottom: 4px; }
+.inspect-stats { font-size: 12px; color: #5a4a30; margin-bottom: 4px; }
+.inspect-weapon { font-size: 12px; color: #6a5a40; line-height: 1.5; }
+
+@media (max-width: 768px) {
+    .app-root {
+        flex-direction: column !important;
+        height: auto !important;
+        min-height: 100dvh;
+        overflow: visible !important;
+    }
+    .board-col {
+        flex: none !important;
+        justify-content: flex-start !important;
+        padding: 8px 6px 120px !important;   /* marge basse pour dégager la barre d'actions fixe */
+        gap: 8px !important;
+    }
+    .side-panel {
+        width: 100% !important;
+        border-left: none !important;
+        flex-shrink: 1 !important;
+    }
+
+    /* Barre d'actions ancrée en bas, toujours accessible sans scroll. */
+    .panel-actions {
+        position: fixed !important;
+        left: 0; right: 0; bottom: 0;
+        z-index: 50;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 8px !important;
+        border-bottom: none !important;
+        border-top: 1px solid #d5cbb8;
+        background: #ece5d8;
+        box-shadow: 0 -2px 10px rgba(42, 32, 21, .15);
+    }
+    .panel-actions > div { display: contents; }          /* le bloc « Fin de tour » rejoint la rangée */
+    .panel-actions .btn {
+        width: auto !important;
+        flex: 1 1 30%;
+        min-height: 44px;
+        margin-bottom: 0 !important;
+    }
+    .panel-actions-title { display: none !important; }
+    .panel-info-toggle { flex: 0 0 auto !important; min-width: 44px; }
+
+    /* Tiroir d'infos descendant du haut (indépendant de la hauteur de la barre). */
+    .panel-infos {
+        position: fixed !important;
+        left: 0; right: 0; top: 0;
+        z-index: 49;
+        max-height: 70dvh;
+        overflow-y: auto;
+        border-bottom: 1px solid #d5cbb8;
+        background: #ece5d8;
+        transform: translateY(-110%);
+        transition: transform .22s ease;
+        box-shadow: 0 2px 14px rgba(42, 32, 21, .2);
+    }
+    .panel-infos.open { transform: translateY(0); }
+
+    /* Écrans de configuration : empilage et largeurs fluides. */
+    .mode-cards { flex-direction: column; width: 100%; max-width: 340px; }
+    .mode-card { width: 100% !important; }
+    .setup-terrain-row { flex-direction: column !important; align-items: stretch !important; }
+    .setup-terrain-col { width: 100% !important; }
+}
