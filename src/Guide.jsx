@@ -537,6 +537,13 @@ function TourTab() {
     );
 }
 
+const UNIT_DESCRIPTIONS = {
+    warrior: "Polyvalent et résistant : le plus endurant, il frappe au corps à corps comme à distance.",
+    knight: "Très rapide : capture les villes en un éclair, mais fragile et moins armé que le Warrior.",
+    sniper: "Tireur d'élite : longue portée et tir perforant, mais lent et sans défense au corps à corps.",
+    berserker: "Brute de corps à corps : frappe en rafale et touche presque à coup sûr, mais s'effondre dès qu'on le vise.",
+};
+
 function UnitesTab() {
     const unitTypes = Object.entries(UNIT_TEMPLATES);
     const STATS = (t) => [
@@ -554,7 +561,10 @@ function UnitesTab() {
                     <div key={key} className="guide-unit">
                         <div className="guide-unit-head">
                             <div className="combat-medallion guide-unit-medallion">{t.symbol}</div>
-                            <div className="guide-unit-name">{t.name}</div>
+                            <div>
+                                <div className="guide-unit-name">{t.name}</div>
+                                {UNIT_DESCRIPTIONS[key] && <div className="guide-unit-desc">{UNIT_DESCRIPTIONS[key]}</div>}
+                            </div>
                         </div>
                         <div className="weapon-stats" style={{ justifyContent: "flex-start", flexWrap: "wrap" }}>
                             {STATS(t).map(s => (
