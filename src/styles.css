@@ -506,6 +506,53 @@ canvas { cursor: crosshair; display: block; }
     100% { transform: translateX(-50%) translateY(-22px); opacity: 0; }
 }
 
+/* Bannières de feedback (PRD 14) : transition de tour + fin de round. */
+.game-banner {
+    position: absolute; top: 20%; left: 50%; z-index: 50;
+    pointer-events: none; text-align: center;
+    background: rgba(245, 240, 232, .96); border: 2px solid #8a6a08; border-radius: 8px;
+    padding: 12px 30px; box-shadow: 0 6px 24px rgba(0, 0, 0, .25);
+    animation: bannerInOut 1100ms ease-in-out forwards;
+}
+.game-banner-sub {
+    font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: .2em; color: #8a7a60;
+}
+.game-banner-main {
+    font-family: 'Cinzel', serif; font-size: 24px; font-weight: 700; letter-spacing: .1em; margin-top: 2px;
+}
+.game-banner-gains {
+    display: flex; gap: 20px; justify-content: center; margin-top: 5px;
+    font-family: 'Cinzel', serif; font-size: 18px; font-weight: 700;
+}
+
+@keyframes bannerInOut {
+    0%   { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(.95); }
+    12%  { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+    82%  { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(1); }
+}
+
+/* Modal de fin de partie (PRD 14) : réutilise la structure de la modal de combat. */
+.end-modal .combat-modal-body { text-align: center; }
+.end-modal .combat-columns { align-items: stretch; margin-top: 4px; }
+.end-col-winner {
+    box-shadow: 0 0 0 1px #8a6a08, 0 4px 18px rgba(138, 106, 8, .3);
+}
+.end-score {
+    font-family: 'Cinzel', serif; font-size: 38px; font-weight: 700; line-height: 1; margin-top: 2px;
+}
+.end-score-label {
+    font-family: 'Cinzel', serif; font-size: 9px; font-weight: 600;
+    letter-spacing: .18em; color: #8a7a60; text-transform: uppercase;
+}
+.end-kills {
+    font-family: 'Cinzel', serif; font-size: 17px; font-weight: 700; margin-top: 8px;
+}
+.end-chart-label {
+    font-family: 'Cinzel', serif; font-size: 10px; font-weight: 600;
+    letter-spacing: .18em; color: #8a7a60; margin: 18px 0 4px;
+}
+
 .combat-overlay {
     position: fixed; inset: 0; z-index: 100;
     background: rgba(0, 0, 0, .5);

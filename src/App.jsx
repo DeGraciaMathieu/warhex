@@ -22,6 +22,8 @@ const CHART_W = W - PAD_X * 2, CHART_H = H - PAD_Y * 2;
 
 // Réglages de la frise des tours (PRD 10).
 const BUBBLE_SIZE = 20, BUBBLE_GAP = 6, ROUND_GAP = 14, SCORE_FX_DURATION = 900;
+// Réglages des bannières de feedback (PRD 14) : transition de tour, fin de round.
+const TURN_BANNER_DURATION = 2000, ROUND_BANNER_DURATION = 2400;
 
 function ScoreChart({ scoreHistory }) {
     const maxScore = Math.max(...scoreHistory.map(h => Math.max(h.scores[1], h.scores[2])), 1);
@@ -137,6 +139,9 @@ export default function HexWarhammer() {
     const [pendingDamage, setPendingDamage] = useState(null);
     const [scoreFx, setScoreFx] = useState(null);
     const prevScoreLen = useRef(0);
+    const [turnBanner, setTurnBanner] = useState(null);
+    const [roundBanner, setRoundBanner] = useState(null);
+    const prevPlayer = useRef(null);
     const [online, setOnline] = useState(null);
     const [joinCode, setJoinCode] = useState("");
     const peerRef = useRef(null);
@@ -230,9 +235,29 @@ export default function HexWarhammer() {
         const last = gains[gains.length - 1];
         if (last.gain[1] <= 0 && last.gain[2] <= 0) return;
         setScoreFx(last);
-        const id = setTimeout(() => setScoreFx(null), SCORE_FX_DURATION);
-        return () => clearTimeout(id);
+        const ids = [setTimeout(() => setScoreFx(null), SCORE_FX_DURATION)];
+        // Bannière de fin de round, sauf au round qui clôt la partie : la modal
+        // de fin prend alors le relais (PRD 14, point 11).
+        if (!state?.winner) {
+            setRoundBanner(last);
+            ids.push(setTimeout(() => setRoundBanner(null), ROUND_BANNER_DURATION));
+        }
+        return () => ids.forEach(clearTimeout);
     }, [scoreHistory]);
+
+    // Bannière de transition : déclenchée à chaque changement de joueur courant,
+    // pilotée par l'état (fonctionne donc aussi pour les tours IA / en ligne).
+    // Pas de bannière au premier rendu d'une partie, ni en fin de partie.
+    const currentPlayer = state?.currentPlayer ?? null;
+    const winner = state?.winner ?? null;
+    useEffect(() => {
+        const prev = prevPlayer.current;
+        prevPlayer.current = currentPlayer;
+        if (prev == null || prev === currentPlayer || currentPlayer == null || winner) return;
+        setTurnBanner({ player: currentPlayer });
+        const id = setTimeout(() => setTurnBanner(null), TURN_BANNER_DURATION);
+        return () => clearTimeout(id);
+    }, [currentPlayer, winner]);
 
     // Hover intent : le tooltip n'apparaît qu'après un court délai passé sur la
     // même unité. La dépendance porte sur l'id de l'unité survolée (et non sur la
@@ -747,10 +772,25 @@ export default function HexWarhammer() {
 
     return (
         <div style={{ display: "flex", height: "100vh", background: "#f5f0e8", color: "#2a2015", fontFamily: "'Crimson Text', Georgia, serif", overflow: "hidden" }}>
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: 20 }}>
+            <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: 20 }}>
                 <div style={{ fontFamily: "'Cinzel', serif", fontSize: 24, fontWeight: 700, letterSpacing: ".2em", color: "#8a6a08", textShadow: "0 0 30px rgba(138,106,8,.2)" }}>
                     ⚔ WARHEX ⚔
                 </div>
+
+                {roundBanner ? (
+                    <div className="game-banner" key={`round-${roundBanner.round}`} style={{ animationDuration: `${ROUND_BANNER_DURATION}ms` }}>
+                        <div className="game-banner-sub">FIN DU ROUND {roundBanner.round}</div>
+                        <div className="game-banner-gains">
+                            {roundBanner.gain[1] > 0 && <span style={{ color: P[1] }}>🏰 J1 +{roundBanner.gain[1]}</span>}
+                            {roundBanner.gain[2] > 0 && <span style={{ color: P[2] }}>🏰 J2 +{roundBanner.gain[2]}</span>}
+                        </div>
+                    </div>
+                ) : turnBanner && (
+                    <div className="game-banner" key={`turn-${turnBanner.player}`} style={{ animationDuration: `${TURN_BANNER_DURATION}ms` }}>
+                        <div className="game-banner-sub">AU TOUR DE</div>
+                        <div className="game-banner-main" style={{ color: P[turnBanner.player] }}>JOUEUR {turnBanner.player}</div>
+                    </div>
+                )}
 
                 {online?.status === "left" && !state.winner && (
                     <div style={{ background: "#a03030", color: "#f5f0e8", padding: "6px 16px", borderRadius: 4, fontSize: 14 }}>
@@ -832,33 +872,6 @@ export default function HexWarhammer() {
             </div>
 
             <div style={{ width: 320, borderLeft: "1px solid #d5cbb8", background: "#ece5d8", display: "flex", flexDirection: "column", flexShrink: 0 }}>
-                {state.winner ? (
-                    <div style={{ padding: "20px", flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
-                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: 16, letterSpacing: ".1em", color: "#2a2015", textAlign: "center" }}>
-                            {state.winner === "draw" ? "ÉGALITÉ" : `JOUEUR ${state.winner} VICTORIEUX`}
-                        </div>
-
-                        <div style={{ display: "flex", justifyContent: "space-around", padding: "12px 0", borderTop: "1px solid #d5cbb8", borderBottom: "1px solid #d5cbb8" }}>
-                            <div style={{ textAlign: "center" }}>
-                                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 4 }}>JOUEUR 1</div>
-                                <div style={{ fontSize: 24, fontWeight: 700, color: "#2a6fa8" }}>{state.kills[1]}</div>
-                                <div style={{ fontSize: 11, color: "#8a7a60" }}>kills</div>
-                                <div style={{ fontSize: 16, fontWeight: 600, color: "#2a6fa8", marginTop: 4 }}>{state.scores[1]} pts</div>
-                            </div>
-                            <div style={{ width: 1, background: "#d5cbb8" }} />
-                            <div style={{ textAlign: "center" }}>
-                                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 4 }}>JOUEUR 2</div>
-                                <div style={{ fontSize: 24, fontWeight: 700, color: "#a03030" }}>{state.kills[2]}</div>
-                                <div style={{ fontSize: 11, color: "#8a7a60" }}>kills</div>
-                                <div style={{ fontSize: 16, fontWeight: 600, color: "#a03030", marginTop: 4 }}>{state.scores[2]} pts</div>
-                            </div>
-                        </div>
-
-                        {state.scoreHistory.length > 0 && <ScoreChart scoreHistory={state.scoreHistory} />}
-
-                        <button className="btn btn-grey" onClick={restart}>↺ Nouvelle partie</button>
-                    </div>
-                ) : <>
                 <div style={{ padding: "16px 20px", borderBottom: "1px solid #d5cbb8" }}>
                     <div style={{ fontFamily: "'Cinzel', serif", fontSize: 12, letterSpacing: ".15em", color: "#8a7a60", marginBottom: 12 }}>INFOS DE PARTIE</div>
                     {(() => {
@@ -899,9 +912,61 @@ export default function HexWarhammer() {
                         <button className="btn btn-gold" disabled={!!state.winner || (vsAI && state.currentPlayer === 2) || notMyTurn || !!state.movingUnit} onClick={endTurn}>⏭ Fin de tour</button>
                     </div>
                 </div>
-
-            </>}
             </div>
+
+            {state.winner && (() => {
+                const draw = state.winner === "draw";
+                const gap = Math.abs(state.scores[1] - state.scores[2]);
+                return (
+                    <div className="combat-overlay">
+                        <div className="combat-modal end-modal">
+                            <div className="combat-modal-header">
+                                <h2>{draw ? "⚖ FIN DE LA BATAILLE" : "🏆 VICTOIRE"}</h2>
+                                <div style={{ fontSize: 12, letterSpacing: ".05em", color: "#8a7a60" }}>
+                                    {draw ? "Les deux camps se quittent à égalité" : `Joueur ${state.winner} l'emporte de ${gap} point${gap > 1 ? "s" : ""}`}
+                                </div>
+                            </div>
+
+                            <div className="combat-modal-body">
+                                <div className="combat-columns">
+                                    {[1, 2].map((p, i) => {
+                                        const isWinner = !draw && state.winner === p;
+                                        return (
+                                            <Fragment key={p}>
+                                                <div className={`combat-col player-${p}${isWinner ? " end-col-winner" : ""}`}>
+                                                    <div className="combat-col-banner">
+                                                        <div className="combat-col-role">JOUEUR {p}</div>
+                                                        <div className="combat-col-side">{isWinner ? "👑 VAINQUEUR" : draw ? "ÉGALITÉ" : "VAINCU"}</div>
+                                                    </div>
+                                                    <div className="combat-col-body">
+                                                        <div className="combat-medallion" style={{ borderColor: P[p] }}>{isWinner ? "👑" : draw ? "⚔" : "🛡"}</div>
+                                                        <div className="end-score" style={{ color: P[p] }}>{state.scores[p]}</div>
+                                                        <div className="end-score-label">points</div>
+                                                        <div className="end-kills" style={{ color: P[p] }}>⚔ {state.kills[p]}</div>
+                                                        <div className="end-score-label">éliminations</div>
+                                                    </div>
+                                                </div>
+                                                {i === 0 && <div className="combat-vs">VS</div>}
+                                            </Fragment>
+                                        );
+                                    })}
+                                </div>
+
+                                {state.scoreHistory.length > 0 && (
+                                    <>
+                                        <div className="end-chart-label">ÉVOLUTION DU SCORE</div>
+                                        <ScoreChart scoreHistory={state.scoreHistory} />
+                                    </>
+                                )}
+                            </div>
+
+                            <div className="combat-modal-footer">
+                                <button className="btn btn-gold" style={{ width: "auto", padding: "8px 24px" }} onClick={restart}>↺ Nouvelle partie</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {hoveredUnit && tooltipPos && tooltipUnitId === hoveredUnit.id && (() => {
                 const ratio = hoveredUnit.currentWounds / hoveredUnit.wounds;
