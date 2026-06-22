@@ -21,7 +21,9 @@
       "mcp__playwright__browser_click",
       "mcp__playwright__browser_take_screenshot",
       "mcp__playwright__browser_navigate",
-      "Bash(pkill -f \"vite --port 5191\")"
+      "Bash(pkill -f \"vite --port 5191\")",
+      "Bash(pkill -f \"vite --port 5174\")",
+      "Bash(git commit *)"
     ]
   },
   "hooks": {
